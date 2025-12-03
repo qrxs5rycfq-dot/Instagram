@@ -10312,11 +10312,17 @@ class InstagramAccountCreator2025:
             )
             
             if account_created:
+                # Get session info for country code
+                session = self.session_manager.get_session(session_id)
+                ip_config = session.get("ip_config", {}) if session else {}
+                country_code = ip_config.get("country_code", ip_config.get("location", {}).get("country", "ID"))
+                
                 result = self._record_success(attempt_id, {
                     "username": username,
                     "email": email_data["email"],
                     "password": password,
                     "session_id": session_id,
+                    "country_code": country_code,
                     "created_at": time.time()
                 })
                 
@@ -11167,34 +11173,103 @@ class InstagramAccountCreator2025:
             # Get current cookies
             current_cookies = self.session_manager.get_session_cookies(session_id, "instagram.com")
             
-            # **HEADERS LENGKAP seperti Instagram asli**
+            # Get IP config for locale info
+            ip_config = session.get("ip_config", {})
+            country_code = ip_config.get("country_code", ip_config.get("location", {}).get("country", "ID"))
+            
+            # Get locale for country
+            locale_map = {
+                "US": "en_US", "CA": "en_CA", "GB": "en_GB", "AU": "en_AU", "NZ": "en_NZ",
+                "DE": "de_DE", "FR": "fr_FR", "IT": "it_IT", "ES": "es_ES", "NL": "nl_NL",
+                "PL": "pl_PL", "TR": "tr_TR", "RU": "ru_RU", "BR": "pt_BR", "MX": "es_MX",
+                "AR": "es_AR", "JP": "ja_JP", "KR": "ko_KR", "IN": "en_IN", "TH": "th_TH",
+                "VN": "vi_VN", "PH": "en_PH", "MY": "ms_MY", "SG": "en_SG", "ID": "id_ID",
+                "AE": "ar_AE", "SA": "ar_SA"
+            }
+            locale = locale_map.get(country_code, "en_US")
+            
+            # Generate fresh pigeon session ID for this request
+            pigeon_session_id = f"UFS-{str(uuid.uuid4()).upper()}-{random.randint(100000000, 999999999)}"
+            
+            # Pre-calculate connection values
+            connection_type_header = "WIFI" if ip_config.get("connection_type") == "wifi" else "CELL"
+            bandwidth_speed = random.randint(5000, 50000)
+            
+            # **HEADERS LENGKAP dengan semua Instagram required headers**
             headers = {
                 "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "*/*",
+                "Accept-Language": self._get_accept_language_for_locale(locale),
+                "Accept-Encoding": "gzip, deflate, br",
+                
+                # CSRF and Authentication
                 "X-CSRFToken": session.get("tokens", {}).get("csrftoken", ""),
                 "X-Instagram-AJAX": "1",
                 "X-IG-WWW-Claim": session.get("ig_www_claim", "0"),
                 "X-Web-Session-Id": extra_session_id,
-                "Priority": "u=1, i",
-                "Sec-Ch-Prefers-Color-Scheme": "dark",
-                "X-Requested-With": "XMLHttpRequest",
-                "Origin": "https://www.instagram.com",
-                "Referer": "https://www.instagram.com/accounts/emailsignup/",
+                
+                # ===== CRITICAL INSTAGRAM HEADERS TO PREVENT CHECKPOINT =====
+                # Locale Headers (must match IP country)
+                "X-IG-App-Locale": locale,
+                "X-IG-Device-Locale": locale,
+                "X-IG-Mapped-Locale": locale,
+                
+                # Pigeon Headers (session tracking - critical for anti-checkpoint)
+                "X-Pigeon-Session-Id": pigeon_session_id,
+                "X-Pigeon-Rawclienttime": str(time.time()),
+                
+                # Bloks Headers (feature flags) - using realistic static version ID
+                "X-Bloks-Version-Id": "5f5dd165df7c12e48d0afc3e4cb25f3fadf1f38e7829b1d1dd90cf28ef0f5c79",
+                "X-Bloks-Is-Layout-RTL": "false",
+                "X-Bloks-Is-Panorama-Enabled": "true",
+                
+                # Device and App Headers
+                "X-IG-App-ID": "936619743392459",
+                "X-IG-Device-ID": session.get("device_id", ""),
+                "X-IG-Android-ID": session.get("fingerprint", {}).get("device", {}).get("identifiers", {}).get("android_id", ""),
+                "X-IG-Family-Device-ID": str(uuid.uuid4()),
+                "X-MID": session.get("cookies", {}).get("mid", ""),
+                
+                # Connection Headers
+                "X-IG-Connection-Type": connection_type_header,
+                "X-IG-Connection-Speed": f"{bandwidth_speed}kbps",
+                "X-IG-Bandwidth-Speed-KBPS": str(bandwidth_speed),
+                "X-IG-Bandwidth-TotalBytes-B": str(random.randint(1000000, 10000000)),
+                "X-IG-Bandwidth-TotalTime-MS": str(random.randint(100, 1000)),
+                "X-IG-Capabilities": "3brTvwM=",
+                
+                # Facebook Cross-App Headers
+                "X-FB-HTTP-Engine": "Liger",
+                "X-FB-Client-IP": "True",
+                "X-FB-Server-Cluster": "True",
+                "X-FB-Connection-Type": connection_type_header,
+                
+                # Security Headers
+                "Sec-CH-UA": '"Chromium";v="135", "Not-A.Brand";v="99", "Google Chrome";v="135"',
+                "Sec-CH-UA-Mobile": "?1",
+                "Sec-CH-UA-Platform": '"Android"',
+                "Sec-CH-UA-Platform-Version": "14",
+                "Sec-CH-Prefers-Color-Scheme": "dark",
                 "Sec-Fetch-Site": "same-origin",
                 "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Dest": "empty"
+                "Sec-Fetch-Dest": "empty",
+                
+                # Request Headers
+                "X-Requested-With": "XMLHttpRequest",
+                "X-ASBD-ID": "129477",
+                "Priority": "u=1, i",
+                "Origin": "https://www.instagram.com",
+                "Referer": "https://www.instagram.com/accounts/emailsignup/"
             }
             
-            # Add session headers
+            # Add session headers (don't override critical ones)
             session_headers = session.get("headers", {})
-            headers.update({k: v for k, v in session_headers.items() if k not in headers})
+            for k, v in session_headers.items():
+                if k not in headers:
+                    headers[k] = v
             
             # Debug: print request info
-            # print(f"{cyan}    Account creation attempt with:{reset}")
-            # print(f"      Email: {email}")
-            # print(f"      Username: {username}")
-            # print(f"      Jazoest: {jazoest}")
-            # print(f"      Extra Session ID: {extra_session_id}")
-            # print(f"      Password Format: {encrypted_password[:50]}...")
+            print(f"{cyan}    Creating account with country: {country_code}, locale: {locale}{reset}")
             
             # **ENDPOINT UTAMA** - gunakan yang sama dengan Instagram asli
             endpoints = [
@@ -11594,10 +11669,45 @@ class InstagramAccountCreator2025:
                 cookies=cookies
             )
             
-            # 6. Final delay before concluding
+            # ===== WARMUP PHASE 4: Activity simulation (critical for anti-checkpoint) =====
+            print(f"{cyan}    Phase 4: Activity simulation...{reset}")
+            
+            # 6. View notifications (shows engagement)
+            await asyncio.sleep(random.uniform(2, 4))
+            await self.request_orchestrator.make_request(
+                session_id=session_id,
+                method="GET",
+                url="https://www.instagram.com/accounts/activity/",
+                headers={"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
+                cookies=cookies
+            )
+            
+            # 7. View a few popular hashtags (normal new user behavior)
+            hashtags = ["travel", "photography", "food", "art", "music"]
+            selected_hashtag = random.choice(hashtags)
+            await asyncio.sleep(random.uniform(2, 4))
+            await self.request_orchestrator.make_request(
+                session_id=session_id,
+                method="GET",
+                url=f"https://www.instagram.com/explore/tags/{selected_hashtag}/",
+                headers={"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
+                cookies=cookies
+            )
+            
+            # 8. Check emails/notifications preferences (shows account setup)
+            await asyncio.sleep(random.uniform(2, 4))
+            await self.request_orchestrator.make_request(
+                session_id=session_id,
+                method="GET",
+                url="https://www.instagram.com/accounts/emails/settings/",
+                headers={"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"},
+                cookies=cookies
+            )
+            
+            # 9. Final delay before concluding
             await asyncio.sleep(random.uniform(5, 10))
             
-            print(f"{hijau}✅  Post-creation warmup complete{reset}")
+            print(f"{hijau}✅  Post-creation warmup complete (4 phases){reset}")
             print(f"{cyan}    Account should be warmed up and less likely to trigger checkpoint{reset}\n")
             
         except Exception as e:
@@ -11650,15 +11760,49 @@ class InstagramAccountCreator2025:
         
         return result
     
+    def _get_accept_language_for_locale(self, locale: str) -> str:
+        """Get Accept-Language header based on locale"""
+        accept_language_map = {
+            "en_US": "en-US,en;q=0.9",
+            "en_CA": "en-CA,en;q=0.9,en-US;q=0.8",
+            "en_GB": "en-GB,en;q=0.9,en-US;q=0.8",
+            "en_AU": "en-AU,en;q=0.9,en-US;q=0.8",
+            "en_NZ": "en-NZ,en;q=0.9,en-US;q=0.8",
+            "en_IN": "en-IN,en;q=0.9,hi;q=0.8",
+            "en_PH": "en-PH,en;q=0.9,fil;q=0.8",
+            "en_SG": "en-SG,en;q=0.9,zh;q=0.8",
+            "de_DE": "de-DE,de;q=0.9,en;q=0.8",
+            "fr_FR": "fr-FR,fr;q=0.9,en;q=0.8",
+            "it_IT": "it-IT,it;q=0.9,en;q=0.8",
+            "es_ES": "es-ES,es;q=0.9,en;q=0.8",
+            "es_MX": "es-MX,es;q=0.9,en;q=0.8",
+            "es_AR": "es-AR,es;q=0.9,en;q=0.8",
+            "pt_BR": "pt-BR,pt;q=0.9,en;q=0.8",
+            "nl_NL": "nl-NL,nl;q=0.9,en;q=0.8",
+            "pl_PL": "pl-PL,pl;q=0.9,en;q=0.8",
+            "tr_TR": "tr-TR,tr;q=0.9,en;q=0.8",
+            "ru_RU": "ru-RU,ru;q=0.9,en;q=0.8",
+            "ja_JP": "ja-JP,ja;q=0.9,en;q=0.8",
+            "ko_KR": "ko-KR,ko;q=0.9,en;q=0.8",
+            "th_TH": "th-TH,th;q=0.9,en;q=0.8",
+            "vi_VN": "vi-VN,vi;q=0.9,en;q=0.8",
+            "ms_MY": "ms-MY,ms;q=0.9,en;q=0.8",
+            "id_ID": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            "ar_AE": "ar-AE,ar;q=0.9,en;q=0.8",
+            "ar_SA": "ar-SA,ar;q=0.9,en;q=0.8"
+        }
+        return accept_language_map.get(locale, "en-US,en;q=0.9")
+    
     def _save_account_to_file(self, account_data: Dict[str, Any]):
         """Save account data to file"""
         try:
             filename = "accounts_2025.txt"
+            country = account_data.get('country_code', 'ID')
             
             with open(filename, "a", encoding="utf-8") as f:
                 f.write(f"{account_data['username']}|{account_data['password']}|"
                        f"{account_data['email']}|{account_data['session_id']}|"
-                       f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}|Indonesia\n")
+                       f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}|{country}\n")
             
             print(f"{cyan}💾  Account saved to {filename}{reset}")
             
