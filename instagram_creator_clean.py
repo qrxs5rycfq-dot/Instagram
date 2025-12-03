@@ -1152,20 +1152,27 @@ class InstagramAccountCreator:
     """
     Main class for creating Instagram accounts.
     Uses InstagramBrowserSimulator for anti-detection.
+    Integrates TenMinuteMailService for automatic email/OTP.
     """
     
     def __init__(self, 
                  proxy: Optional[str] = None,
-                 email_service: str = "manual"):
+                 email_service: str = "10minutemail"):
         """
         Initialize the account creator.
         
         Args:
             proxy: Optional HTTP proxy URL
-            email_service: Email service to use ("manual" for manual OTP entry)
+            email_service: Email service to use ("10minutemail" or "manual")
         """
         self.proxy = proxy
         self.email_service = email_service
+        
+        # Initialize 10minutemail service
+        if email_service == "10minutemail":
+            self.mail_service = TenMinuteMailService()
+        else:
+            self.mail_service = None
     
     def generate_birthdate(self) -> Tuple[int, int, int]:
         """Generate a valid birthdate (18-30 years old)."""
