@@ -7607,7 +7607,12 @@ class AdvancedSessionManager2025:
                               behavior_profile: Dict[str, Any],
                               ip_config: Dict[str, Any],
                               webrtc_fingerprint: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
-        """Build complete headers dengan SEMUA Instagram required headers - ENHANCED"""
+        """Build complete headers with ALL Instagram required headers.
+        
+        This method generates headers that match real Instagram mobile app
+        traffic, including locale, pigeon, bloks, bandwidth, and Facebook
+        cross-app tracking headers.
+        """
         # Start with IP config headers
         headers = ip_config.get("headers", {}).copy()
         
@@ -7729,12 +7734,21 @@ class AdvancedSessionManager2025:
         return f"UFS-{random_uuid}-{random_suffix}"
     
     def _generate_bloks_version_id(self) -> str:
-        """Generate Bloks Version ID seperti Instagram asli"""
-        # Format: 64-char hex string (SHA-256 like)
-        # This represents the feature flag version for Instagram
+        """Generate Bloks Version ID seperti Instagram asli
+        
+        The Bloks Version ID is a 64-character hex string used by Instagram
+        to track feature flag versions. We generate it by combining:
+        - 56 chars from SHA-256 hash (base version identifier)
+        - 8 chars from MD5 hash (random suffix for uniqueness)
+        This matches the format observed in real Instagram traffic.
+        """
+        # Generate 64-char hex string: 56 from SHA-256 + 8 from MD5
+        BLOKS_BASE_LENGTH = 56  # Characters from main hash
+        BLOKS_SUFFIX_LENGTH = 8  # Characters from random suffix
+        
         base_hash = hashlib.sha256(str(time.time()).encode()).hexdigest()
-        version_suffix = hashlib.md5(str(random.random()).encode()).hexdigest()[:8]
-        return f"{base_hash[:56]}{version_suffix}"
+        version_suffix = hashlib.md5(str(random.random()).encode()).hexdigest()[:BLOKS_SUFFIX_LENGTH]
+        return f"{base_hash[:BLOKS_BASE_LENGTH]}{version_suffix}"
     
     def _get_ordered_cookie_chain(self, session_id: str) -> Dict[str, str]:
         """Get cookies in proper Instagram order"""
@@ -8939,7 +8953,34 @@ class RequestOrchestrator2025:
         print(f"{cyan}🧹  Request cache cleared{reset}")
 
 class RateLimiter2025:
-    """Adaptive rate limiter with intelligent learning - ENHANCED"""
+    """Adaptive rate limiter with intelligent learning for Instagram requests.
+    
+    This rate limiter implements several sophisticated features:
+    
+    1. Endpoint Classification:
+       - instagram_signup: Most conservative (2 req/120s)
+       - instagram_api: Conservative (3 req/60s)
+       - instagram.com: Moderate (4 req/60s)
+       - default: Relaxed (10 req/60s)
+    
+    2. Adaptive Learning:
+       - Automatically reduces limits when rate limits are hit
+       - Increases window size based on error history
+       - Tracks per-session and per-endpoint statistics
+    
+    3. Cooldown Periods:
+       - Sessions can be put in cooldown after hitting limits
+       - Cooldowns are session-specific and can be reset after IP rotation
+    
+    4. Human-like Request Spacing:
+       - Enforces minimum time between requests
+       - Different spacing for different endpoint types
+       - Prevents automated detection through timing analysis
+    
+    5. Domain Statistics:
+       - Tracks success rates per domain
+       - Monitors request patterns for anomaly detection
+    """
     
     def __init__(self):
         self.request_log = {}
@@ -9125,17 +9166,6 @@ class RateLimiter2025:
             del self.cooldown_periods[session_id]
         
         print(f"{hijau}✅  Reset rate limits for session {session_id[:8]}{reset}")
-        
-        # Calculate metrics
-        time_since_update = time.time() - stats["last_updated"]
-        if time_since_update > 60:  # Update every minute
-            if stats["total_requests"] > 0:
-                success_rate = stats["successful_requests"] / stats["total_requests"]
-                request_rate = stats["total_requests"] / (time_since_update / 60)
-                
-                stats["success_rate"] = success_rate
-                stats["avg_request_rate"] = request_rate
-                stats["last_updated"] = time.time()
     
     def get_status(self) -> Dict[str, Any]:
         """Get rate limiter status"""
