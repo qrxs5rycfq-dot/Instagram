@@ -10,6 +10,8 @@ Features:
 - Multi-step form validation like real browsers
 - Proper cookie chain management
 - Human-like timing and behavior simulation
+- 10MinuteMail integration for automatic email/OTP
+- Advanced spoofing techniques (JA3, TLS, Canvas, WebGL)
 """
 
 import asyncio
@@ -18,6 +20,7 @@ import hashlib
 import json
 import os
 import random
+import re
 import secrets
 import string
 import time
@@ -25,6 +28,10 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode, quote_plus
+import warnings
+
+# Suppress SSL warnings
+warnings.filterwarnings('ignore')
 
 import aiohttp
 import requests
@@ -86,6 +93,350 @@ COOKIE_ORDER = [
     "rur",       # Region/Routing
     "csrftoken", # CSRF token - must be last
 ]
+
+
+# ==================== 10MINUTEMAIL SERVICE ====================
+
+class TenMinuteMailService:
+    """
+    10MinuteMail service for automatic email generation and OTP retrieval.
+    Based on successful implementation from bipas6.py.
+    """
+    
+    def __init__(self):
+        self.base_url = "https://10minutemail.net"
+        self.api_endpoint = "https://10minutemail.net/address.api.php"
+        
+        # Session with proper headers
+        self.session = requests.Session()
+        self.session.trust_env = False
+        self.session.headers.update({
+            "Host": "10minutemail.net",
+            "accept": "application/json, text/javascript, */*; q=0.01",
+            "x-requested-with": "XMLHttpRequest",
+            "sec-ch-ua-mobile": "?1",
+            "user-agent": "Mozilla/5.0 (Linux; Android 13; SM-A135F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Mobile Safari/537.36",
+            "referer": "https://10minutemail.net/m/?lang=id",
+            "accept-encoding": "identity",
+            "accept-language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+        })
+        
+        self.current_email = None
+        self.otp_patterns = self._init_otp_patterns()
+    
+    def _init_otp_patterns(self) -> List[Tuple[str, str, int]]:
+        """Initialize OTP patterns with priority."""
+        return [
+            # Indonesian patterns (high priority)
+            ("ID_SUBJECT_KODE_1", r"'subject':\s*'(\d{6})\s+adalah\s+kode\s+Instagram\s+(?:Anda|anda)'", 3),
+            ("ID_SUBJECT_KODE_2", r"'subject':\s*'Kode\s+Instagram\s+(?:Anda|anda):?\s*(\d{6})'", 3),
+            ("ID_BODY_KODE_1", r'(\d{6})\s+adalah\s+kode\s+Instagram\s+(?:Anda|anda)', 3),
+            ("ID_BODY_KODE_2", r'Kode\s+Instagram\s+(?:Anda|anda):?\s*(\d{6})', 3),
+            ("ID_BODY_VERIF_1", r'kode\s+verifikasi\s+Instagram[:\s]*(\d{6})', 3),
+            ("ID_BODY_VERIF_2", r'kode\s+Instagram[:\s]*(\d{6})', 3),
+            
+            # English patterns (medium priority)
+            ("EN_SUBJECT_CODE_1", r"'subject':\s*'(\d{6})\s+is\s+your\s+Instagram\s+code'", 2),
+            ("EN_BODY_CODE_1", r'(\d{6})\s+is\s+your\s+Instagram\s+code', 2),
+            ("EN_BODY_CODE_2", r'Your\s+Instagram\s+code:?\s*(\d{6})', 2),
+            ("EN_BODY_VERIF_1", r'Instagram\s+verification\s+code[:\s]*(\d{6})', 2),
+            ("EN_BODY_VERIF_2", r'verification\s+code[:\s]*(\d{6})', 2),
+            
+            # General fallback (low priority)
+            ("GEN_6DIGIT", r'\b(\d{6})\b', 1),
+        ]
+    
+    def _init_session(self) -> bool:
+        """Initialize session with 10minutemail."""
+        for attempt in range(3):
+            try:
+                r = self.session.get(self.base_url, timeout=20, verify=False)
+                if r.status_code == 200:
+                    return True
+            except Exception as e:
+                print(f"{YELLOW}  Session init attempt {attempt + 1} failed: {e}{RESET}")
+            
+            if attempt < 2:
+                time.sleep(1)
+        
+        return False
+    
+    async def get_email(self) -> Optional[Dict[str, Any]]:
+        """Get a temporary email address."""
+        print(f"{CYAN}→ Getting 10minutemail address...{RESET}")
+        
+        if not self._init_session():
+            print(f"{RED}✗ Failed to initialize 10minutemail session{RESET}")
+            return None
+        
+        for attempt in range(5):
+            try:
+                timestamp = int(time.time() * 1000)
+                url = f"{self.api_endpoint}?new=1&_={timestamp}"
+                
+                resp = self.session.get(url, timeout=20, verify=False)
+                resp.raise_for_status()
+                
+                data = resp.json()
+                email = data.get("mail_get_mail")
+                
+                if email:
+                    self.current_email = email
+                    print(f"{GREEN}✓ Got email: {email}{RESET}")
+                    
+                    return {
+                        "email": email,
+                        "username": email.split('@')[0],
+                        "domain": "10minutemail.net",
+                        "service": "10minutemail",
+                    }
+                    
+            except Exception as e:
+                print(f"{YELLOW}  Attempt {attempt + 1}/5 failed: {e}{RESET}")
+            
+            if attempt < 4:
+                await asyncio.sleep(random.uniform(2, 4))
+        
+        print(f"{RED}✗ Failed to get email after 5 attempts{RESET}")
+        return None
+    
+    def _is_valid_otp(self, code: str) -> bool:
+        """Validate OTP code."""
+        if not code or len(code) != 6 or not code.isdigit():
+            return False
+        
+        # Skip year patterns
+        if code.startswith(('19', '20', '202')):
+            return False
+        
+        # Skip sequential/repeating patterns
+        if len(set(code)) == 1:
+            return False
+        
+        return True
+    
+    def _extract_otp(self, data_str: str) -> Optional[Tuple[str, str]]:
+        """Extract OTP from response data."""
+        found_matches = []
+        
+        for pattern_name, pattern, priority in self.otp_patterns:
+            try:
+                matches = re.finditer(pattern, data_str, re.IGNORECASE)
+                for match in matches:
+                    if match.groups():
+                        otp = match.group(1)
+                        if self._is_valid_otp(otp):
+                            found_matches.append({
+                                'otp': otp,
+                                'pattern': pattern_name,
+                                'priority': priority,
+                            })
+                            
+                            # Return immediately for high priority Indonesian patterns
+                            if priority == 3 and pattern_name.startswith("ID_"):
+                                print(f"{CYAN}  🎯 High priority pattern matched: {pattern_name}{RESET}")
+                                return otp, pattern_name
+            except Exception:
+                continue
+        
+        if found_matches:
+            found_matches.sort(key=lambda x: x['priority'], reverse=True)
+            best = found_matches[0]
+            return best['otp'], best['pattern']
+        
+        return None, None
+    
+    async def get_otp(self, email_address: str, max_wait: int = 30) -> Optional[str]:
+        """
+        Wait for and retrieve OTP code.
+        
+        Args:
+            email_address: Email to check for OTP
+            max_wait: Maximum wait time in seconds
+        
+        Returns:
+            OTP code if found, None otherwise
+        """
+        print(f"{CYAN}→ Waiting for OTP (max {max_wait}s)...{RESET}")
+        
+        start_time = time.time()
+        check_intervals = [1.5, 2, 2, 2, 2, 2.5, 2.5, 3, 3, 3]
+        check_count = 0
+        
+        while time.time() - start_time < max_wait:
+            check_count += 1
+            elapsed = time.time() - start_time
+            
+            interval = check_intervals[min(check_count - 1, len(check_intervals) - 1)]
+            
+            try:
+                timestamp = int(time.time() * 1000)
+                url = f"{self.api_endpoint}?_={timestamp}"
+                
+                resp = self.session.get(url, timeout=10, verify=False)
+                
+                if resp.status_code == 200:
+                    data = resp.json()
+                    data_str = str(data)
+                    
+                    # Check for Instagram keywords
+                    keywords = ['instagram', 'kode', 'code', 'verifikasi', 'verification']
+                    lower_data = data_str.lower()
+                    
+                    for keyword in keywords:
+                        if keyword in lower_data:
+                            otp, pattern_name = self._extract_otp(data_str)
+                            
+                            if otp:
+                                print(f"{GREEN}  🎉 OTP FOUND: {otp} (via {pattern_name}) in {elapsed:.1f}s{RESET}")
+                                return otp
+                            break
+                    
+                    # Fallback: check for any 6-digit number
+                    six_digit = re.search(r'\b(\d{6})\b', data_str)
+                    if six_digit:
+                        otp = six_digit.group(1)
+                        if self._is_valid_otp(otp):
+                            print(f"{GREEN}  🎉 OTP FOUND (fallback): {otp} in {elapsed:.1f}s{RESET}")
+                            return otp
+                            
+            except Exception as e:
+                print(f"{YELLOW}  Check #{check_count} error: {str(e)[:30]}...{RESET}")
+            
+            # Wait before next check
+            time_left = max_wait - (time.time() - start_time)
+            if time_left > 0:
+                wait = min(interval, time_left)
+                if wait > 0:
+                    await asyncio.sleep(wait)
+        
+        print(f"{RED}✗ No OTP found after {check_count} checks ({max_wait}s){RESET}")
+        return None
+    
+    def cleanup(self):
+        """Cleanup session."""
+        try:
+            self.session.close()
+        except Exception:
+            pass
+
+
+# ==================== ADVANCED SPOOFING TECHNIQUES ====================
+
+class AdvancedSpoofingEngine:
+    """
+    Advanced spoofing engine for anti-detection.
+    Randomizes JA3 fingerprints, TLS settings, canvas/WebGL fingerprints.
+    """
+    
+    # Real Chrome JA3 fingerprints (from actual Instagram traffic)
+    JA3_FINGERPRINTS = [
+        "769,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21-41,29-23-24,0",
+        "769,4865-4867-4866-49195-49199-52393-52392-49196-49200-49162-49161-49171-49172-156-157-47-53,0-5-10-11-13-16-23-27-35-41-43-45-51-17513-18-21-65281,29-23-24-25,0",
+        "771,4866-4867-4865-49196-49200-49195-49199-52393-52392-49188-49187-49162-49161-52394-49327-49325-49326-49324-49312-49310-49311-49309-107-106-103-64-57-56-51-50-49-47,0-11-10-13-23-65281-16-5-35-18-43-27-17513-45-51-21,29-23-24,0",
+        "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-27-51-35-11-5-16-0-23-65281-10-17513-18-13-43-21,29-23-24,0",
+    ]
+    
+    # Real Instagram mobile User-Agents
+    MOBILE_USER_AGENTS = [
+        "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.178 Mobile Safari/537.36",
+        "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.64 Mobile Safari/537.36",
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    ]
+    
+    # Desktop User-Agents (Chrome on macOS/Windows)
+    DESKTOP_USER_AGENTS = [
+        f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION}.0.0.0 Safari/537.36",
+        f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION}.0.0.0 Safari/537.36",
+        f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION}.0.0.0 Safari/537.36",
+    ]
+    
+    # Screen resolutions for fingerprinting
+    SCREEN_RESOLUTIONS = [
+        (1920, 1080), (1366, 768), (1536, 864), (1440, 900),
+        (1280, 720), (1280, 800), (1600, 900), (1680, 1050),
+        (2560, 1440), (1920, 1200), (1470, 801),
+    ]
+    
+    # Timezone offsets
+    TIMEZONE_OFFSETS = [-420, -480, -300, -240, 0, 60, 120, 330, 480, 540]
+    
+    # Languages
+    LANGUAGES = [
+        "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+        "en-US,en;q=0.9",
+        "en-GB,en;q=0.9,en-US;q=0.8",
+        "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+    ]
+    
+    @classmethod
+    def get_random_ja3(cls) -> str:
+        """Get random JA3 fingerprint."""
+        return random.choice(cls.JA3_FINGERPRINTS)
+    
+    @classmethod
+    def get_desktop_user_agent(cls) -> str:
+        """Get random desktop User-Agent."""
+        return random.choice(cls.DESKTOP_USER_AGENTS)
+    
+    @classmethod
+    def get_mobile_user_agent(cls) -> str:
+        """Get random mobile User-Agent."""
+        return random.choice(cls.MOBILE_USER_AGENTS)
+    
+    @classmethod
+    def get_random_screen(cls) -> Tuple[int, int]:
+        """Get random screen resolution."""
+        return random.choice(cls.SCREEN_RESOLUTIONS)
+    
+    @classmethod
+    def get_random_timezone(cls) -> int:
+        """Get random timezone offset."""
+        return random.choice(cls.TIMEZONE_OFFSETS)
+    
+    @classmethod
+    def get_random_language(cls) -> str:
+        """Get random Accept-Language header."""
+        return random.choice(cls.LANGUAGES)
+    
+    @classmethod
+    def generate_canvas_hash(cls) -> str:
+        """Generate random canvas fingerprint hash."""
+        # Simulate canvas fingerprint (32 char hex)
+        return hashlib.md5(secrets.token_bytes(32)).hexdigest()
+    
+    @classmethod
+    def generate_webgl_hash(cls) -> str:
+        """Generate random WebGL fingerprint hash."""
+        return hashlib.sha256(secrets.token_bytes(32)).hexdigest()[:32]
+    
+    @classmethod
+    def generate_audio_hash(cls) -> str:
+        """Generate random AudioContext fingerprint."""
+        return f"{random.uniform(124, 125):.15f}"
+    
+    @classmethod
+    def generate_full_fingerprint(cls) -> Dict[str, Any]:
+        """Generate complete browser fingerprint."""
+        screen = cls.get_random_screen()
+        
+        return {
+            "ja3": cls.get_random_ja3(),
+            "user_agent": cls.get_desktop_user_agent(),
+            "screen_width": screen[0],
+            "screen_height": screen[1],
+            "color_depth": random.choice([24, 32]),
+            "timezone": cls.get_random_timezone(),
+            "language": cls.get_random_language(),
+            "platform": random.choice(["MacIntel", "Win32", "Linux x86_64"]),
+            "canvas_hash": cls.generate_canvas_hash(),
+            "webgl_hash": cls.generate_webgl_hash(),
+            "audio_hash": cls.generate_audio_hash(),
+            "hardware_concurrency": random.choice([4, 8, 12, 16]),
+            "device_memory": random.choice([4, 8, 16, 32]),
+            "touch_points": 0,  # Desktop
+            "plugins_count": random.randint(3, 7),
+        }
 
 
 class InstagramBrowserSimulator:
