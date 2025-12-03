@@ -10640,7 +10640,12 @@ class InstagramAccountCreator2025:
             return False
     
     async def _simulate_pre_signup_behavior(self, session_id: str):
-        """Simulasi perilaku sebelum signup"""
+        """
+        Enhanced pre-signup browser simulation.
+        
+        Simulates real user behavior by visiting multiple pages before signup,
+        building proper cookie chain and appearing as legitimate browser traffic.
+        """
         print(f"{cyan}🧠  Simulating pre-signup behavior...{reset}")
         
         session = self.session_manager.get_session(session_id)
@@ -10648,6 +10653,74 @@ class InstagramAccountCreator2025:
             return
         
         behavior_profile = session["behavior_profile"]
+        
+        # Get current session headers for consistent browsing
+        base_headers = {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Cache-Control": "max-age=0",
+        }
+        
+        try:
+            # ===== STEP 1: Visit Instagram homepage first (like a real browser) =====
+            print(f"{cyan}    Step 1: Visiting homepage...{reset}")
+            homepage_response = await self.request_orchestrator.make_request(
+                session_id=session_id,
+                method="GET",
+                url="https://www.instagram.com/",
+                headers={**base_headers, "Sec-Fetch-Site": "none"}
+            )
+            
+            # Extract cookies from homepage
+            if homepage_response.get("status") == 200:
+                cookies = homepage_response.get("cookies", {})
+                if cookies:
+                    self.session_manager.update_session(session_id, {"cookies": cookies})
+                    print(f"{cyan}    Got initial cookies: {list(cookies.keys())}{reset}")
+            
+            # Human-like delay between pages
+            await asyncio.sleep(random.uniform(2.0, 4.0))
+            
+            # ===== STEP 2: Visit explore page (optional but makes traffic look natural) =====
+            if random.random() < 0.6:  # 60% chance to visit explore first
+                print(f"{cyan}    Step 2: Visiting explore page...{reset}")
+                await self.request_orchestrator.make_request(
+                    session_id=session_id,
+                    method="GET",
+                    url="https://www.instagram.com/explore/",
+                    headers={**base_headers, 
+                             "Referer": "https://www.instagram.com/",
+                             "Sec-Fetch-Site": "same-origin"}
+                )
+                await asyncio.sleep(random.uniform(1.5, 3.0))
+            
+            # ===== STEP 3: Visit accounts/login first (natural user flow) =====
+            if random.random() < 0.4:  # 40% chance to check login page first
+                print(f"{cyan}    Step 3: Checking login page...{reset}")
+                await self.request_orchestrator.make_request(
+                    session_id=session_id,
+                    method="GET",
+                    url="https://www.instagram.com/accounts/login/",
+                    headers={**base_headers,
+                             "Referer": "https://www.instagram.com/",
+                             "Sec-Fetch-Site": "same-origin"}
+                )
+                await asyncio.sleep(random.uniform(1.0, 2.5))
+            
+            # ===== STEP 4: Load GraphQL shared data (real browsers do this) =====
+            print(f"{cyan}    Step 4: Loading shared data...{reset}")
+            await self._load_instagram_shared_data(session_id)
+            await asyncio.sleep(random.uniform(1.0, 2.0))
+            
+        except Exception as e:
+            print(f"{kuning}    Pre-signup behavior warning: {e}{reset}")
         
         # Generate interaction sequence
         interactions = self.behavior_system.simulate_interaction(
@@ -10666,6 +10739,56 @@ class InstagramAccountCreator2025:
                 await asyncio.sleep(min(interaction["duration"], 0.1))
         
         print(f"{hijau}✅  Pre-signup behavior simulation complete{reset}")
+    
+    async def _load_instagram_shared_data(self, session_id: str) -> Optional[Dict]:
+        """
+        Load Instagram shared data (like real browsers do).
+        
+        This loads the shared data bundle that real browsers fetch,
+        which contains CSRF tokens, device info, and other initialization data.
+        """
+        try:
+            session = self.session_manager.get_session(session_id)
+            if not session:
+                return None
+            
+            # Request the web shared data endpoint
+            response = await self.request_orchestrator.make_request(
+                session_id=session_id,
+                method="GET",
+                url="https://www.instagram.com/data/shared_data/",
+                headers={
+                    "Accept": "*/*",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Referer": "https://www.instagram.com/",
+                    "Sec-Fetch-Dest": "empty",
+                    "Sec-Fetch-Mode": "cors",
+                    "Sec-Fetch-Site": "same-origin"
+                }
+            )
+            
+            if response.get("status") == 200:
+                try:
+                    body = response.get("body", b"")
+                    if body:
+                        data = json.loads(body.decode('utf-8', errors='ignore'))
+                        
+                        # Extract and store CSRF token if present
+                        config = data.get("config", {})
+                        csrf_token = config.get("csrf_token")
+                        if csrf_token:
+                            self.session_manager.update_session(session_id, {
+                                "tokens": {"csrftoken": csrf_token}
+                            })
+                        
+                        return data
+                except Exception:
+                    pass
+            
+            return None
+        except Exception as e:
+            print(f"{kuning}    Shared data load warning: {e}{reset}")
+            return None
     
     async def _get_email_for_account(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Dapatkan email dengan fallback otomatis jika service gagal"""
@@ -10767,19 +10890,69 @@ class InstagramAccountCreator2025:
             return None
     
     async def _get_initial_csrf(self, session_id: str) -> Optional[str]:
-        """Dapatkan initial CSRF token"""
+        """
+        Get initial CSRF token with enhanced browser simulation.
+        
+        This method properly simulates a real browser visiting the signup page,
+        with correct headers, referer chain, and cookie handling.
+        """
         print(f"{cyan}🛡️   Getting initial CSRF token...{reset}")
         
         try:
+            session = self.session_manager.get_session(session_id)
+            current_cookies = session.get("cookies", {}) if session else {}
+            
+            # Build proper browser-like headers
+            ip_config = session.get("ip_config", {}) if session else {}
+            country_code = ip_config.get("country_code", "US")
+            
+            locale_map = {
+                "US": "en-US", "CA": "en-CA", "GB": "en-GB", "AU": "en-AU",
+                "DE": "de-DE", "FR": "fr-FR", "IT": "it-IT", "ES": "es-ES",
+                "BR": "pt-BR", "MX": "es-MX", "AR": "es-AR", "ID": "id-ID",
+                "IN": "en-IN", "JP": "ja-JP", "KR": "ko-KR", "TH": "th-TH",
+                "VN": "vi-VN", "PH": "en-PH", "MY": "ms-MY", "SG": "en-SG",
+                "AE": "ar-AE", "SA": "ar-SA", "TR": "tr-TR", "RU": "ru-RU",
+                "NL": "nl-NL", "PL": "pl-PL", "NZ": "en-NZ"
+            }
+            accept_language = locale_map.get(country_code, "en-US") + ",en;q=0.9"
+            
+            # Chrome version for consistency
+            chrome_major = random.choice([140, 141, 142, 143])
+            
+            # Platform selection
+            platforms = [
+                {"platform": "macOS", "os_detail": "Macintosh; Intel Mac OS X 10_15_7"},
+                {"platform": "Windows", "os_detail": "Windows NT 10.0; Win64; x64"},
+            ]
+            selected_platform = random.choice(platforms)
+            
+            headers = {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": accept_language,
+                "Cache-Control": "max-age=0",
+                "Connection": "keep-alive",
+                "Host": "www.instagram.com",
+                "Sec-Ch-Ua": f'"Chromium";v="{chrome_major}", "Google Chrome";v="{chrome_major}", "Not_A Brand";v="99"',
+                "Sec-Ch-Ua-Mobile": "?0",
+                "Sec-Ch-Ua-Platform": f'"{selected_platform["platform"]}"',
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "same-origin",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1",
+                "User-Agent": f"Mozilla/5.0 ({selected_platform['os_detail']}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_major}.0.0.0 Safari/537.36",
+                "Referer": "https://www.instagram.com/"
+            }
+            
             # Visit Instagram signup page
             response = await self.request_orchestrator.make_request(
                 session_id=session_id,
                 method="GET",
                 url="https://www.instagram.com/accounts/emailsignup/",
-                headers={
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
-                }
+                headers=headers,
+                cookies=current_cookies
             )
             
             if response.get("status") == 200:
@@ -11190,9 +11363,22 @@ class InstagramAccountCreator2025:
     async def _create_instagram_account(self, session_id: str, email: str, 
                                       username: str, password: str, 
                                       signup_code: str) -> bool:
-        """Create Instagram account dengan semua perbaikan"""
+        """
+        Create Instagram account with comprehensive anti-detection measures.
+        
+        This method implements multiple techniques to avoid checkpoint/suspend:
+        1. Human-like timing between requests
+        2. Proper header and cookie chain
+        3. IP rotation on failure
+        4. Extended cooldowns
+        """
         
         max_ip_retries = 3
+        
+        # Add human-like delay before account creation (thinking time)
+        think_time = random.uniform(2.0, 5.0)
+        print(f"{cyan}    Simulating form review time ({think_time:.1f}s)...{reset}")
+        await asyncio.sleep(think_time)
         
         for ip_attempt in range(max_ip_retries):
             print(f"{cyan}    IP Attempt {ip_attempt + 1}/{max_ip_retries}{reset}")
@@ -11211,11 +11397,15 @@ class InstagramAccountCreator2025:
                         session["ip_config"] = new_ip_config
                         session["headers"] = {**session.get("headers", {}), **new_ip_config.get("headers", {})}
                 
-                # Cooldown sebelum attempt baru
-                if ip_attempt > 0:
-                    cooldown = random.uniform(15, 30)
-                    print(f"{kuning}    Cooldown {cooldown:.1f}s before new IP attempt{reset}")
-                    await asyncio.sleep(cooldown)
+                # Extended cooldown before retry with new IP
+                cooldown = random.uniform(25, 45)  # Increased from 15-30
+                print(f"{kuning}    Extended cooldown {cooldown:.1f}s before new IP attempt{reset}")
+                await asyncio.sleep(cooldown)
+                
+                # Re-establish session by visiting signup page again
+                print(f"{cyan}    Re-establishing session...{reset}")
+                await self._get_initial_csrf(session_id)
+                await asyncio.sleep(random.uniform(1.5, 3.0))
             
             # Get session dengan headers terkini
             session = self.session_manager.get_session_with_headers(session_id)
