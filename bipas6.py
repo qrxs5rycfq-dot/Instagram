@@ -7880,122 +7880,64 @@ class AdvancedSessionManager2025:
                               behavior_profile: Dict[str, Any],
                               ip_config: Dict[str, Any],
                               webrtc_fingerprint: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
-        """Build complete headers with ALL Instagram required headers.
+        """Build complete headers matching real Instagram web browser traffic.
         
-        This method generates headers that match real Instagram mobile app
-        traffic, including locale, pigeon, bloks, bandwidth, and Facebook
-        cross-app tracking headers.
+        This method generates headers that match real Instagram desktop web
+        browser traffic, NOT mobile app traffic. Mobile app headers are 
+        detected as suspicious and cause checkpoints.
         """
         # Start with IP config headers
         headers = ip_config.get("headers", {}).copy()
         
-        # Generate required Instagram IDs
-        pigeon_session_id = self._generate_pigeon_session_id()
-        bloks_version_id = self._generate_bloks_version_id()
-        
-        # Get device and location info
-        device_info = fingerprint.get("device", {}) if fingerprint else {}
+        # Get location info for Accept-Language
         location_info = fingerprint.get("location", {}) if fingerprint else {}
-        browser_info = fingerprint.get("browser", {}) if fingerprint else {}
-        os_info = fingerprint.get("os", {}) if fingerprint else {}
+        locale = location_info.get("locale", "id_ID")
         
-        # Generate bandwidth simulation (realistic for mobile/wifi)
-        connection_type = ip_config.get("connection_type", "mobile")
-        if connection_type == "mobile":
-            bandwidth_speed = random.randint(5000, 50000)  # 5-50 Mbps for mobile
-            bandwidth_bytes = random.randint(1000000, 10000000)  # 1-10 MB
-            bandwidth_time = random.randint(100, 1000)  # 100ms - 1s
-        else:
-            bandwidth_speed = random.randint(50000, 500000)  # 50-500 Mbps for wifi
-            bandwidth_bytes = random.randint(5000000, 50000000)  # 5-50 MB
-            bandwidth_time = random.randint(50, 500)  # 50ms - 500ms
+        # Generate Chrome version
+        chrome_major = random.choice([140, 141, 142, 143])
+        chrome_full = f"{chrome_major}.0.{random.randint(7000, 7999)}.{random.randint(100, 200)}"
         
-        # ===== COMPLETE INSTAGRAM REQUIRED HEADERS =====
+        # Platform choices (desktop only - mobile causes checkpoint!)
+        platforms = [
+            {"platform": "macOS", "platform_version": f"{random.randint(24, 26)}.0.{random.randint(0, 2)}", "ua_platform": "Macintosh; Intel Mac OS X 10_15_7"},
+            {"platform": "Windows", "platform_version": f"{random.randint(10, 15)}.0.0", "ua_platform": "Windows NT 10.0; Win64; x64"},
+        ]
+        selected_platform = random.choice(platforms)
+        
+        # Generate Instagram AJAX build ID
+        ig_ajax_id = random.choice(["1029952363", "1029951234", "1029950123", "1029948765"])
+        
+        # ===== DESKTOP WEB BROWSER HEADERS (NOT MOBILE APP) =====
         headers.update({
-            # Browser/Device Headers
-            "User-Agent": browser_info.get("user_agent", "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Mobile Safari/537.36"),
+            # User-Agent - Desktop Chrome
+            "User-Agent": f"Mozilla/5.0 ({selected_platform['ua_platform']}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_major}.0.0.0 Safari/537.36",
             "Accept": "*/*",
-            "Accept-Language": browser_info.get("accept_language", "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"),
-            "Accept-Encoding": "gzip, deflate, br, zstd",
+            "Accept-Language": self._get_accept_language_for_locale(locale) if hasattr(self, '_get_accept_language_for_locale') else "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br",
             
-            # Security Headers
-            "Sec-CH-UA": browser_info.get("sec_ch_ua", '"Chromium";v="135", "Not-A.Brand";v="99", "Google Chrome";v="135"'),
-            "Sec-CH-UA-Mobile": browser_info.get("sec_ch_ua_mobile", "?1"),
-            "Sec-CH-UA-Platform": browser_info.get("sec_ch_ua_platform", '"Android"'),
-            "Sec-CH-UA-Platform-Version": os_info.get("version", "14"),
-            "Sec-CH-UA-Full-Version-List": '"Chromium";v="135.0.0.0", "Not-A.Brand";v="99.0.0.0", "Google Chrome";v="135.0.0.0"',
-            "Sec-CH-Prefers-Color-Scheme": "dark",
-            "Sec-CH-Prefers-Reduced-Motion": "no-preference",
+            # Security Headers (Desktop format)
+            "Sec-Ch-Ua-Full-Version-List": f'"Chromium";v="{chrome_full}", "Google Chrome";v="{chrome_full}", "Not_A Brand";v="99.0.0.0"',
+            "Sec-Ch-Ua-Platform": f'"{selected_platform["platform"]}"',
+            "Sec-Ch-Ua": f'"Chromium";v="{chrome_major}", "Google Chrome";v="{chrome_major}", "Not_A Brand";v="99"',
+            "Sec-Ch-Ua-Model": '""',  # Empty for desktop
+            "Sec-Ch-Ua-Mobile": "?0",  # Desktop = ?0
+            "Sec-Ch-Ua-Platform-Version": f'"{selected_platform["platform_version"]}"',
+            "Sec-Ch-Prefers-Color-Scheme": "dark",
             "Sec-Fetch-Dest": "empty",
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Site": "same-origin",
             
-            # ===== INSTAGRAM SPECIFIC HEADERS (REQUIRED) =====
-            # Locale Headers
-            "X-IG-App-Locale": location_info.get("locale", "id_ID"),
-            "X-IG-Device-Locale": location_info.get("locale", "id_ID"),
-            "X-IG-Mapped-Locale": location_info.get("locale", "id_ID"),
-            
-            # Pigeon Headers (Session tracking)
-            "X-Pigeon-Session-Id": pigeon_session_id,
-            "X-Pigeon-Rawclienttime": str(int(time.time() * 1000) / 1000),
-            
-            # Bloks Headers (Feature flags)
-            "X-Bloks-Version-Id": bloks_version_id,
-            "X-Bloks-Is-Layout-RTL": "false",
-            "X-Bloks-Is-Panorama-Enabled": "true",
-            
-            # Bandwidth Headers (Connection quality)
-            "X-IG-Bandwidth-Speed-KBPS": str(bandwidth_speed),
-            "X-IG-Bandwidth-TotalBytes-B": str(bandwidth_bytes),
-            "X-IG-Bandwidth-TotalTime-MS": str(bandwidth_time),
-            
-            # Facebook Headers (Cross-app tracking)
-            "X-FB-HTTP-Engine": "Liger",
-            "X-FB-Client-IP": "True",
-            "X-FB-Server-Cluster": "True",
-            "X-FB-Connection-Type": connection_type.upper(),
-            "X-FB-Friendly-Name": "PolarisPostActionLoadPostQueryQuery",
-            
-            # Instagram Core Headers
-            "X-IG-App-ID": "936619743392459",  # Instagram Web App ID
-            "X-IG-WWW-Claim": "0",  # Will be updated after first response
-            "X-Instagram-AJAX": "1",
-            "X-ASBD-ID": "129477",
+            # Instagram Core Headers (Web only)
+            "X-Ig-App-Id": "936619743392459",
             "X-Requested-With": "XMLHttpRequest",
+            "X-Instagram-Ajax": ig_ajax_id,
+            "X-Asbd-Id": random.choice(["359341", "359340", "359339"]),
+            "X-Ig-Www-Claim": "0",
             
-            # Device Headers
-            "X-IG-Device-ID": device_info.get("identifiers", {}).get("device_id", ""),
-            "X-IG-Android-ID": device_info.get("identifiers", {}).get("android_id", ""),
-            "X-IG-Family-Device-ID": str(uuid.uuid4()),
-            "X-MID": "",  # Will be set after cookie is received
-            
-            # Connection Headers
-            "X-IG-Connection-Type": "WIFI" if connection_type == "wifi" else "CELL",
-            "X-IG-Connection-Speed": f"{bandwidth_speed}kbps",
-            "X-IG-Capabilities": "3brTvwM=",
-            
-            # Viewport Headers
-            "X-Device-Memory": str(device_info.get("hardware", {}).get("ram", 8)),
-            "X-Viewport-Width": str(browser_info.get("viewport", {}).get("width", 1080)),
-            "X-Viewport-Height": str(browser_info.get("viewport", {}).get("height", 2340)),
-            
-            # Request Headers
+            # Standard Headers
             "Origin": "https://www.instagram.com",
-            "Referer": "https://www.instagram.com/",
             "Priority": "u=1, i",
         })
-        
-        # Add WebRTC fingerprint headers
-        if webrtc_fingerprint:
-            headers.update({
-                "X-WebRTC-Fingerprint": webrtc_fingerprint.get("fingerprint_id", ""),
-                "X-WebGL-Renderer": webrtc_fingerprint.get("webgl", {}).get("renderer", "")[:50],
-                "X-WebGL-Vendor": webrtc_fingerprint.get("webgl", {}).get("vendor", "")[:50],
-            })
-        
-        # Add timestamp
-        headers["X-Timestamp"] = str(int(time.time() * 1000))
         
         return headers
     
@@ -11323,76 +11265,79 @@ class InstagramAccountCreator2025:
             # Generate fresh pigeon session ID for this request
             pigeon_session_id = f"UFS-{str(uuid.uuid4()).upper()}-{random.randint(100000000, 999999999)}"
             
-            # Pre-calculate connection values
-            connection_type_header = "WIFI" if ip_config.get("connection_type") == "wifi" else "CELL"
-            bandwidth_speed = random.randint(5000, 50000)
+            # Generate Chrome version for consistency
+            chrome_major = random.choice([140, 141, 142, 143])
+            chrome_full = f"{chrome_major}.0.{random.randint(7000, 7999)}.{random.randint(100, 200)}"
             
-            # **HEADERS LENGKAP dengan semua Instagram required headers**
+            # Generate Instagram AJAX build ID (numeric, changes with each Instagram update)
+            ig_ajax_build_ids = [
+                "1029952363", "1029951234", "1029950123", "1029948765",
+                "1029947654", "1029946543", "1029945432", "1029944321"
+            ]
+            ig_ajax_id = random.choice(ig_ajax_build_ids)
+            
+            # Generate X-ASBD-ID (Instagram internal tracking)
+            x_asbd_ids = ["359341", "359340", "359339", "359338", "359337"]
+            x_asbd_id = random.choice(x_asbd_ids)
+            
+            # Platform choices (desktop platforms only - mobile headers cause checkpoint!)
+            platforms = [
+                {"platform": "macOS", "platform_version": f"{random.randint(24, 26)}.0.{random.randint(0, 2)}"},
+                {"platform": "Windows", "platform_version": f"{random.randint(10, 15)}.0.0"},
+            ]
+            selected_platform = random.choice(platforms)
+            
+            # Generate datr cookie if not present (browser fingerprint cookie)
+            cookies = session.get("cookies", {})
+            if "datr" not in cookies:
+                datr = ''.join(random.choices(string.ascii_letters + string.digits + "_-", k=24))
+                cookies["datr"] = datr
+            
+            # **HEADERS MATCHING REAL INSTAGRAM WEB BROWSER** (from provided sample)
             headers = {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Accept": "*/*",
-                "Accept-Language": self._get_accept_language_for_locale(locale),
-                "Accept-Encoding": "gzip, deflate, br",
-                
-                # CSRF and Authentication
-                "X-CSRFToken": session.get("tokens", {}).get("csrftoken", ""),
-                "X-Instagram-AJAX": "1",
-                "X-IG-WWW-Claim": session.get("ig_www_claim", "0"),
-                "X-Web-Session-Id": extra_session_id,
-                
-                # ===== CRITICAL INSTAGRAM HEADERS TO PREVENT CHECKPOINT =====
-                # Locale Headers (must match IP country)
-                "X-IG-App-Locale": locale,
-                "X-IG-Device-Locale": locale,
-                "X-IG-Mapped-Locale": locale,
-                
-                # Pigeon Headers (session tracking - critical for anti-checkpoint)
-                "X-Pigeon-Session-Id": pigeon_session_id,
-                "X-Pigeon-Rawclienttime": str(time.time()),
-                
-                # Bloks Headers (feature flags) - using realistic static version ID
-                "X-Bloks-Version-Id": "5f5dd165df7c12e48d0afc3e4cb25f3fadf1f38e7829b1d1dd90cf28ef0f5c79",
-                "X-Bloks-Is-Layout-RTL": "false",
-                "X-Bloks-Is-Panorama-Enabled": "true",
-                
-                # Device and App Headers
-                "X-IG-App-ID": "936619743392459",
-                "X-IG-Device-ID": session.get("device_id", ""),
-                "X-IG-Android-ID": session.get("fingerprint", {}).get("device", {}).get("identifiers", {}).get("android_id", ""),
-                "X-IG-Family-Device-ID": str(uuid.uuid4()),
-                "X-MID": session.get("cookies", {}).get("mid", ""),
-                
-                # Connection Headers
-                "X-IG-Connection-Type": connection_type_header,
-                "X-IG-Connection-Speed": f"{bandwidth_speed}kbps",
-                "X-IG-Bandwidth-Speed-KBPS": str(bandwidth_speed),
-                "X-IG-Bandwidth-TotalBytes-B": str(random.randint(1000000, 10000000)),
-                "X-IG-Bandwidth-TotalTime-MS": str(random.randint(100, 1000)),
-                "X-IG-Capabilities": "3brTvwM=",
-                
-                # Facebook Cross-App Headers
-                "X-FB-HTTP-Engine": "Liger",
-                "X-FB-Client-IP": "True",
-                "X-FB-Server-Cluster": "True",
-                "X-FB-Connection-Type": connection_type_header,
-                
-                # Security Headers
-                "Sec-CH-UA": '"Chromium";v="135", "Not-A.Brand";v="99", "Google Chrome";v="135"',
-                "Sec-CH-UA-Mobile": "?1",
-                "Sec-CH-UA-Platform": '"Android"',
-                "Sec-CH-UA-Platform-Version": "14",
-                "Sec-CH-Prefers-Color-Scheme": "dark",
+                # ===== SECURITY HEADERS (Sec-Ch-*) - MUST BE FIRST =====
+                "Sec-Ch-Ua-Full-Version-List": f'"Chromium";v="{chrome_full}", "Google Chrome";v="{chrome_full}", "Not_A Brand";v="99.0.0.0"',
+                "Sec-Ch-Ua-Platform": f'"{selected_platform["platform"]}"',
+                "Sec-Ch-Ua": f'"Chromium";v="{chrome_major}", "Google Chrome";v="{chrome_major}", "Not_A Brand";v="99"',
+                "Sec-Ch-Ua-Model": '""',  # Empty for desktop
+                "Sec-Ch-Ua-Mobile": "?0",  # Desktop = ?0, Mobile = ?1
+                "Sec-Ch-Ua-Platform-Version": f'"{selected_platform["platform_version"]}"',
+                "Sec-Ch-Prefers-Color-Scheme": "dark",
                 "Sec-Fetch-Site": "same-origin",
                 "Sec-Fetch-Mode": "cors",
                 "Sec-Fetch-Dest": "empty",
                 
-                # Request Headers
+                # ===== INSTAGRAM SPECIFIC HEADERS =====
+                "X-Ig-App-Id": "936619743392459",  # Instagram Web App ID
                 "X-Requested-With": "XMLHttpRequest",
-                "X-ASBD-ID": "129477",
-                "Priority": "u=1, i",
+                "X-Instagram-Ajax": ig_ajax_id,  # Numeric build ID
+                "X-Csrftoken": session.get("tokens", {}).get("csrftoken", ""),
+                "X-Web-Session-Id": extra_session_id,
+                "X-Asbd-Id": x_asbd_id,
+                
+                # X-Ig-Www-Claim - format: "hmac.AR..." or "0" for new sessions
+                "X-Ig-Www-Claim": session.get("ig_www_claim", "0"),
+                
+                # ===== STANDARD HTTP HEADERS =====
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "*/*",
+                "Accept-Language": self._get_accept_language_for_locale(locale),
+                "Accept-Encoding": "gzip, deflate, br",
                 "Origin": "https://www.instagram.com",
-                "Referer": "https://www.instagram.com/accounts/emailsignup/"
+                "Referer": "https://www.instagram.com/accounts/emailsignup/",
+                "Priority": "u=1, i",
+                
+                # ===== USER AGENT (Desktop Chrome) =====
+                "User-Agent": f"Mozilla/5.0 ({selected_platform['platform'] if selected_platform['platform'] == 'Windows' else 'Macintosh'}; {'Intel Mac OS X 10_15_7' if selected_platform['platform'] == 'macOS' else 'Windows NT 10.0; Win64; x64'}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_major}.0.0.0 Safari/537.36",
             }
+            
+            # NOTE: Removed mobile-specific headers that cause checkpoint:
+            # - X-IG-App-Locale, X-IG-Device-Locale, X-IG-Mapped-Locale (mobile app)
+            # - X-Pigeon-Session-Id, X-Pigeon-Rawclienttime (mobile app)
+            # - X-Bloks-Version-Id, X-Bloks-Is-Layout-RTL (mobile app)
+            # - X-IG-Device-ID, X-IG-Android-ID (mobile app)
+            # - X-IG-Connection-Type, X-IG-Bandwidth-* (mobile app)
+            # - X-FB-HTTP-Engine, X-FB-Client-IP (mobile app)
             
             # Add session headers (don't override critical ones)
             session_headers = session.get("headers", {})
@@ -11433,7 +11378,29 @@ class InstagramAccountCreator2025:
                             continue
                         
                         data = json.loads(body.decode('utf-8', errors='ignore'))
-                        # print(f"{cyan}    Response: {json.dumps(data, indent=2)[:300]}...{reset}")
+                        print(f"{cyan}    Response: {json.dumps(data, indent=2)[:300]}...{reset}")
+                        
+                        # **CHECK FOR CHECKPOINT/SUSPENDED FIRST** - critical fix
+                        if data.get("message") == "checkpoint_required" or data.get("checkpoint_url"):
+                            checkpoint_url = data.get("checkpoint_url", "")
+                            if "suspended" in checkpoint_url.lower():
+                                print(f"{merah}    Account immediately suspended!{reset}")
+                                print(f"{merah}    Checkpoint URL: {checkpoint_url}{reset}")
+                                # Don't try with same IP - it's burned
+                                break  # Exit endpoint loop, try with new IP
+                            else:
+                                print(f"{kuning}    Checkpoint required: {checkpoint_url}{reset}")
+                                # Could be verification checkpoint, log and continue
+                                break
+                        
+                        # Check for failed status
+                        if data.get("status") == "fail":
+                            error_msg = data.get("message", "Unknown error")
+                            print(f"{merah}    Instagram returned fail: {error_msg}{reset}")
+                            # Analyze error and decide whether to retry
+                            if "spam" in error_msg.lower() or "block" in error_msg.lower():
+                                break  # IP is burned
+                            continue  # Try next endpoint
                         
                         if data.get("account_created") == True:
                             self.session_manager.update_session(session_id, {
