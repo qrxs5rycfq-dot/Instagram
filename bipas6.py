@@ -8732,14 +8732,9 @@ class RequestOrchestrator2025:
         if "user_agent" in metadata and metadata["user_agent"]:
             all_headers["User-Agent"] = metadata["user_agent"]
         
-        # Update connection headers berdasarkan session - FIXED
+        # NOTE: Removed mobile-specific headers (X-IG-Connection-Type, X-IG-Network-Type)
+        # These are mobile app headers and cause 400 errors for web browser requests
         connection_type = metadata.get("connection_type", "mobile")
-        if connection_type == "mobile":
-            all_headers["X-IG-Connection-Type"] = "CELL"
-            all_headers["X-IG-Network-Type"] = "4G"
-        else:
-            all_headers["X-IG-Connection-Type"] = "WIFI"
-            all_headers["X-IG-Network-Type"] = "WIFI"
         
         # Create request object
         request_id = f"req_{int(time.time())}_{random.randint(1000, 9999)}"
@@ -9144,23 +9139,42 @@ class RequestOrchestrator2025:
         headers = request_data["headers"]
         data = request_data["data"]
         
-        # Add session headers
-        session_headers = session.get("headers", {})
-        all_headers = {**session_headers, **headers}
-
-        all_headers.update({
-            "Priority": "u=1, i",
-            "Sec-Ch-Prefers-Color-Scheme": "dark",
-            "X-Web-Session-Id": session.get("extra_session_id", ""),
-            "X-IG-WWW-Claim": session.get("ig_www_claim", "0"),
-            "Sec-Ch-Ua-Platform-Version": "26.0.1",
-            "X-Requested-With": "XMLHttpRequest"
-        })
+        # IMPORTANT: Use request headers directly, don't override with session headers
+        # The calling code (_create_instagram_account) has already built complete headers
+        all_headers = headers.copy()
+        
+        # Only add X-Web-Session-Id if not already present
+        if "X-Web-Session-Id" not in all_headers and session.get("extra_session_id"):
+            all_headers["X-Web-Session-Id"] = session.get("extra_session_id", "")
+        
+        # NOTE: Removed hardcoded header updates that were causing conflicts:
+        # - X-IG-WWW-Claim (should match the request's X-Ig-Www-Claim)
+        # - Sec-Ch-Ua-Platform-Version (already in request headers)
+        # - etc.
         
         # Combine cookies
         session_cookies = session.get("cookies", {})
         request_cookies = request_data.get("cookies", {})
         all_cookies = {**session_cookies, **request_cookies}
+        
+        # Build Cookie header string in proper format
+        if all_cookies:
+            # Sort cookies in the order Instagram expects: mid, ig_did, datr, wd, ig_nrcb, ps_l, ps_n, rur, csrftoken
+            cookie_order = ["mid", "ig_did", "datr", "wd", "ig_nrcb", "ps_l", "ps_n", "rur", "csrftoken"]
+            ordered_cookies = []
+            
+            # Add cookies in order first
+            for key in cookie_order:
+                if key in all_cookies:
+                    ordered_cookies.append(f"{key}={all_cookies[key]}")
+            
+            # Add remaining cookies
+            for key, value in all_cookies.items():
+                if key not in cookie_order:
+                    ordered_cookies.append(f"{key}={value}")
+            
+            # Set Cookie header
+            all_headers["Cookie"] = "; ".join(ordered_cookies)
         
         # print(f"{cyan}    Real request: {method} {url}{reset}")
         
@@ -9168,15 +9182,11 @@ class RequestOrchestrator2025:
             # Gunakan aiohttp untuk async HTTP requests
             timeout = aiohttp.ClientTimeout(total=30)
             
+            # Don't use cookie_jar since we're setting Cookie header directly
             async with aiohttp.ClientSession(
                 headers=all_headers,
-                timeout=timeout,
-                cookie_jar=aiohttp.CookieJar()
+                timeout=timeout
             ) as client_session:
-                
-                # Set cookies
-                for name, value in all_cookies.items():
-                    client_session.cookie_jar.update_cookies({name: value})
                 
                 start_time = time.time()
                 
@@ -9200,8 +9210,17 @@ class RequestOrchestrator2025:
                 
                 response_time = time.time() - start_time
                 
-                # Get cookies from response
+                # Get cookies from response headers (Set-Cookie)
                 response_cookies = {}
+                for key, value in response_headers.items():
+                    if key.lower() == 'set-cookie':
+                        # Parse Set-Cookie header
+                        cookie_parts = value.split(';')[0]  # Get just name=value
+                        if '=' in cookie_parts:
+                            cookie_name, cookie_value = cookie_parts.split('=', 1)
+                            response_cookies[cookie_name.strip()] = cookie_value.strip()
+                
+                # Also check if using aiohttp's cookie_jar (still available even without init)
                 for cookie in client_session.cookie_jar:
                     response_cookies[cookie.key] = cookie.value
                 
