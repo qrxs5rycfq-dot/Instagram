@@ -10399,56 +10399,75 @@ class InstagramAccountCreator2025:
             return None
     
     def _get_behavior_type_for_country(self, country_code: str, connection_type: str) -> str:
-        """Get appropriate behavior type based on country"""
-        # Define behavior types by region
-        behavior_map = {
-            # Asian countries - tend to use mobile more
+        """Get appropriate behavior type based on country - uses existing profile types only"""
+        # Map countries to existing Indonesian behavior profiles
+        # All countries use the base Indonesian profiles as they contain the same behavioral patterns
+        # The profiles are just templates for typing speed, mouse movement, etc.
+        
+        existing_profiles = [
+            "casual_indonesian", 
+            "tech_savvy_indonesian", 
+            "young_adult_indonesian", 
+            "professional_indonesian"
+        ]
+        
+        # Country preference mapping to existing profiles
+        country_preference = {
+            # Asian countries - casual/young adult focused
             "ID": ["casual_indonesian", "tech_savvy_indonesian", "young_adult_indonesian"],
-            "IN": ["casual_indian", "tech_savvy_indian", "young_adult"],
-            "JP": ["casual_japanese", "tech_savvy", "professional"],
-            "KR": ["casual_korean", "tech_savvy", "young_adult"],
-            "TH": ["casual_asian", "young_adult", "social_media_heavy"],
-            "VN": ["casual_asian", "young_adult", "mobile_heavy"],
-            "PH": ["casual_asian", "social_media_heavy", "young_adult"],
-            "MY": ["casual_asian", "tech_savvy", "young_adult"],
-            "SG": ["professional", "tech_savvy", "urban_user"],
+            "IN": ["casual_indonesian", "tech_savvy_indonesian", "young_adult_indonesian"],
+            "JP": ["tech_savvy_indonesian", "professional_indonesian"],
+            "KR": ["tech_savvy_indonesian", "young_adult_indonesian"],
+            "TH": ["casual_indonesian", "young_adult_indonesian"],
+            "VN": ["casual_indonesian", "young_adult_indonesian"],
+            "PH": ["casual_indonesian", "young_adult_indonesian"],
+            "MY": ["casual_indonesian", "tech_savvy_indonesian"],
+            "SG": ["tech_savvy_indonesian", "professional_indonesian"],
             
-            # Western countries
-            "US": ["casual_american", "tech_savvy", "professional", "young_adult"],
-            "CA": ["casual_american", "tech_savvy", "professional"],
-            "GB": ["casual_british", "professional", "urban_user"],
-            "DE": ["professional_german", "tech_savvy", "careful_user"],
-            "FR": ["casual_french", "professional", "urban_user"],
-            "IT": ["casual_italian", "social_media_heavy", "young_adult"],
-            "ES": ["casual_spanish", "social_media_heavy", "young_adult"],
-            "NL": ["tech_savvy", "professional", "urban_user"],
-            "PL": ["casual_european", "young_adult", "tech_savvy"],
+            # Western countries - more professional/tech savvy
+            "US": ["tech_savvy_indonesian", "professional_indonesian", "young_adult_indonesian"],
+            "CA": ["tech_savvy_indonesian", "professional_indonesian"],
+            "GB": ["professional_indonesian", "tech_savvy_indonesian"],
+            "DE": ["professional_indonesian", "tech_savvy_indonesian"],
+            "FR": ["professional_indonesian", "casual_indonesian"],
+            "IT": ["casual_indonesian", "young_adult_indonesian"],
+            "ES": ["casual_indonesian", "young_adult_indonesian"],
+            "NL": ["tech_savvy_indonesian", "professional_indonesian"],
+            "PL": ["casual_indonesian", "young_adult_indonesian"],
             
-            # Latin America
-            "MX": ["casual_latin", "social_media_heavy", "young_adult"],
-            "BR": ["casual_brazilian", "social_media_heavy", "young_adult"],
-            "AR": ["casual_latin", "social_media_heavy", "urban_user"],
+            # Latin America - social/casual focused
+            "MX": ["casual_indonesian", "young_adult_indonesian"],
+            "BR": ["casual_indonesian", "young_adult_indonesian"],
+            "AR": ["casual_indonesian", "young_adult_indonesian"],
             
-            # Other
-            "AU": ["casual_australian", "tech_savvy", "professional"],
-            "NZ": ["casual_australian", "tech_savvy", "urban_user"],
-            "TR": ["casual_turkish", "social_media_heavy", "young_adult"],
-            "RU": ["casual_russian", "tech_savvy", "urban_user"],
-            "AE": ["professional", "tech_savvy", "urban_user"],
-            "SA": ["casual_arab", "social_media_heavy", "young_adult"]
+            # Other regions
+            "AU": ["tech_savvy_indonesian", "professional_indonesian"],
+            "NZ": ["tech_savvy_indonesian", "professional_indonesian"],
+            "TR": ["casual_indonesian", "young_adult_indonesian"],
+            "RU": ["tech_savvy_indonesian", "casual_indonesian"],
+            "AE": ["professional_indonesian", "tech_savvy_indonesian"],
+            "SA": ["casual_indonesian", "young_adult_indonesian"]
         }
         
-        # Get behavior types for country
-        types = behavior_map.get(country_code, ["casual", "tech_savvy", "young_adult"])
+        # Get preferred profiles for country, default to all existing profiles
+        preferred_profiles = country_preference.get(country_code, existing_profiles)
         
         # Filter by connection type
         if connection_type == "wifi":
-            # WiFi users tend to be more professional/careful
-            preferred = [t for t in types if any(p in t for p in ["professional", "tech_savvy", "careful", "urban"])]
-            if preferred:
-                return random.choice(preferred)
+            # WiFi users tend to be more professional/tech savvy
+            wifi_preferred = ["tech_savvy_indonesian", "professional_indonesian"]
+            matching = [p for p in preferred_profiles if p in wifi_preferred]
+            if matching:
+                return random.choice(matching)
+        else:
+            # Mobile users - casual/young adult
+            mobile_preferred = ["casual_indonesian", "young_adult_indonesian"]
+            matching = [p for p in preferred_profiles if p in mobile_preferred]
+            if matching:
+                return random.choice(matching)
         
-        return random.choice(types)
+        # Fallback to any preferred profile
+        return random.choice(preferred_profiles)
 
     async def rotate_ip_with_fingerprint(self, session_id: str) -> bool:
         """Rotate IP dengan regenerate SEMUA fingerprints - FIXED"""
