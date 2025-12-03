@@ -1459,35 +1459,53 @@ class AdvancedIPStealthSystem2025:
             self._generate_fresh_ip_batch_enhanced()
     
     def _generate_fresh_ip_batch_enhanced(self):
-        """Generate fresh batch of IPs dengan enhanced algorithm"""
-        print(f"{cyan}🌐  Generating enhanced IP batch...{reset}")
+        """Generate fresh batch of IPs using global ISP database"""
+        print(f"{cyan}🌐  Generating enhanced global IP batch...{reset}")
         
         new_ips = []
-        isps = ["telkomsel", "indosat", "xl", "tri", "smartfren", "biznet", "cbn"]
         
-        for isp in isps:
+        # Use global ISP database with weighted country selection
+        # Generate IPs from multiple countries based on weights
+        num_ips_to_generate = 20  # Generate batch of 20 IPs
+        
+        for _ in range(num_ips_to_generate):
             try:
-                print(f"{cyan}    Generating {isp} IPs...{reset}")
-                isp_ips = self._generate_dynamic_isp_ips(isp)
+                # Get random ISP from global database with weighted selection
+                country_code, isp_name, isp_config = self.get_random_global_isp()
                 
-                if isp_ips:
-                    # Validasi setiap IP
-                    validated_ips = []
-                    for ip_info in isp_ips:
-                        validation = self.validator.validate(ip_info["ip"], strict=True)
-                        if validation["valid"] and validation["score"] >= 70:
-                            ip_info["validation_score"] = validation["score"]
-                            ip_info["last_validated"] = time.time()
-                            validated_ips.append(ip_info)
+                print(f"{cyan}    Generating {isp_name} ({country_code}) IP...{reset}")
+                
+                # Generate IP for this ISP
+                ip = self._generate_global_ip(country_code, isp_name, isp_config)
+                
+                if ip and self._validate_ip_format_enhanced(ip):
+                    # Validate IP is not blacklisted
+                    if self._is_ip_blacklisted(ip):
+                        print(f"{kuning}    IP {ip} is blacklisted, skipping...{reset}")
+                        continue
                     
-                    if validated_ips:
-                        new_ips.extend(validated_ips)
-                        print(f"{hijau}    Added {len(validated_ips)} validated {isp} IPs{reset}")
+                    # Create IP profile
+                    ip_info = self._create_global_ip_profile(ip, isp_config, isp_name, country_code)
+                    
+                    # Validate residential
+                    residential_check = self._validate_residential_ip(ip, isp_config)
+                    if not residential_check["is_residential"]:
+                        print(f"{kuning}    IP {ip} failed residential check, skipping...{reset}")
+                        continue
+                    
+                    # Validate with validator
+                    validation = self.validator.validate(ip, strict=True)
+                    if validation["valid"] and validation["score"] >= 70:
+                        ip_info["validation_score"] = validation["score"]
+                        ip_info["last_validated"] = time.time()
+                        ip_info["residential_confidence"] = residential_check["confidence"]
+                        new_ips.append(ip_info)
+                        print(f"{hijau}    Added IP: {ip} ({isp_name}, {country_code}) - Score: {validation['score']}{reset}")
                     else:
-                        print(f"{kuning}    No validated IPs for {isp}{reset}")
+                        print(f"{kuning}    IP {ip} failed validation (score: {validation.get('score', 0)}){reset}")
                         
             except Exception as e:
-                print(f"{merah}    Error generating {isp} IPs: {str(e)[:50]}{reset}")
+                print(f"{merah}    Error generating IP: {str(e)[:50]}{reset}")
                 continue
         
         # Tambahkan ke pool dengan deduplication
@@ -1502,7 +1520,14 @@ class AdvancedIPStealthSystem2025:
                 self.ip_pool.sort(key=lambda x: x.get("timestamp", 0), reverse=True)
                 self.ip_pool = self.ip_pool[:100]
             
-            print(f"{hijau}✅  Added {len(unique_new_ips)} fresh IPs | Total pool: {len(self.ip_pool)}{reset}")
+            print(f"{hijau}✅  Added {len(unique_new_ips)} fresh global IPs | Total pool: {len(self.ip_pool)}{reset}")
+            
+            # Show country distribution
+            country_dist = {}
+            for ip in self.ip_pool:
+                cc = ip.get("country_code", "ID")
+                country_dist[cc] = country_dist.get(cc, 0) + 1
+            print(f"{cyan}    Country distribution: {country_dist}{reset}")
             
             # Update statistics
             avg_health = sum(ip.get("health_score", 0) for ip in self.ip_pool) / len(self.ip_pool)
@@ -1511,45 +1536,272 @@ class AdvancedIPStealthSystem2025:
             print(f"{merah}    No new unique IPs generated{reset}")
             self._generate_emergency_ip_batch()
     
+    def _generate_global_ip(self, country_code: str, isp_name: str, isp_config: Dict[str, Any]) -> Optional[str]:
+        """Generate a valid IP for any global ISP"""
+        try:
+            prefixes = isp_config.get("prefixes", [])
+            if not prefixes:
+                return None
+            
+            prefix = random.choice(prefixes)
+            prefix_parts = prefix.split('.')
+            
+            # Generate remaining octets
+            while len(prefix_parts) < 4:
+                if len(prefix_parts) == 3:
+                    # Last octet - avoid reserved addresses
+                    fourth = random.randint(10, 240)
+                    while fourth in [0, 1, 255, 254, 128]:
+                        fourth = random.randint(10, 240)
+                    prefix_parts.append(str(fourth))
+                else:
+                    prefix_parts.append(str(random.randint(0, 255)))
+            
+            ip = '.'.join(prefix_parts[:4])
+            return ip
+            
+        except Exception as e:
+            print(f"{merah}    Error generating global IP: {e}{reset}")
+            return None
+    
+    def _create_global_ip_profile(self, ip: str, isp_config: Dict[str, Any], isp_name: str, country_code: str) -> Dict[str, Any]:
+        """Create IP profile for global ISP"""
+        cities = isp_config.get("cities", ["Unknown"])
+        city = random.choice(cities)
+        
+        # Get connection type based on ISP
+        connection_type = self._get_connection_type_for_isp(isp_name)
+        network_type = self._get_network_type_for_isp(isp_name, connection_type)
+        
+        # Get latency/jitter from config
+        latency_range = isp_config.get("latency_range", (20, 60))
+        jitter_range = isp_config.get("jitter_range", (2, 10))
+        packet_loss = isp_config.get("packet_loss", (0.1, 0.5))
+        
+        profile = {
+            "ip": ip,
+            "isp": isp_name,
+            "country_code": country_code,
+            "asn": isp_config.get("asn", ""),
+            "as_name": isp_config.get("as_name", ""),
+            "city": city,
+            "connection_type": connection_type,
+            "network_type": network_type,
+            "health_score": random.randint(80, 95),
+            "timestamp": time.time(),
+            "usage_count": 0,
+            "latency": random.uniform(*latency_range),
+            "jitter": random.uniform(*jitter_range),
+            "packet_loss": random.uniform(*packet_loss),
+            "location": {
+                "city": city,
+                "country": country_code,
+                "timezone": self._get_timezone_for_country(country_code)
+            },
+            "isp_info": {
+                "isp": isp_name,
+                "asn": isp_config.get("asn", ""),
+                "as_name": isp_config.get("as_name", "")
+            },
+            "device_fingerprint": self._generate_device_fingerprint_for_ip(isp_name, connection_type),
+            "headers": self._generate_headers_for_global_ip(ip, isp_config, country_code)
+        }
+        
+        return profile
+    
+    def _get_timezone_for_country(self, country_code: str) -> str:
+        """Get timezone for country code"""
+        timezones = {
+            "US": "America/New_York",
+            "CA": "America/Toronto",
+            "MX": "America/Mexico_City",
+            "BR": "America/Sao_Paulo",
+            "AR": "America/Buenos_Aires",
+            "GB": "Europe/London",
+            "DE": "Europe/Berlin",
+            "FR": "Europe/Paris",
+            "IT": "Europe/Rome",
+            "ES": "Europe/Madrid",
+            "NL": "Europe/Amsterdam",
+            "PL": "Europe/Warsaw",
+            "TR": "Europe/Istanbul",
+            "RU": "Europe/Moscow",
+            "IN": "Asia/Kolkata",
+            "JP": "Asia/Tokyo",
+            "KR": "Asia/Seoul",
+            "TH": "Asia/Bangkok",
+            "VN": "Asia/Ho_Chi_Minh",
+            "PH": "Asia/Manila",
+            "MY": "Asia/Kuala_Lumpur",
+            "SG": "Asia/Singapore",
+            "ID": "Asia/Jakarta",
+            "AU": "Australia/Sydney",
+            "NZ": "Pacific/Auckland",
+            "AE": "Asia/Dubai",
+            "SA": "Asia/Riyadh"
+        }
+        return timezones.get(country_code, "UTC")
+    
+    def _generate_headers_for_global_ip(self, ip: str, isp_config: Dict[str, Any], country_code: str) -> Dict[str, str]:
+        """Generate headers appropriate for global IP"""
+        # Get locale based on country
+        locales = {
+            "US": "en_US",
+            "CA": "en_CA",
+            "MX": "es_MX",
+            "BR": "pt_BR",
+            "AR": "es_AR",
+            "GB": "en_GB",
+            "DE": "de_DE",
+            "FR": "fr_FR",
+            "IT": "it_IT",
+            "ES": "es_ES",
+            "NL": "nl_NL",
+            "PL": "pl_PL",
+            "TR": "tr_TR",
+            "RU": "ru_RU",
+            "IN": "en_IN",
+            "JP": "ja_JP",
+            "KR": "ko_KR",
+            "TH": "th_TH",
+            "VN": "vi_VN",
+            "PH": "en_PH",
+            "MY": "ms_MY",
+            "SG": "en_SG",
+            "ID": "id_ID",
+            "AU": "en_AU",
+            "NZ": "en_NZ",
+            "AE": "ar_AE",
+            "SA": "ar_SA"
+        }
+        
+        locale = locales.get(country_code, "en_US")
+        lang = locale.split('_')[0]
+        
+        accept_language_map = {
+            "en": "en-US,en;q=0.9",
+            "de": "de-DE,de;q=0.9,en;q=0.8",
+            "fr": "fr-FR,fr;q=0.9,en;q=0.8",
+            "es": "es-ES,es;q=0.9,en;q=0.8",
+            "pt": "pt-BR,pt;q=0.9,en;q=0.8",
+            "it": "it-IT,it;q=0.9,en;q=0.8",
+            "ja": "ja-JP,ja;q=0.9,en;q=0.8",
+            "ko": "ko-KR,ko;q=0.9,en;q=0.8",
+            "zh": "zh-CN,zh;q=0.9,en;q=0.8",
+            "ru": "ru-RU,ru;q=0.9,en;q=0.8",
+            "ar": "ar-SA,ar;q=0.9,en;q=0.8",
+            "th": "th-TH,th;q=0.9,en;q=0.8",
+            "vi": "vi-VN,vi;q=0.9,en;q=0.8",
+            "id": "id-ID,id;q=0.9,en;q=0.8",
+            "ms": "ms-MY,ms;q=0.9,en;q=0.8",
+            "nl": "nl-NL,nl;q=0.9,en;q=0.8",
+            "pl": "pl-PL,pl;q=0.9,en;q=0.8",
+            "tr": "tr-TR,tr;q=0.9,en;q=0.8"
+        }
+        
+        accept_language = accept_language_map.get(lang, "en-US,en;q=0.9")
+        
+        return {
+            "Accept-Language": accept_language,
+            "X-IG-App-Locale": locale,
+            "X-IG-Device-Locale": locale,
+            "X-IG-Mapped-Locale": locale
+        }
+    
     def _generate_emergency_ip_batch(self):
-        """Generate emergency IP batch ketika semua gagal"""
-        print(f"{merah}🚨  Generating emergency IP batch{reset}")
+        """Generate emergency IP batch using global ISPs when all else fails"""
+        print(f"{merah}🚨  Generating emergency global IP batch{reset}")
         
         emergency_ips = []
         
-        # Generate manual IPs dengan format yang valid
-        manual_prefixes = [
-            ("110.136", "telkomsel"),
-            ("112.215", "indosat"),
-            ("36.86", "xl"),
-            ("116.206", "tri"),
-            ("202.67", "smartfren"),
-            ("103.23", "biznet"),
-            ("114.120", "cbn")
+        # Generate emergency IPs from multiple countries
+        emergency_isps = [
+            # US ISPs
+            ("12.0", "att", "US"),
+            ("66.174", "verizon", "US"),
+            ("172.32", "tmobile", "US"),
+            ("50.128", "comcast", "US"),
+            # European ISPs
+            ("79.64", "bt", "GB"),
+            ("79.192", "dtag", "DE"),
+            ("80.10", "orange_fr", "FR"),
+            # Asian ISPs
+            ("49.40", "jio", "IN"),
+            ("49.96", "ntt_docomo", "JP"),
+            ("49.228", "ais", "TH"),
+            # Indonesian ISPs (fallback)
+            ("110.136", "telkomsel", "ID"),
+            ("112.215", "indosat", "ID"),
+            # Australian ISP
+            ("49.176", "telstra", "AU"),
+            # Middle East ISP
+            ("77.221", "etisalat", "AE")
         ]
         
-        for prefix, isp in manual_prefixes:
-            for _ in range(3):  # 3 IPs per prefix
-                # Generate valid IP
-                third = random.randint(0, 255)
-                fourth = random.randint(10, 240)
-                ip = f"{prefix}.{third}.{fourth}"
-                
-                # Validate format
-                if not self._validate_ip_format_enhanced(ip):
+        for prefix, isp_name, country_code in emergency_isps:
+            for _ in range(2):  # 2 IPs per prefix
+                try:
+                    # Generate valid IP
+                    prefix_parts = prefix.split('.')
+                    while len(prefix_parts) < 4:
+                        if len(prefix_parts) == 3:
+                            fourth = random.randint(10, 240)
+                            prefix_parts.append(str(fourth))
+                        else:
+                            prefix_parts.append(str(random.randint(0, 255)))
+                    
+                    ip = '.'.join(prefix_parts[:4])
+                    
+                    # Validate format
+                    if not self._validate_ip_format_enhanced(ip):
+                        continue
+                    
+                    # Check blacklist
+                    if self._is_ip_blacklisted(ip):
+                        continue
+                    
+                    # Get ISP config from global database
+                    isp_config = self.get_global_isp_config(country_code, isp_name)
+                    if not isp_config:
+                        # Fallback to enhanced config
+                        isp_config = self._get_isp_config_enhanced(isp_name, country_code)
+                    
+                    if isp_config:
+                        ip_info = self._create_global_ip_profile(ip, isp_config, isp_name, country_code)
+                    else:
+                        # Create minimal profile
+                        ip_info = {
+                            "ip": ip,
+                            "isp": isp_name,
+                            "country_code": country_code,
+                            "health_score": 70,
+                            "timestamp": time.time(),
+                            "usage_count": 0,
+                            "connection_type": "mobile",
+                            "location": {"city": "Unknown", "country": country_code},
+                            "isp_info": {"isp": isp_name}
+                        }
+                    
+                    ip_info["emergency"] = True
+                    ip_info["health_score"] = 75  # Lower score for emergency IPs
+                    
+                    emergency_ips.append(ip_info)
+                    print(f"{cyan}      Generated emergency IP: {ip} ({isp_name}, {country_code}){reset}")
+                    
+                except Exception as e:
+                    print(f"{merah}    Error generating emergency IP: {e}{reset}")
                     continue
-                
-                # Create IP info
-                ip_info = self._create_enhanced_ip_profile(ip, self._get_isp_config_enhanced(isp), isp)
-                ip_info["emergency"] = True
-                ip_info["health_score"] = 75  # Lower score untuk emergency IPs
-                
-                emergency_ips.append(ip_info)
-                print(f"{cyan}      Generated emergency IP: {ip} ({isp}){reset}")
         
         if emergency_ips:
-            self.ip_pool = emergency_ips[:25]  # Keep 25 emergency IPs
+            self.ip_pool = emergency_ips[:30]  # Keep 30 emergency IPs
+            
+            # Show country distribution
+            country_dist = {}
+            for ip in self.ip_pool:
+                cc = ip.get("country_code", "ID")
+                country_dist[cc] = country_dist.get(cc, 0) + 1
             print(f"{hijau}✅  Emergency batch generated: {len(self.ip_pool)} IPs{reset}")
+            print(f"{cyan}    Country distribution: {country_dist}{reset}")
         else:
             print(f"{merah}❌  Failed to generate emergency IPs{reset}")
     
@@ -10079,7 +10331,7 @@ class InstagramAccountCreator2025:
             return self._record_failure(attempt_id, f"Unexpected error: {str(e)}")
     
     async def _create_new_session(self) -> Optional[str]:
-        """Buat session baru dengan semua komponen terintegrasi"""
+        """Create new session with global ISP support"""
         try:
             # Determine connection type
             connection_type = self.config.get("connection_type", "auto")
@@ -10089,49 +10341,108 @@ class InstagramAccountCreator2025:
             
             print(f"{cyan}    Creating {connection_type.upper()} session...{reset}")
             
-            # Generate fingerprint berdasarkan connection type
-            fingerprint = self.fingerprint_system.generate_fingerprint(
-                device_type=self.config["device_type"],
-                location=self.config["location"],
-                connection_type=connection_type
-            )
-            
-            # Generate behavior profile
-            if connection_type == "mobile":
-                user_type = random.choice(["casual_indonesian", "tech_savvy_indonesian", "young_adult_indonesian"])
-            else:
-                user_type = random.choice(["professional_indonesian", "casual_indonesian"])
-            
-            behavior_profile = self.behavior_system.generate_behavior_profile(user_type)
-            
-            # Get IP config dengan parameter yang BENAR
+            # Get IP config first to know which country we're using
             ip_config = self.ip_system.get_fresh_ip_config(
                 session_id=None,
                 min_health=80,
-                connection_type=connection_type  # HAPUS parameter ini atau update method
+                connection_type=connection_type
             )
+            
+            # Get country code from IP config
+            country_code = ip_config.get("country_code", ip_config.get("location", {}).get("country", "ID"))
+            city = ip_config.get("location", {}).get("city", "Jakarta")
+            isp = ip_config.get("isp_info", {}).get("isp", ip_config.get("isp", "telkomsel"))
+            
+            print(f"{cyan}    Using ISP: {isp} ({country_code}) - City: {city}{reset}")
+            
+            # Generate fingerprint based on country and connection type
+            fingerprint = self.fingerprint_system.generate_fingerprint(
+                device_type=self.config["device_type"],
+                location=country_code,  # Use country code instead of hardcoded
+                connection_type=connection_type,
+                isp=isp,
+                city=city
+            )
+            
+            # Generate behavior profile based on country
+            user_type = self._get_behavior_type_for_country(country_code, connection_type)
+            behavior_profile = self.behavior_system.generate_behavior_profile(user_type)
             
             # Generate WebRTC/WebGL fingerprint
             webrtc_fingerprint = self.web_system.get_complete_fingerprint(
                 device_type=self.config["device_type"],
                 brand=fingerprint.get("device", {}).get("brand", "Samsung"),
-                connection_type=connection_type  # FIXED
+                connection_type=connection_type
             )
             
-            # Create session dengan semua fingerprints - FIXED
+            # Create session with all fingerprints
             session_id = self.session_manager.create_session(
                 fingerprint=fingerprint,
                 behavior_profile=behavior_profile,
                 ip_config=ip_config,
-                webrtc_fingerprint=webrtc_fingerprint  # FIXED: include WebRTC
+                webrtc_fingerprint=webrtc_fingerprint
             )
             
-            print(f"{hijau}✅  Created new {connection_type.upper()} session: {session_id}{reset}")
+            print(f"{hijau}✅  Created new {connection_type.upper()} session: {session_id} ({country_code}){reset}")
             return session_id
             
         except Exception as e:
             print(f"{merah}❌  Failed to create session: {e}{reset}")
+            import traceback
+            traceback.print_exc()
             return None
+    
+    def _get_behavior_type_for_country(self, country_code: str, connection_type: str) -> str:
+        """Get appropriate behavior type based on country"""
+        # Define behavior types by region
+        behavior_map = {
+            # Asian countries - tend to use mobile more
+            "ID": ["casual_indonesian", "tech_savvy_indonesian", "young_adult_indonesian"],
+            "IN": ["casual_indian", "tech_savvy_indian", "young_adult"],
+            "JP": ["casual_japanese", "tech_savvy", "professional"],
+            "KR": ["casual_korean", "tech_savvy", "young_adult"],
+            "TH": ["casual_asian", "young_adult", "social_media_heavy"],
+            "VN": ["casual_asian", "young_adult", "mobile_heavy"],
+            "PH": ["casual_asian", "social_media_heavy", "young_adult"],
+            "MY": ["casual_asian", "tech_savvy", "young_adult"],
+            "SG": ["professional", "tech_savvy", "urban_user"],
+            
+            # Western countries
+            "US": ["casual_american", "tech_savvy", "professional", "young_adult"],
+            "CA": ["casual_american", "tech_savvy", "professional"],
+            "GB": ["casual_british", "professional", "urban_user"],
+            "DE": ["professional_german", "tech_savvy", "careful_user"],
+            "FR": ["casual_french", "professional", "urban_user"],
+            "IT": ["casual_italian", "social_media_heavy", "young_adult"],
+            "ES": ["casual_spanish", "social_media_heavy", "young_adult"],
+            "NL": ["tech_savvy", "professional", "urban_user"],
+            "PL": ["casual_european", "young_adult", "tech_savvy"],
+            
+            # Latin America
+            "MX": ["casual_latin", "social_media_heavy", "young_adult"],
+            "BR": ["casual_brazilian", "social_media_heavy", "young_adult"],
+            "AR": ["casual_latin", "social_media_heavy", "urban_user"],
+            
+            # Other
+            "AU": ["casual_australian", "tech_savvy", "professional"],
+            "NZ": ["casual_australian", "tech_savvy", "urban_user"],
+            "TR": ["casual_turkish", "social_media_heavy", "young_adult"],
+            "RU": ["casual_russian", "tech_savvy", "urban_user"],
+            "AE": ["professional", "tech_savvy", "urban_user"],
+            "SA": ["casual_arab", "social_media_heavy", "young_adult"]
+        }
+        
+        # Get behavior types for country
+        types = behavior_map.get(country_code, ["casual", "tech_savvy", "young_adult"])
+        
+        # Filter by connection type
+        if connection_type == "wifi":
+            # WiFi users tend to be more professional/careful
+            preferred = [t for t in types if any(p in t for p in ["professional", "tech_savvy", "careful", "urban"])]
+            if preferred:
+                return random.choice(preferred)
+        
+        return random.choice(types)
 
     async def rotate_ip_with_fingerprint(self, session_id: str) -> bool:
         """Rotate IP dengan regenerate SEMUA fingerprints - FIXED"""
@@ -10161,35 +10472,35 @@ class InstagramAccountCreator2025:
                 min_health=80
             )
             
-            # 2. Regenerate fingerprint sesuai ISP baru dan connection type
-            isp = new_ip_config.get("isp_info", {}).get("isp", "telkomsel")
-            location = new_ip_config.get("location", {}).get("city", "Jakarta")
+            # 2. Get country and ISP info from new IP config
+            country_code = new_ip_config.get("country_code", new_ip_config.get("location", {}).get("country", "ID"))
+            isp = new_ip_config.get("isp_info", {}).get("isp", new_ip_config.get("isp", "telkomsel"))
+            city = new_ip_config.get("location", {}).get("city", "Unknown")
             
+            print(f"{cyan}    New IP country: {country_code}, ISP: {isp}{reset}")
+            
+            # 3. Regenerate fingerprint for new country and ISP
             new_fingerprint = self.fingerprint_system.generate_fingerprint(
                 device_type=self.config["device_type"],
-                location=self.config["location"],
+                location=country_code,  # Use country code
                 isp=isp,
-                city=location,
-                connection_type=new_connection  # <-- PAKAI new_connection
+                city=city,
+                connection_type=new_connection
             )
             
-            # 3. Regenerate WebRTC/WebGL fingerprint
+            # 4. Regenerate WebRTC/WebGL fingerprint
             device_brand = new_fingerprint.get("device", {}).get("brand", "Samsung")
             new_webrtc_fingerprint = self.web_system.get_complete_fingerprint(
                 device_type=self.config["device_type"],
                 brand=device_brand,
-                connection_type=new_connection  # <-- PAKAI new_connection
+                connection_type=new_connection
             )
             
-            # 4. Regenerate behavior profile
-            if new_connection == "mobile":
-                user_type = random.choice(["tech_savvy_indonesian", "young_adult_indonesian"])
-            else:
-                user_type = random.choice(["professional_indonesian", "casual_indonesian"])
-            
+            # 5. Regenerate behavior profile based on new country
+            user_type = self._get_behavior_type_for_country(country_code, new_connection)
             new_behavior = self.behavior_system.generate_behavior_profile(user_type)
             
-            # 5. Rotate semua identitas sekaligus
+            # 6. Rotate semua identitas sekaligus
             success = self.session_manager.rotate_session_identity(
                 session_id=session_id,
                 new_ip_config=new_ip_config,
@@ -10203,18 +10514,20 @@ class InstagramAccountCreator2025:
                     "behavior_profile": new_behavior
                 })
                 
-                # Update metadata dengan connection type baru
+                # Update metadata dengan connection type baru dan country
                 self.session_manager.update_session(session_id, {
                     "metadata": {
                         **session.get("metadata", {}),
-                        "connection_type": new_connection  # <-- UPDATE
+                        "connection_type": new_connection,
+                        "country_code": country_code,
+                        "isp": isp
                     }
                 })
                 
                 self.stats["ip_rotations"] = self.stats.get("ip_rotations", 0) + 1
                 print(f"{hijau}✅  Successfully rotated IP and fingerprints{reset}")
                 print(f"{cyan}    New IP: {new_ip_config.get('ip', 'unknown')}")
-                print(f"{cyan}    New ISP: {isp}")
+                print(f"{cyan}    New ISP: {isp} ({country_code})")
                 print(f"{cyan}    Connection: {new_connection.upper()}{reset}")
                 return True
             else:
