@@ -123,18 +123,21 @@ class AdvancedIPStealthSystem2025:
         
         # Country weights for realistic distribution
         self.country_weights = {
-            "ID": 0.40,  # Indonesia - primary target
-            "US": 0.15,  # USA
-            "IN": 0.10,  # India
-            "BR": 0.08,  # Brazil
-            "GB": 0.05,  # United Kingdom
-            "DE": 0.05,  # Germany
-            "JP": 0.04,  # Japan
-            "PH": 0.03,  # Philippines
-            "TH": 0.03,  # Thailand
+            # More balanced distribution - less Indonesia focus for better randomization
+            "US": 0.20,  # USA - Instagram's largest market
+            "IN": 0.15,  # India - second largest
+            "BR": 0.12,  # Brazil - third largest
+            "ID": 0.10,  # Indonesia - reduced from 40%
+            "GB": 0.08,  # United Kingdom
+            "DE": 0.07,  # Germany
+            "JP": 0.06,  # Japan
+            "PH": 0.05,  # Philippines
+            "TH": 0.04,  # Thailand
             "VN": 0.03,  # Vietnam
-            "AU": 0.02,  # Australia
-            "SG": 0.02   # Singapore
+            "AU": 0.03,  # Australia
+            "MX": 0.03,  # Mexico
+            "SG": 0.02,  # Singapore
+            "TR": 0.02   # Turkey
         }
     
     def _load_global_isp_database(self) -> Dict[str, Dict[str, Any]]:
@@ -1901,71 +1904,89 @@ class AdvancedIPStealthSystem2025:
         return config
     
     def _generate_ja3_fingerprint(self, profile: str) -> Tuple[str, str]:
-        """Generate JA3 dan JA3S fingerprint yang spesifik"""
-        ja3_profiles = {
-            "chrome_mobile_samsung": (
-                "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53-65037-65038-65039,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21-65041-65042,29-23-24-25-26,0",
-                "771,4865,65281-0-23-13-5-18-16-11-51-45-43-10-21,29-23-24,0"
-            ),
-            "chrome_mobile_xiaomi": (
-                "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53-65037-65038,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-21-65041,29-23-24-25,0",
-                "771,4865,65281-0-23-13-5-18-16-11-51-45-43-10-21,29-23-24,0"
-            ),
-            "chrome_mobile_generic": (
-                "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24-25,0",
-                "771,4865,65281-0-23-13-5-18-16-11-51-45-43-10-21,29-23-24,0"
-            )
-        }
-        return ja3_profiles.get(profile, ja3_profiles["chrome_mobile_samsung"])
+        """Generate random JA3 and JA3S fingerprints from valid Instagram client signatures"""
+        # Real Instagram client JA3 fingerprints observed in production
+        instagram_ja3_fingerprints = [
+            # Chrome Mobile on Android (various versions)
+            ("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+             "771,4865,65281-0-23-13-5-18-16-11-51-45-43-10-21,29-23-24,0"),
+            ("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-21,29-23-24-25,0",
+             "771,4865,65281-0-23-13-5-18-16-11-51-45-43-10,29-23,0"),
+            ("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513,29-23-24,0",
+             "771,4866,65281-0-23-13-5-18-16-11-51-45-43-10-21,29-23-24,0"),
+            # Chrome 120+ mobile
+            ("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53-10,0-23-65281-10-11-35-16-5-34-51-43-13-45-28-21,29-23-24,0",
+             "771,4865,65281-0-23-13-5-18-16-11-51-45-43-10-21,29-23-24,0"),
+            # Chrome 135 mobile
+            ("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21-41,29-23-24-25-256-257,0",
+             "771,4865,65281-0-23-13-5-18-16-11-51-45-43-10-21,29-23-24,0"),
+            # WebView Android
+            ("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-21,29-23-24,0",
+             "771,4865,65281-0-23-13-5-18-16-11-51-45-43-10-21,29-23-24,0"),
+            # Instagram Android app signatures
+            ("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24-25-256,0",
+             "771,4865,65281-0-23-13-5-18-16-11-51-45-43-10-21,29-23-24,0"),
+            ("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-21-41,29-23-24-25,0",
+             "771,4866,65281-0-23-13-5-18-16-11-51-45-43-10-21,29-23-24,0"),
+        ]
+        # Select random fingerprint
+        return random.choice(instagram_ja3_fingerprints)
     
     def _generate_tls_fingerprint(self, profile: str) -> Dict[str, Any]:
-        """Generate TLS fingerprint yang detail"""
-        tls_profiles = {
-            "tls13_chrome_mobile": {
-                "version": "TLSv1.3",
-                "ciphers": [
-                    "TLS_AES_128_GCM_SHA256",
-                    "TLS_AES_256_GCM_SHA384",
-                    "TLS_CHACHA20_POLY1305_SHA256",
-                    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-                    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
-                ],
-                "extensions": [
-                    "server_name",
-                    "extended_master_secret",
-                    "renegotiation_info",
-                    "supported_groups",
-                    "ec_point_formats",
-                    "session_ticket",
-                    "application_layer_protocol_negotiation",
-                    "status_request",
-                    "delegated_credentials",
-                    "key_share",
-                    "supported_versions",
-                    "signature_algorithms",
-                    "signed_certificate_timestamp",
-                    "compress_certificate",
-                    "record_size_limit"
-                ],
-                "supported_groups": [
-                    "X25519",
-                    "P-256",
-                    "P-384"
-                ],
-                "signature_algorithms": [
-                    "ecdsa_secp256r1_sha256",
-                    "rsa_pss_rsae_sha256",
-                    "rsa_pkcs1_sha256",
-                    "ecdsa_secp384r1_sha384",
-                    "rsa_pss_rsae_sha384",
-                    "rsa_pkcs1_sha384",
-                    "rsa_pss_rsae_sha512",
-                    "rsa_pkcs1_sha512"
-                ],
-                "alpn_protocols": ["h2", "http/1.1"]
-            }
+        """Generate random TLS fingerprint with valid Instagram client configurations"""
+        # Randomize cipher order while keeping valid combinations
+        cipher_suites = [
+            ["TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384", "TLS_CHACHA20_POLY1305_SHA256"],
+            ["TLS_AES_256_GCM_SHA384", "TLS_AES_128_GCM_SHA256", "TLS_CHACHA20_POLY1305_SHA256"],
+            ["TLS_CHACHA20_POLY1305_SHA256", "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384"],
+        ]
+        
+        ecdhe_ciphers = [
+            ["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"],
+            ["TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"],
+            ["TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384", "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"],
+        ]
+        
+        supported_groups_options = [
+            ["X25519", "P-256", "P-384"],
+            ["P-256", "X25519", "P-384"],
+            ["X25519", "P-384", "P-256"],
+            ["P-256", "P-384", "X25519"],
+        ]
+        
+        signature_algorithms_options = [
+            ["ecdsa_secp256r1_sha256", "rsa_pss_rsae_sha256", "rsa_pkcs1_sha256", "ecdsa_secp384r1_sha384", "rsa_pss_rsae_sha384", "rsa_pkcs1_sha384"],
+            ["rsa_pss_rsae_sha256", "ecdsa_secp256r1_sha256", "rsa_pkcs1_sha256", "rsa_pss_rsae_sha384", "ecdsa_secp384r1_sha384", "rsa_pkcs1_sha384"],
+            ["ecdsa_secp256r1_sha256", "ecdsa_secp384r1_sha384", "rsa_pss_rsae_sha256", "rsa_pss_rsae_sha384", "rsa_pkcs1_sha256", "rsa_pkcs1_sha384"],
+        ]
+        
+        return {
+            "version": "TLSv1.3",
+            "ciphers": random.choice(cipher_suites) + random.choice(ecdhe_ciphers),
+            "extensions": [
+                "server_name",
+                "extended_master_secret",
+                "renegotiation_info",
+                "supported_groups",
+                "ec_point_formats",
+                "session_ticket",
+                "application_layer_protocol_negotiation",
+                "status_request",
+                "delegated_credentials",
+                "key_share",
+                "supported_versions",
+                "signature_algorithms",
+                "signed_certificate_timestamp",
+                "compress_certificate",
+                "record_size_limit"
+            ],
+            "supported_groups": random.choice(supported_groups_options),
+            "signature_algorithms": random.choice(signature_algorithms_options),
+            "alpn_protocols": ["h2", "http/1.1"],
+            "session_id_length": random.choice([32, 0]),  # Randomize session ID
+            "compression_methods": [0],  # null compression
+            "record_version": random.choice(["0x0303", "0x0301"]),  # TLS 1.2 or 1.0 in record
         }
-        return tls_profiles.get(profile, tls_profiles["tls13_chrome_mobile"])
     
     def _generate_http2_settings(self, profile: str) -> Dict[str, int]:
         """Generate HTTP2 settings yang spesifik"""
@@ -8446,6 +8467,98 @@ class AdvancedSessionManager2025:
         else:
             return "Create new session"
     
+    def refresh_session_completely(self, session_id: str) -> Optional[str]:
+        """Completely refresh a session with new fingerprints and tokens.
+        
+        Use this when sessions get stale (400 errors, rate limits, etc.)
+        This creates a completely fresh session with new identifiers.
+        """
+        if session_id not in self.sessions:
+            return None
+        
+        old_session = self.sessions[session_id]
+        
+        # Generate completely new device ID and session IDs
+        new_device_id = self._generate_consistent_device_id()
+        new_extra_session_id = self._generate_extra_session_id()
+        new_guid = str(uuid.uuid4())
+        
+        # Create new session ID
+        new_session_id = f"sess_{self.session_counter:08d}_{int(time.time())}"
+        self.session_counter += 1
+        
+        # Copy fingerprint but regenerate headers with new IDs
+        fingerprint = old_session["fingerprint"].copy()
+        behavior_profile = old_session["behavior_profile"].copy()
+        ip_config = old_session["ip_config"].copy()
+        
+        # Rebuild complete headers with new session info
+        complete_headers = self._build_complete_headers(
+            fingerprint, behavior_profile, ip_config, old_session.get("webrtc_fingerprint")
+        )
+        
+        complete_headers.update({
+            "X-Web-Session-Id": new_extra_session_id,
+            "Priority": "u=1, i",
+            "Sec-Ch-Prefers-Color-Scheme": "dark",
+            "X-IG-WWW-Claim": "0"
+        })
+        
+        # Create fresh session data
+        new_session = {
+            "session_id": new_session_id,
+            "created_at": time.time(),
+            "last_activity": time.time(),
+            "last_ip_change": time.time(),
+            "fingerprint": fingerprint,
+            "behavior_profile": behavior_profile,
+            "ip_config": ip_config,
+            "webrtc_fingerprint": old_session.get("webrtc_fingerprint", {}),
+            "device_id": new_device_id,
+            "extra_session_id": new_extra_session_id,
+            "guid": new_guid,
+            "uuid": str(uuid.uuid4()),
+            "request_count": 0,
+            "success_count": 0,
+            "failure_count": 0,
+            "state": "active",
+            "sequence_number": 0,
+            "tokens": {},  # Fresh tokens
+            "cookies": {},  # Fresh cookies
+            "headers": complete_headers,
+            "current_headers": complete_headers,
+            "metadata": old_session.get("metadata", {}).copy()
+        }
+        
+        # Store new session
+        self.sessions[new_session_id] = new_session
+        self.session_states[new_session_id] = {
+            "current_page": None,
+            "form_data": {},
+            "navigation_history": [],
+            "interaction_log": [],
+            "error_log": [],
+            "cookie_jar": {},
+            "performance_metrics": {
+                "avg_response_time": 0,
+                "success_rate": 1.0,
+                "consecutive_errors": 0,
+                "rate_limit_hits": 0,
+                "ip_rotations": 0
+            }
+        }
+        
+        # Initialize cookie jar
+        self.cookie_jar[new_session_id] = {}
+        
+        # Mark old session as refreshed
+        old_session["state"] = "refreshed"
+        old_session["refreshed_to"] = new_session_id
+        
+        print(f"{cyan}🔄  Session refreshed: {session_id[:12]} → {new_session_id[:12]}{reset}")
+        
+        return new_session_id
+    
     def rotate_session(self, session_id: str) -> Optional[str]:
         """Rotate session (create new one with similar profile)"""
         if session_id not in self.sessions:
@@ -11829,7 +11942,7 @@ class InstagramAccountCreator2025:
             print(f"{merah}❌  Failed to save account: {e}{reset}")
     
     async def batch_create_accounts(self, count: int, password: str) -> Dict[str, Any]:
-        """Buat beberapa akun sekaligus"""
+        """Create multiple accounts with session refresh on consecutive failures"""
         print(f"{cyan}🏭  Starting batch creation of {count} accounts{reset}")
         
         results = {
@@ -11841,21 +11954,43 @@ class InstagramAccountCreator2025:
             "start_time": time.time()
         }
         
+        consecutive_failures = 0
+        max_consecutive_failures = 3  # Refresh session after 3 consecutive failures
+        
         for i in range(count):
             print(f"\n{biru}🔹  Account {i + 1}/{count}{reset}")
+            
+            # Check if we need to refresh sessions due to consecutive failures
+            if consecutive_failures >= max_consecutive_failures:
+                print(f"{kuning}⚠️  {consecutive_failures} consecutive failures - refreshing all sessions{reset}")
+                # Clear all sessions to start fresh
+                self.session_manager.sessions.clear()
+                self.session_manager.session_states.clear()
+                self.session_manager.cookie_jar.clear()
+                consecutive_failures = 0
+                # Extended cooldown after session refresh
+                extended_cooldown = random.uniform(60, 90)
+                print(f"{kuning}⏳  Extended cooldown {extended_cooldown:.1f}s after session refresh{reset}")
+                await asyncio.sleep(extended_cooldown)
             
             result = await self.create_account(password)
             
             if result["status"] == "success":
                 results["successful"] += 1
                 results["accounts"].append(result["account"])
+                consecutive_failures = 0  # Reset on success
             else:
                 results["failed"] += 1
                 results["errors"].append(result)
+                consecutive_failures += 1
             
-            # Cooldown antara akun
+            # Cooldown between accounts
             if i < count - 1:
-                cooldown = random.uniform(30, 60)
+                # Longer cooldown if we just had a failure
+                if result["status"] != "success":
+                    cooldown = random.uniform(45, 75)  # Longer cooldown on failure
+                else:
+                    cooldown = random.uniform(30, 60)
                 print(f"{kuning}⏳  Cooldown for {cooldown:.1f}s before next account{reset}")
                 await asyncio.sleep(cooldown)
         
