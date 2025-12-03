@@ -10319,10 +10319,21 @@ class InstagramAccountCreator2025:
             if not csrf_token:
                 print(f"{kuning}⚠️   No CSRF token, continuing anyway{reset}")
             
+            # Call login page API (like real browsers do)
+            await self._call_login_page_api(session_id)
+            await asyncio.sleep(random.uniform(0.5, 1.5))
+            
             # Get username suggestions
             username = await self._get_username_suggestion(session_id, email_data["email"], username_hint)
             if not username:
                 return self._record_failure(attempt_id, "Failed to get username")
+            
+            # Check age eligibility before sending verification
+            month, day, year = self._generate_birthdate()
+            age_eligible = await self._check_age_eligibility(session_id, day, month, year)
+            if not age_eligible:
+                print(f"{kuning}⚠️   Age eligibility check failed, continuing anyway{reset}")
+            await asyncio.sleep(random.uniform(0.5, 1.0))
             
             # Send verification email
             verification_sent = await self._send_verification_email(session_id, email_data["email"])
@@ -10380,9 +10391,10 @@ class InstagramAccountCreator2025:
                 if not signup_code:
                     return self._record_failure(attempt_id, "Failed to verify OTP from new email")
             
-            # Create account
+            # Create account (pass the same birthdate we validated)
             account_created = await self._create_instagram_account(
-                session_id, email_data["email"], username, password, signup_code
+                session_id, email_data["email"], username, password, signup_code,
+                birthdate=(month, day, year)
             )
             
             if account_created:
@@ -11183,6 +11195,113 @@ class InstagramAccountCreator2025:
         
         return username.lower()
     
+    async def _check_age_eligibility(self, session_id: str, day: str, month: str, year: str) -> bool:
+        """
+        Check age eligibility before sending verification email.
+        
+        This matches the real Instagram flow where age is verified before proceeding.
+        """
+        try:
+            session = self.session_manager.get_session(session_id)
+            if not session:
+                return True  # Skip check if no session
+            
+            jazoest = await self.get_jazoest()
+            
+            request_data = {
+                "day": day,
+                "month": month,
+                "year": year,
+                "jazoest": jazoest
+            }
+            
+            encoded_data = urlencode(request_data)
+            
+            response = await self.request_orchestrator.make_request(
+                session_id=session_id,
+                method="POST",
+                url="https://www.instagram.com/api/v1/web/consent/check_age_eligibility/",
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRFToken": session.get("tokens", {}).get("csrftoken", ""),
+                    "X-Instagram-Ajax": "1029952363",
+                    "X-Ig-App-Id": "936619743392459",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-Asbd-Id": "359341",
+                    "Sec-Fetch-Site": "same-origin",
+                    "Sec-Fetch-Mode": "cors",
+                    "Sec-Fetch-Dest": "empty",
+                    "Origin": "https://www.instagram.com",
+                    "Referer": "https://www.instagram.com/accounts/emailsignup/"
+                },
+                data=encoded_data,
+                cookies=session.get("cookies", {})
+            )
+            
+            if response.get("status") == 200:
+                try:
+                    body = response.get("body", b"{}").decode('utf-8', errors='ignore')
+                    data = json.loads(body) if body else {}
+                    
+                    if data.get("eligible_to_register") == True:
+                        return True
+                    else:
+                        print(f"{kuning}    Age eligibility: {data}{reset}")
+                        return False
+                except Exception:
+                    return True
+            
+            return True  # Assume eligible if request fails
+            
+        except Exception as e:
+            print(f"{kuning}    Age check warning: {e}{reset}")
+            return True
+    
+    async def _call_login_page_api(self, session_id: str) -> bool:
+        """
+        Call the login page API to check GDPR and TOS version.
+        
+        This is called by real Instagram browsers before signup.
+        """
+        try:
+            session = self.session_manager.get_session(session_id)
+            if not session:
+                return True
+            
+            response = await self.request_orchestrator.make_request(
+                session_id=session_id,
+                method="GET",
+                url="https://www.instagram.com/api/v1/web/login_page/",
+                headers={
+                    "Accept": "*/*",
+                    "X-CSRFToken": session.get("tokens", {}).get("csrftoken", ""),
+                    "X-Instagram-Ajax": "1029952363",
+                    "X-Ig-App-Id": "936619743392459",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-Asbd-Id": "359341",
+                    "Sec-Fetch-Site": "same-origin",
+                    "Sec-Fetch-Mode": "cors",
+                    "Sec-Fetch-Dest": "empty",
+                    "Referer": "https://www.instagram.com/accounts/emailsignup/"
+                },
+                cookies=session.get("cookies", {})
+            )
+            
+            if response.get("status") == 200:
+                try:
+                    body = response.get("body", b"{}").decode('utf-8', errors='ignore')
+                    data = json.loads(body) if body else {}
+                    print(f"{cyan}    Login page API: gdpr_required={data.get('gdpr_required')}, tos_version={data.get('tos_version')}{reset}")
+                    return True
+                except Exception:
+                    return True
+            
+            return True
+            
+        except Exception as e:
+            print(f"{kuning}    Login page API warning: {e}{reset}")
+            return True
+
     async def _send_verification_email(self, session_id: str, email: str) -> bool:
         """Kirim email verifikasi dengan jazoest"""
         print(f"{cyan}📤  Sending verification email...{reset}")
@@ -11362,7 +11481,8 @@ class InstagramAccountCreator2025:
     
     async def _create_instagram_account(self, session_id: str, email: str, 
                                       username: str, password: str, 
-                                      signup_code: str) -> bool:
+                                      signup_code: str,
+                                      birthdate: Optional[Tuple[str, str, str]] = None) -> bool:
         """
         Create Instagram account with comprehensive anti-detection measures.
         
@@ -11371,9 +11491,18 @@ class InstagramAccountCreator2025:
         2. Proper header and cookie chain
         3. IP rotation on failure
         4. Extended cooldowns
+        
+        Args:
+            birthdate: Optional tuple of (month, day, year) strings. If not provided, generates new.
         """
         
         max_ip_retries = 3
+        
+        # Use provided birthdate or generate new one
+        if birthdate:
+            month, day, year = birthdate
+        else:
+            month, day, year = self._generate_birthdate()
         
         # Add human-like delay before account creation (thinking time)
         think_time = random.uniform(2.0, 5.0)
@@ -11416,42 +11545,20 @@ class InstagramAccountCreator2025:
             # Get fresh jazoest
             jazoest = await self.get_jazoest()
             
-            # Prepare account data dengan FORMAT YANG BENAR
-            month, day, year = self._generate_birthdate()
+            # Use the birthdate passed to this method (already validated with age eligibility)
+            # month, day, year are already defined from the method parameter
             
-            # **PERBAIKAN KRITIS: FORMAT PASSWORD ENCRYPTION v10**
-            current_timestamp = int(time.time())  # DETIK, bukan milidetik
-            encrypted_password = f"#PWD_INSTAGRAM_BROWSER:0:{current_timestamp}:{password}"
-            
-            # Extra session ID
+            # Extra session ID - format: "abc123:def456:ghi789" (colon-separated)
             extra_session_id = session.get("extra_session_id", "")
             if not extra_session_id:
-                extra_session_id = self._generate_extra_session_id()
-
+                extra_session_id = self._generate_web_session_id()
+            
+            # Device ID (client_id) - format from real Instagram
+            device_id = session.get("device_id", "")
+            if not device_id:
+                device_id = self._generate_device_id()
+            
             name_first = fake_indonesia.first_name()
-            
-            account_data = {
-                "email": email,
-                "username": username,
-                "first_name": name_first,
-                "last_name": fake_indonesia.last_name(),
-                "enc_password": encrypted_password,  # **FORMAT YANG BENAR**
-                "month": month,
-                "day": day,
-                "year": year,
-                "client_id": session.get("device_id", ""),  # **GUNAKAN client_id**
-                "seamless_login_enabled": "1",
-                "tos_version": "row",
-                "force_sign_up_code": signup_code,
-                "failed_birthday_year_count": "{}",
-                "extra_session_id": extra_session_id,
-                "jazoest": jazoest,
-            }
-            
-            # Filter out empty values
-            account_data = {k: v for k, v in account_data.items() if v}
-            
-            encoded_data = urlencode(account_data)
             
             # Get current cookies
             current_cookies = self.session_manager.get_session_cookies(session_id, "instagram.com")
@@ -11471,33 +11578,55 @@ class InstagramAccountCreator2025:
             }
             locale = locale_map.get(country_code, "en_US")
             
-            # Generate fresh pigeon session ID for this request
-            pigeon_session_id = f"UFS-{str(uuid.uuid4()).upper()}-{random.randint(100000000, 999999999)}"
+            # Generate Chrome version for consistency - use EXACT format from real Instagram
+            chrome_major = 142  # Match the real headers exactly
+            chrome_full = f"{chrome_major}.0.7444.162"
             
-            # Generate Chrome version for consistency
-            chrome_major = random.choice([140, 141, 142, 143])
-            chrome_full = f"{chrome_major}.0.{random.randint(7000, 7999)}.{random.randint(100, 200)}"
+            # Use EXACT Instagram AJAX build ID from real traffic
+            ig_ajax_id = "1029952363"
             
-            # Generate Instagram AJAX build ID (numeric, changes with each Instagram update)
-            ig_ajax_build_ids = [
-                "1029952363", "1029951234", "1029950123", "1029948765",
-                "1029947654", "1029946543", "1029945432", "1029944321"
-            ]
-            ig_ajax_id = random.choice(ig_ajax_build_ids)
+            # Use EXACT X-ASBD-ID from real traffic
+            x_asbd_id = "359341"
             
-            # Generate X-ASBD-ID (Instagram internal tracking)
-            x_asbd_ids = ["359341", "359340", "359339", "359338", "359337"]
-            x_asbd_id = random.choice(x_asbd_ids)
-            
-            # Platform choices (desktop platforms only - mobile headers cause checkpoint!)
-            platforms = [
-                {"platform": "macOS", "platform_version": f"{random.randint(24, 26)}.0.{random.randint(0, 2)}"},
-                {"platform": "Windows", "platform_version": f"{random.randint(10, 15)}.0.0"},
-            ]
-            selected_platform = random.choice(platforms)
+            # Use macOS platform to match real headers exactly
+            selected_platform = {
+                "platform": "macOS",
+                "platform_version": "26.0.1"
+            }
             
             # Generate datr cookie if not present (browser fingerprint cookie)
             cookies = session.get("cookies", {})
+            if "datr" not in cookies:
+                datr = ''.join(random.choices(string.ascii_letters + string.digits + "_-", k=24))
+                cookies["datr"] = datr
+            
+            # **ACCOUNT DATA MATCHING REAL INSTAGRAM FORMAT**
+            # Note: Real Instagram uses version 10 encryption but we use version 0 (plaintext)
+            # since we don't have the Instagram encryption key
+            current_timestamp = int(time.time())
+            encrypted_password = f"#PWD_INSTAGRAM_BROWSER:0:{current_timestamp}:{password}"
+            
+            account_data = {
+                "enc_password": encrypted_password,
+                "day": str(day),
+                "email": email,
+                "failed_birthday_year_count": "{}",
+                "first_name": name_first,
+                "month": str(month),
+                "username": username,
+                "year": str(year),
+                "client_id": device_id,
+                "seamless_login_enabled": "1",
+                "tos_version": "row",
+                "force_sign_up_code": signup_code,
+                "extra_session_id": extra_session_id,
+                "jazoest": jazoest,
+            }
+            
+            # Filter out empty values
+            account_data = {k: v for k, v in account_data.items() if v}
+            
+            encoded_data = urlencode(account_data)
             if "datr" not in cookies:
                 datr = ''.join(random.choices(string.ascii_letters + string.digits + "_-", k=24))
                 cookies["datr"] = datr
@@ -12100,6 +12229,29 @@ class InstagramAccountCreator2025:
             "ar_SA": "ar-SA,ar;q=0.9,en;q=0.8"
         }
         return accept_language_map.get(locale, "en-US,en;q=0.9")
+    
+    def _generate_web_session_id(self) -> str:
+        """
+        Generate Instagram web session ID in the correct format.
+        
+        Real format: "abc123:def456:ghi789" (3 segments separated by colons)
+        Each segment is 6 alphanumeric characters.
+        """
+        chars = string.ascii_lowercase + string.digits
+        segment1 = ''.join(random.choices(chars, k=6))
+        segment2 = ''.join(random.choices(chars, k=6))
+        segment3 = ''.join(random.choices(chars, k=6))
+        return f"{segment1}:{segment2}:{segment3}"
+    
+    def _generate_device_id(self) -> str:
+        """
+        Generate Instagram device ID (client_id) in the correct format.
+        
+        Real format: long alphanumeric string like "fteoi31uy3xvd18u088y17jrd6on11xzm10166bzhbvqlw1wigks5"
+        """
+        chars = string.ascii_lowercase + string.digits
+        length = random.randint(45, 55)
+        return ''.join(random.choices(chars, k=length))
     
     def _save_account_to_file(self, account_data: Dict[str, Any]):
         """Save account data to file"""
