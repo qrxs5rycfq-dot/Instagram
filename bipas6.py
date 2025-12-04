@@ -7341,15 +7341,6 @@ class RequestOrchestrator2025:
         if "user_agent" in metadata and metadata["user_agent"]:
             all_headers["User-Agent"] = metadata["user_agent"]
         
-        # Update connection headers berdasarkan session - FIXED
-        connection_type = metadata.get("connection_type", "mobile")
-        if connection_type == "mobile":
-            all_headers["X-IG-Connection-Type"] = "CELL"
-            all_headers["X-IG-Network-Type"] = "4G"
-        else:
-            all_headers["X-IG-Connection-Type"] = "WIFI"
-            all_headers["X-IG-Network-Type"] = "WIFI"
-        
         # Create request object
         request_id = f"req_{int(time.time())}_{random.randint(1000, 9999)}"
         
@@ -7640,62 +7631,111 @@ class RequestOrchestrator2025:
     
     async def _make_real_http_request(self, request_data: Dict[str, Any], 
                                     session: Dict[str, Any]) -> Dict[str, Any]:
-        """Make REAL HTTP request menggunakan aiohttp"""
+        """Make HTTP request with realistic browser behavior"""
         method = request_data["method"]
         url = request_data["url"]
         headers = request_data["headers"]
         data = request_data["data"]
         
-        # Add session headers
+        # Get session headers and merge - session headers take priority for consistency
         session_headers = session.get("headers", {})
-        all_headers = {**session_headers, **headers}
-
-        all_headers.update({
-            "Priority": "u=1, i",
-            "Sec-Ch-Prefers-Color-Scheme": "dark",
-            "X-Web-Session-Id": session.get("extra_session_id", ""),
-            "X-IG-WWW-Claim": session.get("ig_www_claim", "0"),
-            "Sec-Ch-Ua-Platform-Version": "26.0.1",
-            "X-Requested-With": "XMLHttpRequest"
-        })
+        
+        # Build final headers - start with request headers, then apply session headers for consistency
+        all_headers = {}
+        
+        # First, add essential browser headers in correct order
+        if "Accept" in headers:
+            all_headers["Accept"] = headers["Accept"]
+        if "Accept-Encoding" in headers:
+            all_headers["Accept-Encoding"] = headers["Accept-Encoding"]
+        if "Accept-Language" in headers:
+            all_headers["Accept-Language"] = headers["Accept-Language"]
+        
+        # Add Content-Type for POST
+        if method.upper() == "POST" and "Content-Type" in headers:
+            all_headers["Content-Type"] = headers["Content-Type"]
+        
+        # Add Origin and Referer
+        if "Origin" in headers:
+            all_headers["Origin"] = headers["Origin"]
+        if "Referer" in headers:
+            all_headers["Referer"] = headers["Referer"]
+            
+        # Add Sec-Ch-* headers from session for consistency
+        for key in ["Sec-Ch-Ua", "Sec-Ch-Ua-Mobile", "Sec-Ch-Ua-Platform", 
+                   "Sec-Ch-Ua-Model", "Sec-Ch-Ua-Full-Version-List", "Sec-Ch-Ua-Platform-Version"]:
+            if key in session_headers:
+                all_headers[key] = session_headers[key]
+            elif key in headers:
+                all_headers[key] = headers[key]
+        
+        # Add Sec-Fetch-* headers
+        for key in ["Sec-Fetch-Dest", "Sec-Fetch-Mode", "Sec-Fetch-Site", "Sec-Fetch-User"]:
+            if key in headers:
+                all_headers[key] = headers[key]
+        
+        # Add User-Agent from session for consistency
+        if "User-Agent" in session_headers:
+            all_headers["User-Agent"] = session_headers["User-Agent"]
+        elif "User-Agent" in headers:
+            all_headers["User-Agent"] = headers["User-Agent"]
+        
+        # Add Instagram-specific headers only if present in request (for AJAX calls)
+        ig_headers = ["X-Csrftoken", "X-Ig-App-Id", "X-Ig-Www-Claim", "X-Instagram-Ajax", 
+                     "X-Requested-With", "X-Asbd-Id"]
+        for key in ig_headers:
+            if key in headers:
+                all_headers[key] = headers[key]
         
         # Combine cookies
         session_cookies = session.get("cookies", {})
         request_cookies = request_data.get("cookies", {})
         all_cookies = {**session_cookies, **request_cookies}
         
-        # print(f"{cyan}    Real request: {method} {url}{reset}")
-        
         try:
-            # Gunakan aiohttp untuk async HTTP requests
-            timeout = aiohttp.ClientTimeout(total=30)
+            # Create SSL context that mimics Chrome
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = True
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+            
+            # Use connector with keepalive like real browsers
+            connector = aiohttp.TCPConnector(
+                ssl=ssl_context,
+                limit=10,
+                limit_per_host=5,
+                keepalive_timeout=30,
+                enable_cleanup_closed=True
+            )
+            
+            timeout = aiohttp.ClientTimeout(total=30, connect=10)
             
             async with aiohttp.ClientSession(
-                headers=all_headers,
+                connector=connector,
                 timeout=timeout,
                 cookie_jar=aiohttp.CookieJar()
             ) as client_session:
                 
-                # Set cookies
+                # Set cookies properly
                 for name, value in all_cookies.items():
-                    client_session.cookie_jar.update_cookies({name: value})
+                    client_session.cookie_jar.update_cookies({name: value}, 
+                        response_url=aiohttp.client.URL("https://www.instagram.com/"))
                 
                 start_time = time.time()
                 
                 if method.upper() == "GET":
-                    async with client_session.get(url, ssl=False) as response:
+                    async with client_session.get(url, headers=all_headers) as response:
                         body = await response.read()
                         status = response.status
                         response_headers = dict(response.headers)
                         
                 elif method.upper() == "POST":
-                    async with client_session.post(url, data=data, ssl=False) as response:
+                    async with client_session.post(url, headers=all_headers, data=data) as response:
                         body = await response.read()
                         status = response.status
                         response_headers = dict(response.headers)
                         
                 else:
-                    async with client_session.request(method, url, data=data, ssl=False) as response:
+                    async with client_session.request(method, url, headers=all_headers, data=data) as response:
                         body = await response.read()
                         status = response.status
                         response_headers = dict(response.headers)
@@ -7706,9 +7746,6 @@ class RequestOrchestrator2025:
                 response_cookies = {}
                 for cookie in client_session.cookie_jar:
                     response_cookies[cookie.key] = cookie.value
-                
-                # Debug info
-                # print(f"{cyan}    Response: {status} in {response_time:.2f}s{reset}")
                 
                 return {
                     "status": status,
@@ -9052,12 +9089,35 @@ class InstagramAccountCreator2025:
             if response.get("status") == 200:
                 # Extract CSRF from cookies
                 cookies = response.get("cookies", {})
+                body = response.get("body", b"")
+                
                 if "csrftoken" in cookies:
                     csrf_token = cookies["csrftoken"]
                     
-                    # Store all cookies in session
+                    # Try to extract X-Instagram-Ajax from page
+                    ajax_id = None
+                    try:
+                        body_str = body.decode('utf-8', errors='ignore') if isinstance(body, bytes) else str(body)
+                        # Look for rollout_hash or similar in the page
+                        import re
+                        ajax_match = re.search(r'"rollout_hash":"([^"]+)"', body_str)
+                        if ajax_match:
+                            ajax_id = ajax_match.group(1)
+                        else:
+                            # Try alternative pattern
+                            ajax_match = re.search(r'"server_revision":(\d+)', body_str)
+                            if ajax_match:
+                                ajax_id = ajax_match.group(1)
+                    except Exception:
+                        pass
+                    
+                    # Store all tokens and cookies in session
+                    tokens = {"csrftoken": csrf_token}
+                    if ajax_id:
+                        tokens["ajax_id"] = ajax_id
+                    
                     self.session_manager.update_session(session_id, {
-                        "tokens": {"csrftoken": csrf_token},
+                        "tokens": tokens,
                         "cookies": cookies
                     })
                     
@@ -9065,6 +9125,8 @@ class InstagramAccountCreator2025:
                     self.session_manager.update_session_cookies(session_id, cookies)
                     
                     print(f"{hijau}✅  Got CSRF token: {csrf_token[:10]}...{reset}")
+                    if ajax_id:
+                        print(f"{hijau}✅  Got Ajax ID: {ajax_id[:10]}...{reset}")
                     return csrf_token
             
             return None
@@ -9548,6 +9610,9 @@ class InstagramAccountCreator2025:
             # Get session headers for User-Agent consistency
             session_headers = session.get("headers", {})
             
+            # Get dynamic Ajax ID if available
+            ajax_id = session.get("tokens", {}).get("ajax_id", "1018448258")
+            
             # Build clean headers for account creation (AJAX request)
             headers = {
                 "Accept": "*/*",
@@ -9559,11 +9624,9 @@ class InstagramAccountCreator2025:
                 "Sec-Fetch-Dest": "empty",
                 "Sec-Fetch-Mode": "cors",
                 "Sec-Fetch-Site": "same-origin",
-                "X-Asbd-Id": "129477",
                 "X-Csrftoken": csrf_token,
                 "X-Ig-App-Id": "936619743392459",
-                "X-Ig-Www-Claim": session.get("ig_www_claim", "0"),
-                "X-Instagram-Ajax": "1018448258",
+                "X-Instagram-Ajax": ajax_id,
                 "X-Requested-With": "XMLHttpRequest",
             }
             
