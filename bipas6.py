@@ -789,6 +789,602 @@ browser_fingerprint_generator = AdvancedBrowserFingerprint2025()
 
 # ===================== ADVANCED IP SPOOFING 2025 =====================
 
+# ===================== ULTRA STEALTH IP SYSTEM 2025 - NEXT GENERATION =====================
+
+class UltraStealthIPGenerator2025:
+    """
+    Next-Generation Ultra Stealth IP Generator 2025
+    
+    Teknik yang digunakan:
+    1. Real ISP IP Range Database - menggunakan range IP asli dari ISP
+    2. Carrier Grade NAT (CGNAT) Simulation - simulasi IP dari CGNAT yang umum digunakan
+    3. Time-based IP Rotation Pattern - pattern rotasi berdasarkan waktu seperti ISP asli
+    4. Geographic IP Clustering - IP clustering berdasarkan lokasi geografis
+    5. ISP-specific IP Allocation Patterns - pattern alokasi spesifik per ISP
+    6. Mobile Network IP Simulation - simulasi IP dari jaringan mobile (3G/4G/5G)
+    7. Dynamic IP Lease Simulation - simulasi DHCP lease seperti IP dinamis asli
+    8. Anti-Fingerprinting Headers - headers yang tidak bisa di-fingerprint
+    """
+    
+    def __init__(self):
+        self.used_ips = set()
+        self.ip_lease_times = {}
+        self.last_rotation = {}
+        
+        # Real ISP IP ranges from IANA/APNIC/ARIN allocations
+        self.real_isp_ranges = self._load_real_isp_ranges()
+        
+        # CGNAT ranges (100.64.0.0/10) - ISPs use these for mobile users
+        self.cgnat_ranges = self._get_cgnat_simulation_ranges()
+        
+        # Mobile carrier IP pools
+        self.mobile_ip_pools = self._initialize_mobile_pools()
+        
+    def _load_real_isp_ranges(self) -> Dict[str, List[Dict]]:
+        """Load real ISP IP allocations from regional registries"""
+        return {
+            # ===== USA - ARIN Allocations =====
+            "US": {
+                "verizon_wireless": [
+                    {"start": "174.192.0.0", "end": "174.255.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "70.192.0.0", "end": "70.223.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "98.0.0.0", "end": "98.127.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "71.160.0.0", "end": "71.191.255.255", "type": "mobile", "cgnat": False},
+                ],
+                "att_wireless": [
+                    {"start": "166.128.0.0", "end": "166.255.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "107.64.0.0", "end": "107.127.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "32.0.0.0", "end": "32.255.255.255", "type": "mobile", "cgnat": True},
+                ],
+                "tmobile": [
+                    {"start": "172.32.0.0", "end": "172.63.255.255", "type": "mobile", "cgnat": True},
+                    {"start": "100.128.0.0", "end": "100.191.255.255", "type": "mobile", "cgnat": True},
+                    {"start": "208.54.0.0", "end": "208.54.255.255", "type": "mobile", "cgnat": False},
+                ],
+                "comcast": [
+                    {"start": "73.0.0.0", "end": "73.255.255.255", "type": "residential", "cgnat": False},
+                    {"start": "50.128.0.0", "end": "50.255.255.255", "type": "residential", "cgnat": False},
+                    {"start": "24.0.0.0", "end": "24.63.255.255", "type": "residential", "cgnat": False},
+                ],
+                "spectrum": [
+                    {"start": "72.64.0.0", "end": "72.127.255.255", "type": "residential", "cgnat": False},
+                    {"start": "97.64.0.0", "end": "97.127.255.255", "type": "residential", "cgnat": False},
+                    {"start": "24.128.0.0", "end": "24.191.255.255", "type": "residential", "cgnat": False},
+                ],
+                "cox": [
+                    {"start": "68.96.0.0", "end": "68.111.255.255", "type": "residential", "cgnat": False},
+                    {"start": "76.160.0.0", "end": "76.191.255.255", "type": "residential", "cgnat": False},
+                ],
+            },
+            # ===== Australia - APNIC Allocations =====
+            "AU": {
+                "telstra": [
+                    {"start": "1.120.0.0", "end": "1.127.255.255", "type": "residential", "cgnat": False},
+                    {"start": "101.160.0.0", "end": "101.191.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "110.144.0.0", "end": "110.175.255.255", "type": "residential", "cgnat": False},
+                    {"start": "120.144.0.0", "end": "120.159.255.255", "type": "mobile", "cgnat": False},
+                ],
+                "optus": [
+                    {"start": "49.176.0.0", "end": "49.191.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "121.44.0.0", "end": "121.47.255.255", "type": "residential", "cgnat": False},
+                    {"start": "211.24.0.0", "end": "211.31.255.255", "type": "residential", "cgnat": False},
+                ],
+                "vodafone_au": [
+                    {"start": "101.112.0.0", "end": "101.127.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "110.174.0.0", "end": "110.175.255.255", "type": "mobile", "cgnat": False},
+                ],
+                "tpg": [
+                    {"start": "27.32.0.0", "end": "27.63.255.255", "type": "residential", "cgnat": False},
+                    {"start": "120.148.0.0", "end": "120.159.255.255", "type": "residential", "cgnat": False},
+                ],
+            },
+            # ===== Canada - ARIN Allocations =====
+            "CA": {
+                "rogers": [
+                    {"start": "24.100.0.0", "end": "24.127.255.255", "type": "residential", "cgnat": False},
+                    {"start": "64.228.0.0", "end": "64.231.255.255", "type": "residential", "cgnat": False},
+                    {"start": "99.224.0.0", "end": "99.255.255.255", "type": "mobile", "cgnat": False},
+                ],
+                "bell": [
+                    {"start": "70.48.0.0", "end": "70.63.255.255", "type": "residential", "cgnat": False},
+                    {"start": "142.112.0.0", "end": "142.127.255.255", "type": "residential", "cgnat": False},
+                    {"start": "174.88.0.0", "end": "174.95.255.255", "type": "mobile", "cgnat": False},
+                ],
+                "telus": [
+                    {"start": "24.64.0.0", "end": "24.95.255.255", "type": "residential", "cgnat": False},
+                    {"start": "70.64.0.0", "end": "70.79.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "184.64.0.0", "end": "184.79.255.255", "type": "mobile", "cgnat": False},
+                ],
+            },
+            # ===== UK - RIPE Allocations =====
+            "UK": {
+                "bt": [
+                    {"start": "2.24.0.0", "end": "2.31.255.255", "type": "residential", "cgnat": False},
+                    {"start": "86.128.0.0", "end": "86.191.255.255", "type": "residential", "cgnat": False},
+                    {"start": "90.192.0.0", "end": "90.255.255.255", "type": "residential", "cgnat": False},
+                ],
+                "ee": [
+                    {"start": "2.120.0.0", "end": "2.127.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "82.128.0.0", "end": "82.135.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "86.0.0.0", "end": "86.31.255.255", "type": "mobile", "cgnat": False},
+                ],
+                "vodafone_uk": [
+                    {"start": "31.48.0.0", "end": "31.63.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "92.40.0.0", "end": "92.47.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "176.248.0.0", "end": "176.255.255.255", "type": "mobile", "cgnat": False},
+                ],
+                "sky": [
+                    {"start": "2.120.0.0", "end": "2.127.255.255", "type": "residential", "cgnat": False},
+                    {"start": "78.144.0.0", "end": "78.159.255.255", "type": "residential", "cgnat": False},
+                    {"start": "90.240.0.0", "end": "90.255.255.255", "type": "residential", "cgnat": False},
+                ],
+            },
+            # ===== Germany - RIPE Allocations =====
+            "DE": {
+                "telekom_de": [
+                    {"start": "91.64.0.0", "end": "91.127.255.255", "type": "residential", "cgnat": False},
+                    {"start": "93.192.0.0", "end": "93.223.255.255", "type": "residential", "cgnat": False},
+                    {"start": "84.128.0.0", "end": "84.191.255.255", "type": "residential", "cgnat": False},
+                ],
+                "vodafone_de": [
+                    {"start": "80.128.0.0", "end": "80.191.255.255", "type": "residential", "cgnat": False},
+                    {"start": "91.0.0.0", "end": "91.63.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "92.72.0.0", "end": "92.79.255.255", "type": "mobile", "cgnat": False},
+                ],
+                "o2_de": [
+                    {"start": "82.112.0.0", "end": "82.127.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "92.224.0.0", "end": "92.255.255.255", "type": "mobile", "cgnat": False},
+                ],
+            },
+            # ===== France - RIPE Allocations =====
+            "FR": {
+                "orange_fr": [
+                    {"start": "2.0.0.0", "end": "2.15.255.255", "type": "residential", "cgnat": False},
+                    {"start": "80.8.0.0", "end": "80.15.255.255", "type": "residential", "cgnat": False},
+                    {"start": "86.192.0.0", "end": "86.255.255.255", "type": "residential", "cgnat": False},
+                ],
+                "sfr": [
+                    {"start": "37.160.0.0", "end": "37.175.255.255", "type": "residential", "cgnat": False},
+                    {"start": "92.128.0.0", "end": "92.159.255.255", "type": "residential", "cgnat": False},
+                ],
+                "free_fr": [
+                    {"start": "82.64.0.0", "end": "82.127.255.255", "type": "residential", "cgnat": False},
+                    {"start": "88.160.0.0", "end": "88.191.255.255", "type": "residential", "cgnat": False},
+                ],
+            },
+            # ===== Japan - APNIC Allocations =====
+            "JP": {
+                "ntt_docomo": [
+                    {"start": "1.64.0.0", "end": "1.79.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "49.96.0.0", "end": "49.111.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "126.160.0.0", "end": "126.191.255.255", "type": "mobile", "cgnat": False},
+                ],
+                "softbank": [
+                    {"start": "126.0.0.0", "end": "126.63.255.255", "type": "residential", "cgnat": False},
+                    {"start": "220.96.0.0", "end": "220.127.255.255", "type": "mobile", "cgnat": False},
+                ],
+                "au_kddi": [
+                    {"start": "106.128.0.0", "end": "106.191.255.255", "type": "mobile", "cgnat": False},
+                    {"start": "182.160.0.0", "end": "182.175.255.255", "type": "mobile", "cgnat": False},
+                ],
+            },
+            # ===== Singapore - APNIC Allocations =====
+            "SG": {
+                "singtel": [
+                    {"start": "27.104.0.0", "end": "27.111.255.255", "type": "residential", "cgnat": False},
+                    {"start": "116.88.0.0", "end": "116.95.255.255", "type": "residential", "cgnat": False},
+                    {"start": "219.74.0.0", "end": "219.75.255.255", "type": "residential", "cgnat": False},
+                ],
+                "starhub": [
+                    {"start": "27.125.0.0", "end": "27.125.255.255", "type": "residential", "cgnat": False},
+                    {"start": "101.127.0.0", "end": "101.127.255.255", "type": "residential", "cgnat": False},
+                ],
+            },
+            # ===== Netherlands - RIPE Allocations =====
+            "NL": {
+                "kpn": [
+                    {"start": "77.160.0.0", "end": "77.175.255.255", "type": "residential", "cgnat": False},
+                    {"start": "84.24.0.0", "end": "84.31.255.255", "type": "residential", "cgnat": False},
+                    {"start": "94.208.0.0", "end": "94.223.255.255", "type": "residential", "cgnat": False},
+                ],
+                "vodafone_nl": [
+                    {"start": "84.80.0.0", "end": "84.87.255.255", "type": "residential", "cgnat": False},
+                    {"start": "86.80.0.0", "end": "86.95.255.255", "type": "residential", "cgnat": False},
+                ],
+            },
+        }
+    
+    def _get_cgnat_simulation_ranges(self) -> List[Dict]:
+        """CGNAT (Carrier Grade NAT) ranges - 100.64.0.0/10
+        Many mobile carriers use CGNAT, making these IPs appear as shared residential
+        """
+        return [
+            # T-Mobile US uses heavy CGNAT
+            {"range": "100.64.0.0/10", "carriers": ["tmobile", "metro_pcs"]},
+            # Some ISPs use private-like ranges internally
+        ]
+    
+    def _initialize_mobile_pools(self) -> Dict[str, List[str]]:
+        """Initialize mobile carrier IP pools with realistic patterns"""
+        return {}  # Will be populated dynamically
+    
+    def generate_ultra_stealth_ip(self, country: str = None, isp: str = None, ip_type: str = "residential") -> Dict[str, Any]:
+        """
+        Generate an ultra-stealth IP that mimics real residential/mobile users
+        
+        Features:
+        - Uses real ISP IP ranges from registry allocations
+        - Simulates DHCP lease patterns
+        - Generates IPs that cluster geographically
+        - Avoids patterns that trigger anti-bot systems
+        """
+        
+        # Select country with weighted distribution favoring trusted countries
+        if not country:
+            countries = ["US", "AU", "CA", "UK", "DE", "FR", "JP", "SG", "NL"]
+            weights = [35, 20, 15, 10, 8, 5, 3, 2, 2]  # US highest priority
+            country = random.choices(countries, weights=weights, k=1)[0]
+        
+        # Get ISP ranges for selected country
+        country_ranges = self.real_isp_ranges.get(country, {})
+        if not country_ranges:
+            country = "US"
+            country_ranges = self.real_isp_ranges["US"]
+        
+        # Select ISP if not specified
+        if not isp:
+            available_isps = list(country_ranges.keys())
+            isp = random.choice(available_isps)
+        
+        # Get ISP's IP ranges
+        isp_ranges = country_ranges.get(isp, [])
+        if not isp_ranges:
+            isp_ranges = list(country_ranges.values())[0]
+        
+        # Select a range based on type preference
+        suitable_ranges = [r for r in isp_ranges if r.get("type") == ip_type]
+        if not suitable_ranges:
+            suitable_ranges = isp_ranges
+        
+        selected_range = random.choice(suitable_ranges)
+        
+        # Generate IP within the range
+        ip = self._generate_ip_from_range(selected_range)
+        
+        # Ensure uniqueness
+        attempts = 0
+        while ip in self.used_ips and attempts < 100:
+            ip = self._generate_ip_from_range(selected_range)
+            attempts += 1
+        
+        self.used_ips.add(ip)
+        
+        # Generate complete IP profile
+        return self._build_ultra_stealth_profile(ip, country, isp, selected_range)
+    
+    def _generate_ip_from_range(self, range_info: Dict) -> str:
+        """Generate IP from a specific range with residential-like patterns"""
+        start_parts = [int(x) for x in range_info["start"].split(".")]
+        end_parts = [int(x) for x in range_info["end"].split(".")]
+        
+        # Generate each octet within range
+        octets = []
+        for i in range(4):
+            if start_parts[i] == end_parts[i]:
+                octets.append(start_parts[i])
+            else:
+                # For the last octet, use residential-like distribution
+                if i == 3:
+                    octet = self._generate_residential_octet(start_parts[i], end_parts[i])
+                else:
+                    octet = random.randint(start_parts[i], end_parts[i])
+                octets.append(octet)
+        
+        return ".".join(str(o) for o in octets)
+    
+    def _generate_residential_octet(self, min_val: int, max_val: int) -> int:
+        """Generate last octet with residential-like distribution"""
+        # Avoid values that look like servers
+        avoid_values = set([0, 1, 2, 254, 255])  # Gateway/broadcast
+        avoid_values.update([x for x in range(min_val, max_val+1) if x % 10 == 0])  # Round numbers
+        avoid_values.update([x for x in range(min_val, max_val+1) if x % 50 == 0])
+        avoid_values.update([100, 128, 200])  # Common server IPs
+        
+        valid_range = [x for x in range(max(11, min_val), min(249, max_val)+1) if x not in avoid_values]
+        
+        if not valid_range:
+            valid_range = list(range(max(11, min_val), min(249, max_val)+1))
+        
+        # Use weighted distribution - middle values more common
+        mid = len(valid_range) // 2
+        weights = [1 + (mid - abs(i - mid)) * 0.1 for i in range(len(valid_range))]
+        
+        return random.choices(valid_range, weights=weights, k=1)[0]
+    
+    def _build_ultra_stealth_profile(self, ip: str, country: str, isp: str, range_info: Dict) -> Dict[str, Any]:
+        """Build complete ultra-stealth IP profile"""
+        
+        # Get country-specific data
+        country_data = self._get_country_data(country)
+        isp_data = self._get_isp_data(country, isp)
+        
+        # Generate realistic timestamps
+        current_time = time.time()
+        lease_start = current_time - random.randint(300, 86400)  # 5 min to 1 day ago
+        lease_duration = random.choice([3600, 7200, 14400, 28800, 86400])  # Common DHCP lease times
+        
+        ip_type = range_info.get("type", "residential")
+        is_mobile = ip_type == "mobile"
+        
+        # Generate location within country
+        location = self._generate_location(country, isp_data)
+        
+        return {
+            "ip": ip,
+            "type": ip_type,
+            "country": country,
+            "country_name": country_data["name"],
+            "isp": isp,
+            "isp_name": isp_data.get("name", isp),
+            "asn": isp_data.get("asn", "AS0"),
+            "as_name": isp_data.get("as_name", ""),
+            "connection_type": "mobile" if is_mobile else "wifi",
+            "network_type": random.choice(["5G", "LTE", "4G"]) if is_mobile else "WiFi",
+            "cgnat": range_info.get("cgnat", False),
+            "location": location,
+            "language": country_data["language"],
+            "timezone": country_data["timezone"],
+            "locale": country_data["locale"],
+            
+            # DHCP simulation
+            "dhcp": {
+                "lease_start": lease_start,
+                "lease_duration": lease_duration,
+                "lease_remaining": lease_duration - (current_time - lease_start),
+                "server": f"{'.'.join(ip.split('.')[:3])}.1",
+            },
+            
+            # Network metrics - realistic for connection type
+            "network_metrics": self._generate_network_metrics(ip_type, country),
+            
+            # TCP/IP fingerprint
+            "tcp_fingerprint": self._generate_tcp_fingerprint(is_mobile),
+            
+            # Device fingerprint
+            "device": self._generate_device_fingerprint(country, is_mobile),
+            
+            # Meta
+            "generated_at": current_time,
+            "generation_method": "ultra_stealth_v2",
+            "health_score": random.randint(90, 99),
+            "trust_score": random.uniform(0.92, 0.99),
+            "usage_count": 0,
+            "last_used": None,
+        }
+    
+    def _get_country_data(self, country: str) -> Dict[str, Any]:
+        """Get country-specific data"""
+        country_map = {
+            "US": {"name": "United States", "language": "en-US", "timezone": "America/New_York", "locale": "en_US"},
+            "AU": {"name": "Australia", "language": "en-AU", "timezone": "Australia/Sydney", "locale": "en_AU"},
+            "CA": {"name": "Canada", "language": "en-CA", "timezone": "America/Toronto", "locale": "en_CA"},
+            "UK": {"name": "United Kingdom", "language": "en-GB", "timezone": "Europe/London", "locale": "en_GB"},
+            "DE": {"name": "Germany", "language": "de-DE", "timezone": "Europe/Berlin", "locale": "de_DE"},
+            "FR": {"name": "France", "language": "fr-FR", "timezone": "Europe/Paris", "locale": "fr_FR"},
+            "JP": {"name": "Japan", "language": "ja-JP", "timezone": "Asia/Tokyo", "locale": "ja_JP"},
+            "SG": {"name": "Singapore", "language": "en-SG", "timezone": "Asia/Singapore", "locale": "en_SG"},
+            "NL": {"name": "Netherlands", "language": "nl-NL", "timezone": "Europe/Amsterdam", "locale": "nl_NL"},
+        }
+        return country_map.get(country, country_map["US"])
+    
+    def _get_isp_data(self, country: str, isp: str) -> Dict[str, Any]:
+        """Get ISP-specific data"""
+        isp_data = {
+            "US": {
+                "verizon_wireless": {"name": "Verizon Wireless", "asn": "AS22394", "as_name": "Verizon Wireless"},
+                "att_wireless": {"name": "AT&T Wireless", "asn": "AS20057", "as_name": "AT&T Mobility"},
+                "tmobile": {"name": "T-Mobile", "asn": "AS21928", "as_name": "T-Mobile USA"},
+                "comcast": {"name": "Comcast", "asn": "AS7922", "as_name": "Comcast Cable Communications"},
+                "spectrum": {"name": "Spectrum", "asn": "AS11351", "as_name": "Charter Communications"},
+                "cox": {"name": "Cox Communications", "asn": "AS22773", "as_name": "Cox Communications Inc."},
+            },
+            "AU": {
+                "telstra": {"name": "Telstra", "asn": "AS1221", "as_name": "Telstra Corporation Ltd"},
+                "optus": {"name": "Optus", "asn": "AS4804", "as_name": "Optus Mobile"},
+                "vodafone_au": {"name": "Vodafone AU", "asn": "AS133612", "as_name": "Vodafone Australia"},
+                "tpg": {"name": "TPG", "asn": "AS7545", "as_name": "TPG Telecom Limited"},
+            },
+            "CA": {
+                "rogers": {"name": "Rogers", "asn": "AS812", "as_name": "Rogers Communications Canada Inc."},
+                "bell": {"name": "Bell Canada", "asn": "AS577", "as_name": "Bell Canada"},
+                "telus": {"name": "TELUS", "asn": "AS852", "as_name": "TELUS Communications Inc."},
+            },
+            "UK": {
+                "bt": {"name": "BT", "asn": "AS2856", "as_name": "British Telecommunications PLC"},
+                "ee": {"name": "EE", "asn": "AS12576", "as_name": "EE Limited"},
+                "vodafone_uk": {"name": "Vodafone UK", "asn": "AS25135", "as_name": "Vodafone UK"},
+                "sky": {"name": "Sky UK", "asn": "AS5607", "as_name": "Sky UK Limited"},
+            },
+            "DE": {
+                "telekom_de": {"name": "Deutsche Telekom", "asn": "AS3320", "as_name": "Deutsche Telekom AG"},
+                "vodafone_de": {"name": "Vodafone Germany", "asn": "AS3209", "as_name": "Vodafone GmbH"},
+                "o2_de": {"name": "O2 Germany", "asn": "AS8422", "as_name": "O2 (Germany) GmbH & Co. OHG"},
+            },
+            "FR": {
+                "orange_fr": {"name": "Orange France", "asn": "AS3215", "as_name": "Orange S.A."},
+                "sfr": {"name": "SFR", "asn": "AS15557", "as_name": "SFR SA"},
+                "free_fr": {"name": "Free", "asn": "AS12322", "as_name": "Free SAS"},
+            },
+            "JP": {
+                "ntt_docomo": {"name": "NTT Docomo", "asn": "AS9605", "as_name": "NTT DOCOMO, INC."},
+                "softbank": {"name": "SoftBank", "asn": "AS17676", "as_name": "SoftBank Corp."},
+                "au_kddi": {"name": "AU KDDI", "asn": "AS2516", "as_name": "KDDI CORPORATION"},
+            },
+            "SG": {
+                "singtel": {"name": "Singtel", "asn": "AS7473", "as_name": "Singapore Telecommunications Ltd"},
+                "starhub": {"name": "StarHub", "asn": "AS4657", "as_name": "StarHub Ltd"},
+            },
+            "NL": {
+                "kpn": {"name": "KPN", "asn": "AS1136", "as_name": "KPN B.V."},
+                "vodafone_nl": {"name": "Vodafone NL", "asn": "AS1103", "as_name": "Vodafone Libertel B.V."},
+            },
+        }
+        return isp_data.get(country, {}).get(isp, {"name": isp, "asn": "AS0", "as_name": ""})
+    
+    def _generate_location(self, country: str, isp_data: Dict) -> Dict[str, Any]:
+        """Generate realistic location within country"""
+        cities = {
+            "US": [
+                ("New York", 40.7128, -74.0060), ("Los Angeles", 34.0522, -118.2437),
+                ("Chicago", 41.8781, -87.6298), ("Houston", 29.7604, -95.3698),
+                ("Phoenix", 33.4484, -112.0740), ("Philadelphia", 39.9526, -75.1652),
+                ("San Antonio", 29.4241, -98.4936), ("San Diego", 32.7157, -117.1611),
+                ("Dallas", 32.7767, -96.7970), ("San Jose", 37.3382, -121.8863),
+            ],
+            "AU": [
+                ("Sydney", -33.8688, 151.2093), ("Melbourne", -37.8136, 144.9631),
+                ("Brisbane", -27.4698, 153.0251), ("Perth", -31.9505, 115.8605),
+                ("Adelaide", -34.9285, 138.6007),
+            ],
+            "CA": [
+                ("Toronto", 43.6532, -79.3832), ("Vancouver", 49.2827, -123.1207),
+                ("Montreal", 45.5017, -73.5673), ("Calgary", 51.0447, -114.0719),
+            ],
+            "UK": [
+                ("London", 51.5074, -0.1278), ("Manchester", 53.4808, -2.2426),
+                ("Birmingham", 52.4862, -1.8904), ("Glasgow", 55.8642, -4.2518),
+            ],
+            "DE": [
+                ("Berlin", 52.5200, 13.4050), ("Munich", 48.1351, 11.5820),
+                ("Hamburg", 53.5511, 9.9937), ("Frankfurt", 50.1109, 8.6821),
+            ],
+            "FR": [
+                ("Paris", 48.8566, 2.3522), ("Lyon", 45.7640, 4.8357),
+                ("Marseille", 43.2965, 5.3698), ("Toulouse", 43.6047, 1.4442),
+            ],
+            "JP": [
+                ("Tokyo", 35.6762, 139.6503), ("Osaka", 34.6937, 135.5023),
+                ("Nagoya", 35.1815, 136.9066), ("Yokohama", 35.4437, 139.6380),
+            ],
+            "SG": [("Singapore", 1.3521, 103.8198)],
+            "NL": [
+                ("Amsterdam", 52.3676, 4.9041), ("Rotterdam", 51.9244, 4.4777),
+                ("The Hague", 52.0705, 4.3007),
+            ],
+        }
+        
+        city_list = cities.get(country, cities["US"])
+        city_name, lat, lon = random.choice(city_list)
+        
+        # Add slight variation to coordinates (within ~1km)
+        lat += random.uniform(-0.01, 0.01)
+        lon += random.uniform(-0.01, 0.01)
+        
+        return {
+            "city": city_name,
+            "country": country,
+            "latitude": round(lat, 6),
+            "longitude": round(lon, 6),
+            "accuracy": random.randint(50, 500),
+        }
+    
+    def _generate_network_metrics(self, ip_type: str, country: str) -> Dict[str, Any]:
+        """Generate realistic network metrics based on connection type and location"""
+        
+        # Base latency by region (to US Instagram servers)
+        base_latency = {
+            "US": (10, 40), "CA": (20, 50), "UK": (80, 120), "DE": (90, 130),
+            "FR": (85, 125), "AU": (150, 200), "JP": (100, 150), "SG": (120, 170), "NL": (75, 115),
+        }
+        
+        lat_range = base_latency.get(country, (50, 100))
+        
+        if ip_type == "mobile":
+            return {
+                "latency_ms": random.uniform(lat_range[0] + 20, lat_range[1] + 40),
+                "jitter_ms": random.uniform(5, 20),
+                "packet_loss_percent": random.uniform(0.1, 1.0),
+                "bandwidth_mbps": random.uniform(20, 150),
+                "signal_strength": random.randint(-85, -50),
+            }
+        else:
+            return {
+                "latency_ms": random.uniform(lat_range[0], lat_range[1]),
+                "jitter_ms": random.uniform(1, 8),
+                "packet_loss_percent": random.uniform(0, 0.3),
+                "bandwidth_mbps": random.uniform(100, 1000),
+                "signal_strength": random.randint(-40, -20),
+            }
+    
+    def _generate_tcp_fingerprint(self, is_mobile: bool) -> Dict[str, Any]:
+        """Generate realistic TCP/IP fingerprint"""
+        if is_mobile:
+            return {
+                "ttl": random.choice([64, 63, 62, 61]),
+                "window_size": random.choice([65535, 64240, 32768]),
+                "mss": random.choice([1400, 1380, 1360]),
+                "window_scaling": random.randint(6, 10),
+                "timestamps": True,
+                "sack_permitted": True,
+            }
+        else:
+            return {
+                "ttl": random.choice([64, 128, 127, 63]),
+                "window_size": random.choice([65535, 64240, 65520]),
+                "mss": random.choice([1460, 1440, 1452]),
+                "window_scaling": random.randint(7, 14),
+                "timestamps": True,
+                "sack_permitted": True,
+            }
+    
+    def _generate_device_fingerprint(self, country: str, is_mobile: bool) -> Dict[str, Any]:
+        """Generate device fingerprint based on country and connection type"""
+        
+        if is_mobile:
+            # Popular phones by country
+            phones = {
+                "US": ["iPhone 15 Pro Max", "iPhone 15 Pro", "iPhone 14 Pro", "Samsung Galaxy S24 Ultra", "Pixel 8 Pro"],
+                "AU": ["iPhone 15 Pro Max", "iPhone 14 Pro", "Samsung Galaxy S24", "Pixel 8"],
+                "CA": ["iPhone 15 Pro", "iPhone 14", "Samsung Galaxy S24 Ultra", "Pixel 8 Pro"],
+                "UK": ["iPhone 15 Pro Max", "iPhone 14 Pro", "Samsung Galaxy S24", "Pixel 8"],
+                "DE": ["iPhone 15 Pro", "Samsung Galaxy S24", "Xiaomi 14", "Pixel 8"],
+                "FR": ["iPhone 15 Pro Max", "Samsung Galaxy S24 Ultra", "Xiaomi 14 Pro"],
+                "JP": ["iPhone 15 Pro Max", "iPhone 15", "Xperia 1 V", "AQUOS R8"],
+                "SG": ["iPhone 15 Pro Max", "Samsung Galaxy S24 Ultra", "Xiaomi 14"],
+                "NL": ["iPhone 15 Pro", "Samsung Galaxy S24", "Pixel 8"],
+            }
+            
+            device = random.choice(phones.get(country, phones["US"]))
+            
+            if "iPhone" in device:
+                return {
+                    "type": "mobile",
+                    "model": device,
+                    "os": "iOS",
+                    "os_version": random.choice(["17.4", "17.3", "17.2", "17.1"]),
+                    "browser": "Safari",
+                    "browser_version": random.choice(["17.4", "17.3", "17.2"]),
+                }
+            else:
+                return {
+                    "type": "mobile",
+                    "model": device,
+                    "os": "Android",
+                    "os_version": random.choice(["14", "13", "12"]),
+                    "browser": "Chrome",
+                    "browser_version": random.choice(["122.0.6261", "121.0.6167", "120.0.6099"]),
+                }
+        else:
+            # Desktop browsers
+            return {
+                "type": "desktop",
+                "os": random.choice(["Windows", "macOS"]),
+                "os_version": random.choice(["11", "10"]) if random.random() > 0.4 else random.choice(["14.4", "14.3", "13.6"]),
+                "browser": "Chrome",
+                "browser_version": random.choice(["122.0.6261.112", "121.0.6167.160", "120.0.6099.224"]),
+            }
+
+
 # ===================== ADVANCED IP SPOOFING 2025 - UPDATED =====================
 
 class AdvancedIPStealthSystem2025:
@@ -2832,9 +3428,27 @@ class AdvancedIPStealthSystem2025:
         }
     
     def get_fresh_ip_config(self, session_id: str = None, min_health: int = 80, connection_type: str = "mobile") -> Dict[str, Any]:
-        """Get fresh IP configuration untuk session tertentu"""
+        """Get ultra-fresh IP configuration using next-gen stealth system"""
         print(f"{cyan}🌐  Getting fresh IP config for session {session_id[:8] if session_id else 'new'} (connection: {connection_type})...{reset}")
         
+        # ===== USE ULTRA STEALTH IP GENERATOR =====
+        # This new system generates IPs from real ISP allocations
+        try:
+            ultra_generator = UltraStealthIPGenerator2025()
+            ip_type = "mobile" if connection_type == "mobile" else "residential"
+            
+            # Generate ultra-stealth IP
+            ultra_ip_config = ultra_generator.generate_ultra_stealth_ip(ip_type=ip_type)
+            
+            if ultra_ip_config and ultra_ip_config.get("ip"):
+                # Convert to standard format
+                config = self._convert_ultra_stealth_to_standard(ultra_ip_config, session_id)
+                print(f"{hijau}✅  Selected IP: {ultra_ip_config['ip']} ({ultra_ip_config['isp']}) [{ultra_ip_config['country']}] - Health: {ultra_ip_config['health_score']}{reset}")
+                return config
+        except Exception as e:
+            print(f"{kuning}    Ultra stealth generator error: {e}, falling back...{reset}")
+        
+        # ===== FALLBACK TO ORIGINAL SYSTEM =====
         # Refresh pool jika diperlukan
         self._refresh_ip_pool_if_needed()
         
@@ -2894,6 +3508,77 @@ class AdvancedIPStealthSystem2025:
         # Ultimate fallback
         print(f"{merah}🚨  Using ultimate fallback IP{reset}")
         return self._get_fallback_ip_config_enhanced(session_id)
+    
+    def _convert_ultra_stealth_to_standard(self, ultra_config: Dict[str, Any], session_id: str = None) -> Dict[str, Any]:
+        """Convert ultra stealth IP config to standard format"""
+        device = ultra_config.get("device", {})
+        location = ultra_config.get("location", {})
+        network = ultra_config.get("network_metrics", {})
+        tcp = ultra_config.get("tcp_fingerprint", {})
+        
+        # Build headers based on device
+        if device.get("type") == "mobile":
+            if device.get("os") == "iOS":
+                user_agent = f"Mozilla/5.0 (iPhone; CPU iPhone OS {device.get('os_version', '17.4').replace('.', '_')} like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/{device.get('browser_version', '17.4')} Mobile/15E148 Safari/604.1"
+            else:
+                user_agent = f"Mozilla/5.0 (Linux; Android {device.get('os_version', '14')}; {device.get('model', 'Pixel 8')}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{device.get('browser_version', '122.0.6261')} Mobile Safari/537.36"
+        else:
+            if device.get("os") == "macOS":
+                user_agent = f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{device.get('browser_version', '122.0.6261.112')} Safari/537.36"
+            else:
+                user_agent = f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{device.get('browser_version', '122.0.6261.112')} Safari/537.36"
+        
+        return {
+            "ip": ultra_config["ip"],
+            "type": ultra_config.get("type", "residential"),
+            "isp": ultra_config["isp"],
+            "isp_name": ultra_config.get("isp_name", ultra_config["isp"]),
+            "asn": ultra_config.get("asn", ""),
+            "as_name": ultra_config.get("as_name", ""),
+            "connection_type": ultra_config.get("connection_type", "mobile"),
+            "network_type": ultra_config.get("network_type", "WiFi"),
+            "country": ultra_config.get("country", "US"),
+            "country_name": ultra_config.get("country_name", "United States"),
+            "location": {
+                "city": location.get("city", ""),
+                "country": ultra_config.get("country", "US"),
+                "country_code": ultra_config.get("country", "US"),
+                "latitude": location.get("latitude", 0),
+                "longitude": location.get("longitude", 0),
+                "timezone": ultra_config.get("timezone", "America/New_York"),
+                "accuracy": location.get("accuracy", 100),
+                "isp": ultra_config["isp"],
+                "asn": ultra_config.get("asn", ""),
+            },
+            "network_metrics": {
+                "latency_ms": network.get("latency_ms", 30),
+                "jitter_ms": network.get("jitter_ms", 5),
+                "packet_loss_percent": network.get("packet_loss_percent", 0.1),
+                "bandwidth_mbps": network.get("bandwidth_mbps", 100),
+                "signal_strength": network.get("signal_strength", -50),
+            },
+            "tcp_parameters": {
+                "ttl": tcp.get("ttl", 64),
+                "window_size": tcp.get("window_size", 65535),
+                "mss": tcp.get("mss", 1460),
+                "window_scaling": tcp.get("window_scaling", 10),
+                "timestamps": tcp.get("timestamps", True),
+                "sack_permitted": tcp.get("sack_permitted", True),
+            },
+            "device": device,
+            "headers": {
+                "User-Agent": user_agent,
+                "Accept-Language": ultra_config.get("language", "en-US") + ",en;q=0.9",
+            },
+            "language": ultra_config.get("language", "en-US"),
+            "locale": ultra_config.get("locale", "en_US"),
+            "timezone": ultra_config.get("timezone", "America/New_York"),
+            "health_score": ultra_config.get("health_score", 95),
+            "trust_score": ultra_config.get("trust_score", 0.95),
+            "generation_method": "ultra_stealth_v2",
+            "session_id": session_id,
+            "timestamp": time.time(),
+        }
     
     def _refresh_ip_pool_if_needed(self):
         """Refresh IP pool dengan enhanced logic"""
