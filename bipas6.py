@@ -7341,6 +7341,9 @@ class RequestOrchestrator2025:
         if "user_agent" in metadata and metadata["user_agent"]:
             all_headers["User-Agent"] = metadata["user_agent"]
         
+        # Get connection type from session metadata
+        connection_type = metadata.get("connection_type", "mobile")
+        
         # Create request object
         request_id = f"req_{int(time.time())}_{random.randint(1000, 9999)}"
         
@@ -9611,28 +9614,41 @@ class InstagramAccountCreator2025:
             session_headers = session.get("headers", {})
             
             # Get dynamic Ajax ID if available
-            ajax_id = session.get("tokens", {}).get("ajax_id", "1018448258")
+            ajax_id = session.get("tokens", {}).get("ajax_id", "1029952363")
             
-            # Build clean headers for account creation (AJAX request)
+            # Get web session id (format: xxx:xxx:xxx)
+            web_session_id = session.get("extra_session_id", "")
+            if not web_session_id:
+                web_session_id = self._generate_extra_session_id()
+            
+            # Get ig_www_claim from session or cookies
+            ig_www_claim = session.get("ig_www_claim", "0")
+            
+            # Build headers matching REAL Instagram request exactly
             headers = {
                 "Accept": "*/*",
-                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept-Encoding": "gzip, deflate, br",
                 "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Origin": "https://www.instagram.com",
+                "Priority": "u=1, i",
                 "Referer": "https://www.instagram.com/accounts/emailsignup/",
+                "Sec-Ch-Prefers-Color-Scheme": "dark",
                 "Sec-Fetch-Dest": "empty",
                 "Sec-Fetch-Mode": "cors",
                 "Sec-Fetch-Site": "same-origin",
+                "X-Asbd-Id": "359341",
                 "X-Csrftoken": csrf_token,
                 "X-Ig-App-Id": "936619743392459",
+                "X-Ig-Www-Claim": ig_www_claim,
                 "X-Instagram-Ajax": ajax_id,
                 "X-Requested-With": "XMLHttpRequest",
+                "X-Web-Session-Id": web_session_id,
             }
             
-            # Add User-Agent and Sec-Ch-* from session
-            for key in ["User-Agent", "Sec-Ch-Ua", "Sec-Ch-Ua-Mobile", "Sec-Ch-Ua-Platform",
-                       "Sec-Ch-Ua-Model", "Sec-Ch-Ua-Full-Version-List"]:
+            # Add User-Agent and Sec-Ch-* from session (matching real Instagram order)
+            for key in ["Sec-Ch-Ua-Full-Version-List", "Sec-Ch-Ua-Platform", "Sec-Ch-Ua", 
+                       "Sec-Ch-Ua-Model", "Sec-Ch-Ua-Mobile", "User-Agent", "Sec-Ch-Ua-Platform-Version"]:
                 if key in session_headers:
                     headers[key] = session_headers[key]
             
