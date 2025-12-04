@@ -4766,6 +4766,147 @@ class AdvancedIPStealthSystem2025:
         print(f"{merah}🚨  Using ultimate fallback IP{reset}")
         return self._get_fallback_ip_config_enhanced(session_id)
     
+    def _build_real_ip_config(self, real_ip: str, geo_info: Dict[str, Any], fingerprint: Dict[str, Any],
+                               ja3_data: Dict[str, Any], http2_data: Dict[str, Any], device_data: Dict[str, Any],
+                               connection_type: str = "mobile", session_id: str = None) -> Dict[str, Any]:
+        """
+        Build complete IP config from real IP detection results.
+        All fingerprints are synced to actual IP location.
+        Prioritizes Indonesia with super dynamic fingerprints.
+        """
+        country = geo_info.get("country_code", geo_info.get("country", "ID"))
+        city = geo_info.get("city", "Jakarta")
+        isp = geo_info.get("isp", geo_info.get("org", "Unknown"))
+        timezone_str = geo_info.get("timezone", "Asia/Jakarta" if country == "ID" else "UTC")
+        
+        # Get device info
+        device_model = fingerprint.get("device_model", device_data.get("model", "SM-A546B"))
+        device_brand = device_data.get("brand", "Samsung")
+        user_agent = fingerprint.get("user_agent", "")
+        
+        # Build Accept-Language based on country
+        accept_language = self._get_accept_language_for_country(country)
+        
+        # Get Chrome version from fingerprint or generate
+        chrome_version = fingerprint.get("chrome_version", random.choice(["131", "132", "133", "134", "135", "136"]))
+        chrome_build = fingerprint.get("chrome_build", f"{chrome_version}.0.{random.randint(6800, 6900)}.{random.randint(100, 200)}")
+        
+        # Build Sec-Ch-Ua headers
+        sec_ch_ua = f'"Chromium";v="{chrome_version}", "Google Chrome";v="{chrome_version}", "Not-A.Brand";v="24"'
+        sec_ch_ua_full = f'"Chromium";v="{chrome_build}", "Google Chrome";v="{chrome_build}", "Not-A.Brand";v="24.0.0.0"'
+        
+        # Get Android version based on device
+        android_version = device_data.get("os_version", "14")
+        
+        return {
+            "ip": real_ip,
+            "type": "real",  # Mark as real IP (not spoofed)
+            "isp": isp,
+            "isp_name": isp,
+            "asn": geo_info.get("asn", ""),
+            "as_name": geo_info.get("as_name", isp),
+            "connection_type": connection_type,
+            "network_type": "mobile" if connection_type == "mobile" else "wifi",
+            "country": country,
+            "country_name": geo_info.get("country_name", self._get_country_name(country)),
+            "location": {
+                "city": city,
+                "country": country,
+                "country_code": country,
+                "latitude": geo_info.get("lat", geo_info.get("latitude", 0)),
+                "longitude": geo_info.get("lon", geo_info.get("longitude", 0)),
+                "timezone": timezone_str,
+                "accuracy": 100,
+                "isp": isp,
+                "region": geo_info.get("regionName", geo_info.get("region", "")),
+            },
+            "device": {
+                "type": "mobile" if connection_type == "mobile" else "desktop",
+                "os": "Android",
+                "os_version": android_version,
+                "brand": device_brand,
+                "model": device_model,
+                "browser": "Chrome",
+                "browser_version": chrome_build,
+                **device_data,
+            },
+            "fingerprint": {
+                **fingerprint,
+                "user_agent": user_agent,
+                "device_model": device_model,
+                "chrome_version": chrome_version,
+                "chrome_build": chrome_build,
+            },
+            "ja3": ja3_data,
+            "http2": http2_data,
+            "headers": {
+                "User-Agent": user_agent,
+                "Accept-Language": accept_language,
+                "Sec-Ch-Ua": sec_ch_ua,
+                "Sec-Ch-Ua-Full-Version-List": sec_ch_ua_full,
+                "Sec-Ch-Ua-Model": f'"{device_model}"',
+                "Sec-Ch-Ua-Platform": '"Android"',
+                "Sec-Ch-Ua-Platform-Version": f'"{android_version}"',
+                "Sec-Ch-Ua-Mobile": "?1",
+            },
+            "language": self._get_language_for_country(country),
+            "locale": self._get_locale_for_country(country),
+            "timezone": timezone_str,
+            "health_score": 95,  # Real IP is healthy
+            "trust_score": 0.98,
+            "generation_method": "real_ip_detection",
+            "session_id": session_id,
+            "timestamp": time.time(),
+            "is_real_ip": True,
+        }
+    
+    def _get_accept_language_for_country(self, country: str) -> str:
+        """Get Accept-Language header based on country"""
+        country_languages = {
+            "ID": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            "US": "en-US,en;q=0.9",
+            "GB": "en-GB,en;q=0.9,en-US;q=0.8",
+            "AU": "en-AU,en;q=0.9,en-US;q=0.8",
+            "CA": "en-CA,en;q=0.9,en-US;q=0.8,fr-CA;q=0.7",
+            "DE": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+            "FR": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+            "NL": "nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7",
+            "JP": "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7",
+            "SG": "en-SG,en;q=0.9,zh-CN;q=0.8,en-US;q=0.7",
+            "NZ": "en-NZ,en;q=0.9,en-US;q=0.8",
+            "IN": "en-IN,en;q=0.9,hi;q=0.8,en-US;q=0.7",
+            "BR": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+        }
+        return country_languages.get(country, "en-US,en;q=0.9")
+    
+    def _get_language_for_country(self, country: str) -> str:
+        """Get language code for country"""
+        country_languages = {
+            "ID": "id-ID", "US": "en-US", "GB": "en-GB", "AU": "en-AU",
+            "CA": "en-CA", "DE": "de-DE", "FR": "fr-FR", "NL": "nl-NL",
+            "JP": "ja-JP", "SG": "en-SG", "NZ": "en-NZ", "IN": "en-IN", "BR": "pt-BR",
+        }
+        return country_languages.get(country, "en-US")
+    
+    def _get_locale_for_country(self, country: str) -> str:
+        """Get locale for country"""
+        country_locales = {
+            "ID": "id_ID", "US": "en_US", "GB": "en_GB", "AU": "en_AU",
+            "CA": "en_CA", "DE": "de_DE", "FR": "fr_FR", "NL": "nl_NL",
+            "JP": "ja_JP", "SG": "en_SG", "NZ": "en_NZ", "IN": "en_IN", "BR": "pt_BR",
+        }
+        return country_locales.get(country, "en_US")
+    
+    def _get_country_name(self, country_code: str) -> str:
+        """Get country name from code"""
+        country_names = {
+            "ID": "Indonesia", "US": "United States", "GB": "United Kingdom",
+            "AU": "Australia", "CA": "Canada", "DE": "Germany", "FR": "France",
+            "NL": "Netherlands", "JP": "Japan", "SG": "Singapore", "NZ": "New Zealand",
+            "IN": "India", "BR": "Brazil",
+        }
+        return country_names.get(country_code, country_code)
+    
     def _convert_ultra_stealth_to_standard(self, ultra_config: Dict[str, Any], session_id: str = None) -> Dict[str, Any]:
         """Convert ultra stealth IP config to standard format"""
         device = ultra_config.get("device", {})
