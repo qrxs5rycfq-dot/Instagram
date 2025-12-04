@@ -13169,11 +13169,24 @@ class RequestOrchestrator2025:
                 
                 response_time = time.time() - start_time
                 
-                # Parse cookies from response
+                # Parse cookies from response (curl_cffi returns Cookies object)
                 response_cookies = {}
                 if hasattr(response, 'cookies'):
-                    for cookie in response.cookies:
-                        response_cookies[cookie.name] = cookie.value
+                    try:
+                        # curl_cffi cookies are dict-like
+                        for name, value in response.cookies.items():
+                            response_cookies[name] = value
+                    except Exception:
+                        # Fallback: try iterating as cookie objects
+                        try:
+                            for cookie in response.cookies:
+                                if hasattr(cookie, 'name') and hasattr(cookie, 'value'):
+                                    response_cookies[cookie.name] = cookie.value
+                                elif isinstance(cookie, str):
+                                    # Cookie name only, get value from dict
+                                    response_cookies[cookie] = response.cookies.get(cookie, "")
+                        except Exception:
+                            pass
                 
                 return {
                     "status": response.status_code,
