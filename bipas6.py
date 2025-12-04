@@ -1703,6 +1703,214 @@ class AdvancedIPStealthSystem2025:
                 "latency_range": (35, 65),
                 "jitter_range": (6, 20),
                 "packet_loss": (0.5, 0.9)
+            },
+            "tri": {
+                "prefixes": ["116.206", "118.96", "182.253", "203.190", "103.10"],
+                "asn": "AS23947",
+                "as_name": "PT Hutchison 3 Indonesia",
+                "ttl_range": (60, 68),
+                "window_range": (43800, 44200),
+                "mss_range": (1360, 1460),
+                "cities": ["Jakarta", "Surabaya", "Bandung", "Bekasi", "Tangerang"],
+                "latency_range": (30, 60),
+                "jitter_range": (5, 18),
+                "packet_loss": (0.4, 0.8)
+            },
+            "biznet": {
+                "prefixes": ["103.28", "103.78", "117.102", "182.253"],
+                "asn": "AS17451",
+                "as_name": "PT Biznet Gio Nusantara",
+                "ttl_range": (64, 72),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Jakarta", "Surabaya", "Bandung"],
+                "latency_range": (10, 30),
+                "jitter_range": (1, 5),
+                "packet_loss": (0.1, 0.3)
+            },
+            "cbn": {
+                "prefixes": ["202.158", "202.169", "117.102"],
+                "asn": "AS9340",
+                "as_name": "PT Cyberindo Aditama",
+                "ttl_range": (64, 72),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Jakarta", "Surabaya"],
+                "latency_range": (8, 25),
+                "jitter_range": (1, 4),
+                "packet_loss": (0.1, 0.2)
+            },
+            # US ISPs
+            "verizon": {
+                "prefixes": ["174.192", "174.225", "70.192", "98.116"],
+                "asn": "AS22394",
+                "as_name": "Verizon Wireless",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["New York", "Los Angeles", "Chicago", "Houston", "Miami"],
+                "latency_range": (15, 40),
+                "jitter_range": (2, 8),
+                "packet_loss": (0.1, 0.4)
+            },
+            "att": {
+                "prefixes": ["166.137", "166.171", "107.77", "108.186"],
+                "asn": "AS20057",
+                "as_name": "AT&T Mobility",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Dallas", "Atlanta", "San Francisco", "Seattle"],
+                "latency_range": (18, 45),
+                "jitter_range": (3, 10),
+                "packet_loss": (0.2, 0.5)
+            },
+            "tmobile": {
+                "prefixes": ["172.32", "172.58", "100.128", "208.54"],
+                "asn": "AS21928",
+                "as_name": "T-Mobile USA",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Bellevue", "Las Vegas", "Denver", "Phoenix"],
+                "latency_range": (20, 50),
+                "jitter_range": (4, 12),
+                "packet_loss": (0.3, 0.6)
+            },
+            "comcast": {
+                "prefixes": ["73.93", "73.162", "98.216", "50.79"],
+                "asn": "AS7922",
+                "as_name": "Comcast Cable Communications",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Philadelphia", "Chicago", "Denver", "San Jose"],
+                "latency_range": (8, 25),
+                "jitter_range": (1, 5),
+                "packet_loss": (0.1, 0.3)
+            },
+            "spectrum": {
+                "prefixes": ["72.68", "72.93", "97.87", "24.14"],
+                "asn": "AS11351",
+                "as_name": "Charter Communications",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Stamford", "St Louis", "Tampa", "Austin"],
+                "latency_range": (10, 30),
+                "jitter_range": (2, 6),
+                "packet_loss": (0.1, 0.3)
+            },
+            # Brazil ISPs
+            "claro_br": {
+                "prefixes": ["177.32", "177.84", "189.4", "200.215"],
+                "asn": "AS28573",
+                "as_name": "Claro S.A.",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["São Paulo", "Rio de Janeiro", "Brasília", "Salvador"],
+                "latency_range": (25, 60),
+                "jitter_range": (5, 15),
+                "packet_loss": (0.3, 0.7)
+            },
+            "vivo_br": {
+                "prefixes": ["179.152", "189.79", "200.150", "201.16"],
+                "asn": "AS26599",
+                "as_name": "Telefonica Brasil S.A.",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["São Paulo", "Rio de Janeiro", "Curitiba"],
+                "latency_range": (20, 55),
+                "jitter_range": (4, 12),
+                "packet_loss": (0.2, 0.6)
+            },
+            "tim_br": {
+                "prefixes": ["179.176", "189.36", "186.204"],
+                "asn": "AS26615",
+                "as_name": "TIM S/A",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["São Paulo", "Belo Horizonte", "Porto Alegre"],
+                "latency_range": (30, 65),
+                "jitter_range": (6, 18),
+                "packet_loss": (0.4, 0.8)
+            },
+            # India ISPs
+            "jio": {
+                "prefixes": ["49.36", "49.44", "157.32", "157.48"],
+                "asn": "AS55836",
+                "as_name": "Reliance Jio Infocomm Limited",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai"],
+                "latency_range": (20, 50),
+                "jitter_range": (4, 12),
+                "packet_loss": (0.2, 0.5)
+            },
+            "airtel_in": {
+                "prefixes": ["106.76", "106.210", "122.161", "182.64"],
+                "asn": "AS24560",
+                "as_name": "Bharti Airtel Ltd.",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Mumbai", "Delhi", "Kolkata", "Chennai"],
+                "latency_range": (25, 55),
+                "jitter_range": (5, 15),
+                "packet_loss": (0.3, 0.6)
+            },
+            "vi_in": {
+                "prefixes": ["106.196", "115.110", "117.195"],
+                "asn": "AS45609",
+                "as_name": "Vodafone Idea Limited",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Mumbai", "Delhi", "Pune", "Ahmedabad"],
+                "latency_range": (30, 60),
+                "jitter_range": (6, 18),
+                "packet_loss": (0.4, 0.7)
+            },
+            # Germany ISPs
+            "telekom_de": {
+                "prefixes": ["91.64", "217.6", "93.220", "84.138"],
+                "asn": "AS3320",
+                "as_name": "Deutsche Telekom AG",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Berlin", "Munich", "Hamburg", "Frankfurt"],
+                "latency_range": (10, 30),
+                "jitter_range": (1, 5),
+                "packet_loss": (0.1, 0.3)
+            },
+            "vodafone_de": {
+                "prefixes": ["80.187", "91.0", "92.72", "109.42"],
+                "asn": "AS3209",
+                "as_name": "Vodafone GmbH",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Düsseldorf", "Cologne", "Stuttgart"],
+                "latency_range": (12, 35),
+                "jitter_range": (2, 6),
+                "packet_loss": (0.1, 0.3)
+            },
+            "o2_de": {
+                "prefixes": ["82.113", "83.169", "92.224", "109.40"],
+                "asn": "AS8422",
+                "as_name": "O2 (Germany) GmbH & Co. OHG",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Munich", "Nuremberg", "Leipzig"],
+                "latency_range": (15, 40),
+                "jitter_range": (3, 8),
+                "packet_loss": (0.2, 0.4)
             }
         }
         return isp_configs.get(isp_name)
@@ -1926,8 +2134,9 @@ class AdvancedIPStealthSystem2025:
         }
     
     def _get_city_coordinates_enhanced(self, city: str) -> Dict[str, float]:
-        """Enhanced city coordinates dengan lebih banyak kota Indonesia"""
+        """Enhanced city coordinates dengan lebih banyak kota Indonesia dan internasional"""
         coordinates = {
+            # Indonesia
             "Jakarta": {"lat": -6.2088, "lon": 106.8456},
             "Surabaya": {"lat": -7.2575, "lon": 112.7521},
             "Bandung": {"lat": -6.9175, "lon": 107.6191},
@@ -1957,7 +2166,54 @@ class AdvancedIPStealthSystem2025:
             "Cirebon": {"lat": -6.7320, "lon": 108.5523},
             "Serang": {"lat": -6.1200, "lon": 106.1503},
             "Tegal": {"lat": -6.8667, "lon": 109.1333},
-            "Bogor": {"lat": -6.5971, "lon": 106.8060}
+            "Bogor": {"lat": -6.5971, "lon": 106.8060},
+            # US Cities
+            "New York": {"lat": 40.7128, "lon": -74.0060},
+            "Los Angeles": {"lat": 34.0522, "lon": -118.2437},
+            "Chicago": {"lat": 41.8781, "lon": -87.6298},
+            "Houston": {"lat": 29.7604, "lon": -95.3698},
+            "Miami": {"lat": 25.7617, "lon": -80.1918},
+            "Dallas": {"lat": 32.7767, "lon": -96.7970},
+            "Atlanta": {"lat": 33.7490, "lon": -84.3880},
+            "San Francisco": {"lat": 37.7749, "lon": -122.4194},
+            "Seattle": {"lat": 47.6062, "lon": -122.3321},
+            "Bellevue": {"lat": 47.6101, "lon": -122.2015},
+            "Las Vegas": {"lat": 36.1699, "lon": -115.1398},
+            "Denver": {"lat": 39.7392, "lon": -104.9903},
+            "Phoenix": {"lat": 33.4484, "lon": -112.0740},
+            "Philadelphia": {"lat": 39.9526, "lon": -75.1652},
+            "San Jose": {"lat": 37.3382, "lon": -121.8863},
+            "Stamford": {"lat": 41.0534, "lon": -73.5387},
+            "St Louis": {"lat": 38.6270, "lon": -90.1994},
+            "Tampa": {"lat": 27.9506, "lon": -82.4572},
+            "Austin": {"lat": 30.2672, "lon": -97.7431},
+            # Brazil Cities
+            "São Paulo": {"lat": -23.5505, "lon": -46.6333},
+            "Rio de Janeiro": {"lat": -22.9068, "lon": -43.1729},
+            "Brasília": {"lat": -15.7942, "lon": -47.8822},
+            "Salvador": {"lat": -12.9714, "lon": -38.5014},
+            "Curitiba": {"lat": -25.4290, "lon": -49.2671},
+            "Belo Horizonte": {"lat": -19.9167, "lon": -43.9345},
+            "Porto Alegre": {"lat": -30.0346, "lon": -51.2177},
+            # India Cities
+            "Mumbai": {"lat": 19.0760, "lon": 72.8777},
+            "Delhi": {"lat": 28.6139, "lon": 77.2090},
+            "Bangalore": {"lat": 12.9716, "lon": 77.5946},
+            "Hyderabad": {"lat": 17.3850, "lon": 78.4867},
+            "Chennai": {"lat": 13.0827, "lon": 80.2707},
+            "Kolkata": {"lat": 22.5726, "lon": 88.3639},
+            "Pune": {"lat": 18.5204, "lon": 73.8567},
+            "Ahmedabad": {"lat": 23.0225, "lon": 72.5714},
+            # Germany Cities
+            "Berlin": {"lat": 52.5200, "lon": 13.4050},
+            "Munich": {"lat": 48.1351, "lon": 11.5820},
+            "Hamburg": {"lat": 53.5511, "lon": 9.9937},
+            "Frankfurt": {"lat": 50.1109, "lon": 8.6821},
+            "Düsseldorf": {"lat": 51.2277, "lon": 6.7735},
+            "Cologne": {"lat": 50.9375, "lon": 6.9603},
+            "Stuttgart": {"lat": 48.7758, "lon": 9.1829},
+            "Nuremberg": {"lat": 49.4521, "lon": 11.0767},
+            "Leipzig": {"lat": 51.3397, "lon": 12.3731}
         }
         return coordinates.get(city, coordinates["Jakarta"])
     
