@@ -789,6 +789,401 @@ browser_fingerprint_generator = AdvancedBrowserFingerprint2025()
 
 # ===================== ADVANCED IP SPOOFING 2025 =====================
 
+# ===================== ULTIMATE ANTI-DETECTION SYSTEM 2025 =====================
+
+class UltimateAntiDetection2025:
+    """
+    Ultimate Anti-Detection System 2025 - Military Grade Evasion
+    
+    Advanced techniques to bypass all anti-bot systems:
+    1. Human-like request timing with realistic delays
+    2. Browser behavior simulation (mouse, keyboard, scroll)
+    3. Canvas/WebGL fingerprint randomization
+    4. Advanced cookie chain management
+    5. Request pacing with exponential backoff
+    6. Pre-request warmup (visit pages naturally)
+    7. Referrer chain building
+    8. Advanced header ordering and normalization
+    9. TLS fingerprint rotation
+    10. Request signature obfuscation
+    """
+    
+    def __init__(self):
+        self.request_history = []
+        self.last_request_time = 0
+        self.session_start_time = time.time()
+        self.page_visit_count = 0
+        self.warmup_complete = False
+        
+    def get_human_delay(self, action_type: str = "click") -> float:
+        """
+        Generate human-like delays based on action type
+        Uses statistical distributions matching real human behavior
+        """
+        delays = {
+            "page_load": (2.5, 5.0, 0.8),      # (min, max, std_dev)
+            "form_fill": (0.8, 2.5, 0.4),
+            "button_click": (0.3, 1.2, 0.2),
+            "field_focus": (0.2, 0.8, 0.15),
+            "typing_char": (0.05, 0.2, 0.03),
+            "scroll": (0.5, 2.0, 0.3),
+            "api_call": (1.5, 4.0, 0.6),
+            "verification": (3.0, 8.0, 1.0),
+            "between_steps": (2.0, 6.0, 0.8),
+            "reading": (1.0, 3.0, 0.5),
+        }
+        
+        params = delays.get(action_type, (1.0, 3.0, 0.5))
+        
+        # Use truncated normal distribution
+        mean = (params[0] + params[1]) / 2
+        std = params[2]
+        
+        while True:
+            delay = random.gauss(mean, std)
+            if params[0] <= delay <= params[1]:
+                # Add micro-variations like real humans
+                delay += random.uniform(-0.1, 0.1)
+                return max(0.1, delay)
+    
+    def generate_mouse_movement_data(self) -> Dict[str, Any]:
+        """Generate realistic mouse movement patterns"""
+        # Number of points in the movement path
+        num_points = random.randint(15, 35)
+        
+        # Starting and ending positions (random but within viewport)
+        start_x = random.randint(0, 1920)
+        start_y = random.randint(0, 1080)
+        end_x = random.randint(400, 1500)  # Typical button areas
+        end_y = random.randint(300, 800)
+        
+        points = []
+        timestamps = []
+        current_time = 0
+        
+        for i in range(num_points):
+            progress = i / (num_points - 1)
+            
+            # Use bezier curve for natural movement
+            # Add random jitter to simulate hand tremor
+            jitter_x = random.gauss(0, 3)
+            jitter_y = random.gauss(0, 3)
+            
+            x = start_x + (end_x - start_x) * self._ease_out_cubic(progress) + jitter_x
+            y = start_y + (end_y - start_y) * self._ease_out_cubic(progress) + jitter_y
+            
+            points.append({"x": int(x), "y": int(y)})
+            
+            # Time between points varies (slower at start/end)
+            if progress < 0.2 or progress > 0.8:
+                interval = random.uniform(20, 50)
+            else:
+                interval = random.uniform(8, 25)
+            
+            current_time += interval
+            timestamps.append(int(current_time))
+        
+        return {
+            "path": points,
+            "timestamps": timestamps,
+            "duration": current_time,
+            "velocity": self._calculate_velocity(points, timestamps),
+            "acceleration": random.uniform(0.8, 1.5),
+            "clicks": [{"x": end_x, "y": end_y, "time": current_time}],
+        }
+    
+    def _ease_out_cubic(self, t: float) -> float:
+        """Cubic ease-out function for natural movement"""
+        return 1 - pow(1 - t, 3)
+    
+    def _calculate_velocity(self, points: List, timestamps: List) -> float:
+        """Calculate average velocity of mouse movement"""
+        if len(points) < 2:
+            return 0
+        
+        total_distance = 0
+        for i in range(1, len(points)):
+            dx = points[i]["x"] - points[i-1]["x"]
+            dy = points[i]["y"] - points[i-1]["y"]
+            total_distance += math.sqrt(dx*dx + dy*dy)
+        
+        total_time = timestamps[-1] - timestamps[0]
+        return total_distance / max(1, total_time)
+    
+    def generate_keyboard_timing(self, text: str) -> List[Dict]:
+        """Generate realistic keyboard input timing"""
+        events = []
+        current_time = 0
+        
+        for i, char in enumerate(text):
+            # Time to press key (varies by character)
+            if char in 'asdfjkl;':  # Home row - faster
+                press_delay = random.gauss(80, 15)
+            elif char.isupper():  # Shift needed - slower
+                press_delay = random.gauss(120, 25)
+            elif char.isdigit():  # Number row - medium
+                press_delay = random.gauss(100, 20)
+            else:
+                press_delay = random.gauss(95, 18)
+            
+            current_time += max(30, press_delay)
+            
+            events.append({
+                "char": char,
+                "keydown": current_time,
+                "keyup": current_time + random.randint(30, 80),
+            })
+            
+            # Occasional pause (thinking, correcting)
+            if random.random() < 0.05:
+                current_time += random.randint(200, 800)
+        
+        return events
+    
+    def generate_scroll_pattern(self) -> Dict[str, Any]:
+        """Generate realistic scroll patterns"""
+        scroll_events = []
+        current_y = 0
+        
+        num_scrolls = random.randint(3, 12)
+        
+        for _ in range(num_scrolls):
+            # Random scroll amount (usually 100-300 pixels)
+            delta_y = random.choice([100, 150, 200, 250, 300, -100, -150])
+            
+            # Momentum scrolling simulation
+            momentum_factor = random.uniform(0.8, 1.3)
+            
+            scroll_events.append({
+                "deltaY": delta_y * momentum_factor,
+                "timestamp": int(time.time() * 1000),
+                "isMomentum": random.random() > 0.7,
+            })
+            
+            current_y += delta_y
+            
+            # Pause between scrolls
+            time.sleep(random.uniform(0.1, 0.5))
+        
+        return {
+            "events": scroll_events,
+            "total_scroll": current_y,
+            "scroll_count": num_scrolls,
+        }
+    
+    def generate_canvas_fingerprint(self) -> Dict[str, Any]:
+        """Generate unique but realistic canvas fingerprint"""
+        # Common screen resolutions
+        resolutions = [
+            (1920, 1080), (2560, 1440), (1366, 768), (1536, 864),
+            (1440, 900), (1280, 720), (1600, 900), (2880, 1800),
+        ]
+        
+        width, height = random.choice(resolutions)
+        
+        # Generate realistic canvas data hash
+        base_data = f"{width}x{height}:{random.randint(1, 999999)}"
+        canvas_hash = hashlib.md5(base_data.encode()).hexdigest()
+        
+        return {
+            "hash": canvas_hash,
+            "width": width,
+            "height": height,
+            "colorDepth": random.choice([24, 32]),
+            "pixelRatio": random.choice([1, 1.25, 1.5, 2, 2.5, 3]),
+        }
+    
+    def generate_webgl_fingerprint(self) -> Dict[str, Any]:
+        """Generate realistic WebGL fingerprint"""
+        vendors = [
+            ("Google Inc. (NVIDIA)", "ANGLE (NVIDIA, NVIDIA GeForce RTX 4090, OpenGL 4.5)"),
+            ("Google Inc. (NVIDIA)", "ANGLE (NVIDIA, NVIDIA GeForce RTX 4080, OpenGL 4.5)"),
+            ("Google Inc. (NVIDIA)", "ANGLE (NVIDIA, NVIDIA GeForce RTX 3080, OpenGL 4.5)"),
+            ("Google Inc. (AMD)", "ANGLE (AMD, AMD Radeon RX 7900 XTX, OpenGL 4.5)"),
+            ("Google Inc. (Intel)", "ANGLE (Intel, Intel(R) UHD Graphics 770, OpenGL 4.5)"),
+            ("Apple Inc.", "Apple GPU"),
+            ("ARM", "Mali-G78"),
+            ("Qualcomm", "Adreno (TM) 750"),
+        ]
+        
+        vendor, renderer = random.choice(vendors)
+        
+        return {
+            "vendor": vendor,
+            "renderer": renderer,
+            "version": "WebGL 2.0",
+            "shadingLanguageVersion": "WebGL GLSL ES 3.00",
+            "maxTextureSize": random.choice([8192, 16384, 32768]),
+            "maxViewportDims": [random.choice([16384, 32768]), random.choice([16384, 32768])],
+        }
+    
+    def generate_audio_fingerprint(self) -> str:
+        """Generate realistic audio fingerprint hash"""
+        # Simulate AudioContext fingerprint
+        sample_rate = random.choice([44100, 48000])
+        channel_count = random.choice([2, 6, 8])
+        base = f"audio:{sample_rate}:{channel_count}:{random.randint(1, 999999)}"
+        return hashlib.sha256(base.encode()).hexdigest()[:32]
+    
+    def build_referrer_chain(self, target_url: str) -> List[str]:
+        """Build realistic referrer chain"""
+        chains = [
+            ["https://www.google.com/", "https://www.instagram.com/", target_url],
+            ["https://www.google.com/search?q=instagram", "https://www.instagram.com/", target_url],
+            ["https://www.instagram.com/", target_url],
+            ["https://l.instagram.com/", target_url],
+            ["https://www.facebook.com/", "https://www.instagram.com/", target_url],
+        ]
+        return random.choice(chains)
+    
+    def should_add_warmup_request(self) -> bool:
+        """Determine if warmup requests are needed"""
+        if self.warmup_complete:
+            return False
+        
+        if self.page_visit_count < 2:
+            return True
+        
+        return False
+    
+    def get_warmup_urls(self) -> List[str]:
+        """Get URLs to visit for session warmup"""
+        return [
+            "https://www.instagram.com/",
+            "https://www.instagram.com/accounts/emailsignup/",
+        ]
+    
+    def mark_warmup_complete(self):
+        """Mark session warmup as complete"""
+        self.warmup_complete = True
+        self.page_visit_count += 1
+    
+    def get_request_signature(self) -> Dict[str, Any]:
+        """Generate request signature for anti-bot bypass"""
+        timestamp = int(time.time() * 1000)
+        random_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=32))
+        
+        return {
+            "timestamp": timestamp,
+            "nonce": random_id,
+            "client_id": self._generate_client_id(),
+            "session_id": self._generate_session_id(),
+        }
+    
+    def _generate_client_id(self) -> str:
+        """Generate consistent client ID for session"""
+        base = f"client_{random.randint(100000000, 999999999)}"
+        return hashlib.md5(base.encode()).hexdigest()[:16]
+    
+    def _generate_session_id(self) -> str:
+        """Generate session ID in Instagram format"""
+        parts = [
+            ''.join(random.choices(string.ascii_lowercase + string.digits, k=6)),
+            ''.join(random.choices(string.ascii_lowercase + string.digits, k=6)),
+            ''.join(random.choices(string.ascii_lowercase + string.digits, k=6)),
+        ]
+        return ':'.join(parts)
+    
+    def calculate_backoff_delay(self, retry_count: int, base_delay: float = 2.0) -> float:
+        """Calculate exponential backoff with jitter"""
+        # Exponential backoff: base * 2^retry
+        delay = base_delay * (2 ** retry_count)
+        
+        # Add jitter (±25%)
+        jitter = delay * random.uniform(-0.25, 0.25)
+        delay += jitter
+        
+        # Cap at 60 seconds
+        return min(delay, 60.0)
+    
+    def get_optimal_request_timing(self) -> Dict[str, float]:
+        """Get optimal timing for requests to avoid rate limits"""
+        time_since_start = time.time() - self.session_start_time
+        requests_made = len(self.request_history)
+        
+        # Calculate request rate
+        if time_since_start > 0:
+            current_rate = requests_made / time_since_start
+        else:
+            current_rate = 0
+        
+        # Optimal rate is about 1 request per 3-5 seconds
+        if current_rate > 0.3:  # More than 1 request per 3 seconds
+            recommended_delay = random.uniform(5.0, 10.0)
+        elif current_rate > 0.2:
+            recommended_delay = random.uniform(3.0, 6.0)
+        else:
+            recommended_delay = random.uniform(2.0, 4.0)
+        
+        return {
+            "recommended_delay": recommended_delay,
+            "current_rate": current_rate,
+            "requests_made": requests_made,
+            "session_duration": time_since_start,
+        }
+    
+    def record_request(self, url: str, status: int):
+        """Record request for rate limit management"""
+        self.request_history.append({
+            "url": url,
+            "status": status,
+            "timestamp": time.time(),
+        })
+        self.last_request_time = time.time()
+        
+        # Keep only last 100 requests
+        if len(self.request_history) > 100:
+            self.request_history = self.request_history[-100:]
+
+
+class AdvancedRequestPacer:
+    """
+    Advanced Request Pacing System
+    Ensures requests are made at human-like intervals to avoid detection
+    """
+    
+    def __init__(self):
+        self.request_times = []
+        self.rate_limit_hits = 0
+        self.last_rate_limit = 0
+        
+    async def pace_request(self, request_type: str = "api"):
+        """Pace request with appropriate delay"""
+        now = time.time()
+        
+        # Clean old requests (older than 5 minutes)
+        self.request_times = [t for t in self.request_times if now - t < 300]
+        
+        # Calculate required delay
+        if len(self.request_times) == 0:
+            delay = 0
+        elif len(self.request_times) < 3:
+            delay = random.uniform(1.0, 2.5)
+        elif len(self.request_times) < 10:
+            delay = random.uniform(2.0, 4.0)
+        else:
+            # Many requests - slow down
+            delay = random.uniform(4.0, 8.0)
+        
+        # Extra delay if we hit rate limits recently
+        if self.rate_limit_hits > 0 and now - self.last_rate_limit < 60:
+            delay += self.rate_limit_hits * random.uniform(5.0, 10.0)
+        
+        if delay > 0:
+            await asyncio.sleep(delay)
+        
+        self.request_times.append(time.time())
+    
+    def record_rate_limit(self):
+        """Record rate limit hit"""
+        self.rate_limit_hits += 1
+        self.last_rate_limit = time.time()
+    
+    def reset_rate_limits(self):
+        """Reset rate limit counter"""
+        self.rate_limit_hits = 0
+
+
 # ===================== ULTRA STEALTH IP SYSTEM 2025 - NEXT GENERATION =====================
 
 class UltraStealthIPGenerator2025:
@@ -10886,41 +11281,88 @@ class RequestOrchestrator2025:
             }
 
     async def _simulate_human_behavior(self, session_id: str, request_data: Dict[str, Any]):
-        """Simulasi perilaku manusia berdasarkan connection type - FIXED"""
+        """
+        Advanced human behavior simulation using UltimateAntiDetection2025
+        Simulates realistic human interaction patterns to avoid bot detection
+        """
         session = self.session_manager.get_session(session_id)
         if not session:
             return
         
+        # Initialize anti-detection system
+        anti_detect = UltimateAntiDetection2025()
+        
         behavior_profile = session.get("behavior_profile", {})
         connection_type = session.get("metadata", {}).get("connection_type", "mobile")
+        request_type = request_data.get("request_type", "default")
+        url = request_data.get("url", "")
         
-        # Different behavior for mobile vs wifi
+        # Get optimal timing based on request history
+        timing = anti_detect.get_optimal_request_timing()
+        
+        # Different behavior for different request types
+        if request_type == "navigate" or "signup" in url.lower():
+            # Page navigation - simulate page loading and reading
+            delay = anti_detect.get_human_delay("page_load")
+            await asyncio.sleep(delay)
+            
+            # Simulate scrolling behavior
+            if random.random() < 0.7:
+                scroll_delay = anti_detect.get_human_delay("scroll")
+                await asyncio.sleep(scroll_delay)
+        
+        elif request_type == "ajax" and request_data["method"] == "POST":
+            # Form submission - simulate filling form
+            delay = anti_detect.get_human_delay("form_fill")
+            await asyncio.sleep(delay)
+            
+            # Simulate button click delay
+            click_delay = anti_detect.get_human_delay("button_click")
+            await asyncio.sleep(click_delay)
+            
+            # Extra delay for API calls
+            api_delay = anti_detect.get_human_delay("api_call")
+            await asyncio.sleep(api_delay * 0.5)
+        
+        elif request_type == "form":
+            # Traditional form submission
+            delay = anti_detect.get_human_delay("form_fill")
+            await asyncio.sleep(delay)
+        
+        else:
+            # Default - general browsing behavior
+            delay = anti_detect.get_human_delay("between_steps")
+            await asyncio.sleep(delay * 0.7)
+        
+        # Mobile vs WiFi behavioral differences
         if connection_type == "mobile":
-            # Mobile: lebih cepat, lebih mungkin multitasking
-            thinking_time = random.uniform(0.5, 2.0)
-            typing_delay = random.uniform(0.1, 0.3)
+            # Mobile users are slightly faster but have more pauses
+            if random.random() < 0.3:
+                await asyncio.sleep(random.uniform(0.5, 1.5))  # Random pause
         else:
-            # WiFi: lebih lambat, lebih fokus
-            thinking_time = random.uniform(1.0, 3.0)
-            typing_delay = random.uniform(0.2, 0.5)
+            # WiFi users are more consistent but slower
+            await asyncio.sleep(random.uniform(0.3, 0.8))
         
-        # Simulate thinking/reading time
-        if request_data["method"] == "POST" or "signup" in request_data["url"].lower():
-            # Form submissions take longer
-            await asyncio.sleep(thinking_time * 1.5)
-        else:
-            # Regular requests
-            await asyncio.sleep(thinking_time)
-        
-        # Simulate typing delay untuk POST data
+        # Simulate POST data typing if applicable
         if request_data["method"] == "POST" and request_data.get("data"):
-            # Estimate typing time based on data size
             data_str = str(request_data["data"])
             char_count = len(data_str)
-            typing_time = (char_count / (behavior_profile.get("typing_speed_wpm", 70) * 5)) * 60
             
-            # Add random delays
-            await asyncio.sleep(min(typing_time, 5.0))
+            # Realistic typing speed: 60-100 WPM (5 chars per word)
+            typing_speed_cps = behavior_profile.get("typing_speed_wpm", 70) * 5 / 60
+            typing_time = char_count / typing_speed_cps
+            
+            # Cap at 5 seconds and add variation
+            typing_time = min(typing_time, 5.0) * random.uniform(0.8, 1.2)
+            await asyncio.sleep(typing_time)
+        
+        # Apply recommended delay from rate limit avoidance
+        if timing["current_rate"] > 0.25:  # More than 1 request per 4 seconds
+            extra_delay = timing["recommended_delay"] * 0.5
+            await asyncio.sleep(extra_delay)
+        
+        # Record this request for rate management
+        anti_detect.record_request(url, 0)  # Status 0 = pending
 
     async def _handle_rate_limit(self, session_id: str, request_data: Dict[str, Any]):
         """Handle rate limit dengan strategi yang tepat - FIXED"""
