@@ -1,49 +1,48 @@
+# ===================== IMPORTS =====================
 from __future__ import annotations
 import asyncio
 import base64
-import hashlib
-import json
-import logging
-import os
-import sys
-import random
-import ssl
-import string
-import time
-import re
-import uuid
-import requests
-from datetime import datetime, timedelta
-from faker import Faker
-from time import sleep
-from colorama import init, Fore, Back, Style
-from http.cookies import SimpleCookie
-from typing import Any, Dict, List, Optional, Tuple
 import concurrent.futures
-from functools import wraps
-import urllib3
-import urllib
-import logging
-from hashlib import sha1
-from fake_useragent import UserAgent
-from typing import Optional, Tuple, Dict
-import ipaddress
-import socket
-import struct
+import functools
 import hashlib
 import hmac
-import secrets
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import padding
-import subprocess
-import platform
-import psutil
-import numpy as np
-from scipy import stats
+import ipaddress
+import json
+import logging
 import math
-from urllib3.util.retry import Retry
+import os
+import platform
+import random
+import re
+import secrets
+import socket
+import ssl
+import string
+import struct
+import subprocess
+import sys
+import time
+import urllib
+import uuid
+from datetime import datetime, timedelta
+from functools import wraps
+from hashlib import sha1
+from http.cookies import SimpleCookie
+from time import sleep
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+import psutil
+import requests
+import urllib3
+from colorama import Fore, Back, Style
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from faker import Faker
+from fake_useragent import UserAgent
 from requests.adapters import HTTPAdapter
-import functools
+from scipy import stats
+from urllib3.util.retry import Retry
 
 if sys.version_info >= (3, 0):
     from urllib.parse import urlencode, quote_plus
@@ -66,20 +65,16 @@ try:
     HAVE_AIOHTTP = True
 except ImportError:
     HAVE_AIOHTTP = False
-    print("⚠️   aiohttp not installed. Install with: pip install aiohttp")
 
-# curl_cffi - RECOMMENDED for realistic TLS/JA3 fingerprinting
+# curl_cffi for realistic TLS/JA3 fingerprinting
 try:
     from curl_cffi import requests as curl_requests
     from curl_cffi.requests import AsyncSession as CurlAsyncSession
     HAVE_CURL_CFFI = True
-    print("✅  curl_cffi available - Using realistic browser impersonation")
 except ImportError:
     curl_requests = None
     CurlAsyncSession = None
     HAVE_CURL_CFFI = False
-    print("⚠️   curl_cffi not installed. Install with: pip install curl_cffi")
-    print("     curl_cffi provides realistic TLS/JA3/HTTP2 fingerprinting")
 
 try:
     import brotli
@@ -2246,13 +2241,6 @@ class RealIPGeoSyncSystem:
         self.cached_ip_info = config
         self.cache_timestamp = current_time
         
-        print(f"{hijau}✅  Synced config ready:{reset}")
-        print(f"    IP: {real_ip}")
-        print(f"    Location: {geo_info.get('city')}, {geo_info.get('country')}")
-        print(f"    ISP: {geo_info.get('isp')}")
-        print(f"    Device: {fingerprint.get('platform')} - {fingerprint.get('device_model')}")
-        print(f"    Language: {fingerprint.get('language')}")
-        
         return config
     
     def clear_cache(self):
@@ -2614,12 +2602,6 @@ class RealIPGeoSyncSystem:
         # Add complete device info
         device_info = self.generate_dynamic_device_info(fingerprint, geo_info)
         config["device"] = device_info
-        
-        print(f"{hijau}✅  TLS/JA3/Device fingerprints synced:{reset}")
-        print(f"    JA3 Hash: {ja3_fingerprint.get('ja3_hash', 'N/A')[:16]}...")
-        print(f"    TLS: {ja3_fingerprint.get('tls_version', 'N/A')}")
-        print(f"    H2: {h2_fingerprint.get('h2_fingerprint', 'N/A')[:30]}...")
-        print(f"    Device: {device_info.get('manufacturer', 'N/A')} {device_info.get('model', 'N/A')}")
         
         return config
 
