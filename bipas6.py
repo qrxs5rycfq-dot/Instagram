@@ -138,12 +138,26 @@ class AdvancedIPStealthSystem2025:
 
     def _get_connection_type_for_isp(self, isp: str) -> str:
         """Determine connection type berdasarkan ISP - FIXED"""
-        mobile_isps = ["telkomsel", "indosat", "xl", "tri", "smartfren"]
+        mobile_isps = [
+            # Indonesia
+            "telkomsel", "indosat", "xl", "tri", "smartfren",
+            # US
+            "verizon", "att", "tmobile",
+            # UK
+            "ee", "vodafone_uk", "three_uk",
+            # Brazil
+            "claro_br", "vivo_br", "tim_br",
+            # India
+            "jio", "airtel_in", "vi_in",
+            # Germany
+            "telekom_de", "vodafone_de", "o2_de"
+        ]
         return "mobile" if isp in mobile_isps else "wifi"
         
     def _initialize_ip_sources(self):
-        """Initialize multiple IP generation sources dengan ISP Indonesia"""
+        """Initialize multiple IP generation sources - Multi-Country Support"""
         return {
+            # Indonesia
             "telkomsel": self._generate_telkomsel_ips,
             "indosat": self._generate_indosat_ips,
             "xl": self._generate_xl_ips,
@@ -152,56 +166,507 @@ class AdvancedIPStealthSystem2025:
             "biznet": self._generate_biznet_ips,
             "cbn": self._generate_cbn_ips,
             "firstmedia": self._generate_firstmedia_ips,
-            "myrepublic": self._generate_myrepublic_ips
+            "myrepublic": self._generate_myrepublic_ips,
+            # US Mobile
+            "verizon": self._generate_us_mobile_ips,
+            "att": self._generate_us_mobile_ips,
+            "tmobile": self._generate_us_mobile_ips,
+            # US ISP
+            "comcast": self._generate_us_isp_ips,
+            "spectrum": self._generate_us_isp_ips,
+            # Brazil
+            "claro_br": self._generate_brazil_ips,
+            "vivo_br": self._generate_brazil_ips,
+            # India
+            "jio": self._generate_india_ips,
+            "airtel_in": self._generate_india_ips,
         }
     
-    def _generate_dynamic_isp_ips(self, isp_name: str) -> List[Dict[str, Any]]:
-        """Generate fresh IPs untuk ISP tertentu dengan enhanced validation"""
-        current_time = time.time()
-        cache_key = f"{isp_name}_{int(current_time // 180)}"  # Cache 3 menit
+    def _get_country_config(self) -> Dict[str, Any]:
+        """Get comprehensive country configurations with synced ISP, device, location"""
+        return {
+            "ID": {
+                "name": "Indonesia",
+                "language": "id-ID",
+                "timezone": "Asia/Jakarta",
+                "currency": "IDR",
+                "isps": {
+                    "telkomsel": {
+                        "prefixes": ["110.136", "110.137", "114.124", "118.137", "139.192", "182.253"],
+                        "asn": "AS7713",
+                        "as_name": "PT Telekomunikasi Selular",
+                        "type": "mobile",
+                        "mcc": "510",
+                        "mnc": "10",
+                    },
+                    "indosat": {
+                        "prefixes": ["112.215", "114.4", "125.160", "139.0", "202.152"],
+                        "asn": "AS4761",
+                        "as_name": "PT Indosat Tbk",
+                        "type": "mobile",
+                        "mcc": "510",
+                        "mnc": "21",
+                    },
+                    "xl": {
+                        "prefixes": ["36.86", "114.120", "180.241", "110.139"],
+                        "asn": "AS24203",
+                        "as_name": "PT XL Axiata Tbk",
+                        "type": "mobile",
+                        "mcc": "510",
+                        "mnc": "11",
+                    },
+                    "biznet": {
+                        "prefixes": ["103.28", "103.78", "117.102", "182.253"],
+                        "asn": "AS17451",
+                        "as_name": "PT Biznet Gio Nusantara",
+                        "type": "wifi",
+                    }
+                },
+                "cities": [
+                    {"name": "Jakarta", "lat": -6.2088, "lon": 106.8456, "region": "DKI Jakarta"},
+                    {"name": "Surabaya", "lat": -7.2575, "lon": 112.7521, "region": "East Java"},
+                    {"name": "Bandung", "lat": -6.9175, "lon": 107.6191, "region": "West Java"},
+                    {"name": "Medan", "lat": 3.5952, "lon": 98.6722, "region": "North Sumatra"},
+                    {"name": "Bali", "lat": -8.3405, "lon": 115.0920, "region": "Bali"},
+                ],
+                "devices": [
+                    {"brand": "Samsung", "models": ["SM-A546E", "SM-A346E", "SM-S928B", "SM-S918B"]},
+                    {"brand": "Xiaomi", "models": ["23116PN5BC", "22071219CG", "2201117TG"]},
+                    {"brand": "OPPO", "models": ["CPH2585", "CPH2565", "CPH2531"]},
+                    {"brand": "Vivo", "models": ["V2254", "V2219", "V2203"]},
+                ]
+            },
+            "US": {
+                "name": "United States",
+                "language": "en-US",
+                "timezone": "America/New_York",
+                "currency": "USD",
+                "isps": {
+                    "verizon": {
+                        "prefixes": ["174.192", "174.225", "70.192", "98.116"],
+                        "asn": "AS22394",
+                        "as_name": "Verizon Wireless",
+                        "type": "mobile",
+                        "mcc": "311",
+                        "mnc": "480",
+                    },
+                    "att": {
+                        "prefixes": ["166.137", "166.171", "107.77", "108.186"],
+                        "asn": "AS20057",
+                        "as_name": "AT&T Mobility",
+                        "type": "mobile",
+                        "mcc": "310",
+                        "mnc": "410",
+                    },
+                    "tmobile": {
+                        "prefixes": ["172.32", "172.58", "100.128", "208.54"],
+                        "asn": "AS21928",
+                        "as_name": "T-Mobile USA",
+                        "type": "mobile",
+                        "mcc": "310",
+                        "mnc": "260",
+                    },
+                    "comcast": {
+                        "prefixes": ["73.93", "73.162", "98.216", "50.79"],
+                        "asn": "AS7922",
+                        "as_name": "Comcast Cable Communications",
+                        "type": "wifi",
+                    },
+                    "spectrum": {
+                        "prefixes": ["72.68", "72.93", "97.87", "24.14"],
+                        "asn": "AS11351",
+                        "as_name": "Charter Communications",
+                        "type": "wifi",
+                    }
+                },
+                "cities": [
+                    {"name": "New York", "lat": 40.7128, "lon": -74.0060, "region": "New York"},
+                    {"name": "Los Angeles", "lat": 34.0522, "lon": -118.2437, "region": "California"},
+                    {"name": "Chicago", "lat": 41.8781, "lon": -87.6298, "region": "Illinois"},
+                    {"name": "Houston", "lat": 29.7604, "lon": -95.3698, "region": "Texas"},
+                    {"name": "Miami", "lat": 25.7617, "lon": -80.1918, "region": "Florida"},
+                ],
+                "devices": [
+                    {"brand": "Apple", "models": ["iPhone15,2", "iPhone15,3", "iPhone14,5"]},
+                    {"brand": "Samsung", "models": ["SM-S928U", "SM-S918U", "SM-G998U"]},
+                    {"brand": "Google", "models": ["Pixel 8 Pro", "Pixel 8", "Pixel 7 Pro"]},
+                ]
+            },
+            "BR": {
+                "name": "Brazil",
+                "language": "pt-BR",
+                "timezone": "America/Sao_Paulo",
+                "currency": "BRL",
+                "isps": {
+                    "claro_br": {
+                        "prefixes": ["177.32", "177.84", "189.4", "200.215"],
+                        "asn": "AS28573",
+                        "as_name": "Claro S.A.",
+                        "type": "mobile",
+                        "mcc": "724",
+                        "mnc": "05",
+                    },
+                    "vivo_br": {
+                        "prefixes": ["179.152", "189.79", "200.150", "201.16"],
+                        "asn": "AS26599",
+                        "as_name": "Telefonica Brasil S.A.",
+                        "type": "mobile",
+                        "mcc": "724",
+                        "mnc": "06",
+                    },
+                    "tim_br": {
+                        "prefixes": ["179.176", "189.36", "186.204"],
+                        "asn": "AS26615",
+                        "as_name": "TIM S/A",
+                        "type": "mobile",
+                        "mcc": "724",
+                        "mnc": "02",
+                    }
+                },
+                "cities": [
+                    {"name": "São Paulo", "lat": -23.5505, "lon": -46.6333, "region": "SP"},
+                    {"name": "Rio de Janeiro", "lat": -22.9068, "lon": -43.1729, "region": "RJ"},
+                    {"name": "Brasília", "lat": -15.7942, "lon": -47.8822, "region": "DF"},
+                    {"name": "Salvador", "lat": -12.9714, "lon": -38.5014, "region": "BA"},
+                ],
+                "devices": [
+                    {"brand": "Samsung", "models": ["SM-A546E", "SM-A346B", "SM-S918B"]},
+                    {"brand": "Motorola", "models": ["XT2347-2", "XT2343-1", "XT2301-4"]},
+                    {"brand": "Xiaomi", "models": ["23116PN5BC", "22071219CG"]},
+                ]
+            },
+            "IN": {
+                "name": "India",
+                "language": "en-IN",
+                "timezone": "Asia/Kolkata",
+                "currency": "INR",
+                "isps": {
+                    "jio": {
+                        "prefixes": ["49.36", "49.44", "157.32", "157.48"],
+                        "asn": "AS55836",
+                        "as_name": "Reliance Jio Infocomm Limited",
+                        "type": "mobile",
+                        "mcc": "405",
+                        "mnc": "862",
+                    },
+                    "airtel_in": {
+                        "prefixes": ["106.76", "106.210", "122.161", "182.64"],
+                        "asn": "AS24560",
+                        "as_name": "Bharti Airtel Ltd.",
+                        "type": "mobile",
+                        "mcc": "404",
+                        "mnc": "10",
+                    },
+                    "vi_in": {
+                        "prefixes": ["106.196", "115.110", "117.195"],
+                        "asn": "AS45609",
+                        "as_name": "Vodafone Idea Limited",
+                        "type": "mobile",
+                        "mcc": "404",
+                        "mnc": "20",
+                    }
+                },
+                "cities": [
+                    {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777, "region": "Maharashtra"},
+                    {"name": "Delhi", "lat": 28.6139, "lon": 77.2090, "region": "Delhi"},
+                    {"name": "Bangalore", "lat": 12.9716, "lon": 77.5946, "region": "Karnataka"},
+                    {"name": "Hyderabad", "lat": 17.3850, "lon": 78.4867, "region": "Telangana"},
+                    {"name": "Chennai", "lat": 13.0827, "lon": 80.2707, "region": "Tamil Nadu"},
+                ],
+                "devices": [
+                    {"brand": "Samsung", "models": ["SM-A546E", "SM-M546B", "SM-S918B"]},
+                    {"brand": "Xiaomi", "models": ["23116PN5BC", "22071219CI", "2201117TI"]},
+                    {"brand": "OnePlus", "models": ["CPH2467", "CPH2451", "NE2213"]},
+                    {"brand": "Realme", "models": ["RMX3700", "RMX3630", "RMX3610"]},
+                ]
+            },
+            "DE": {
+                "name": "Germany",
+                "language": "de-DE",
+                "timezone": "Europe/Berlin",
+                "currency": "EUR",
+                "isps": {
+                    "telekom_de": {
+                        "prefixes": ["91.64", "217.6", "93.220", "84.138"],
+                        "asn": "AS3320",
+                        "as_name": "Deutsche Telekom AG",
+                        "type": "mobile",
+                        "mcc": "262",
+                        "mnc": "01",
+                    },
+                    "vodafone_de": {
+                        "prefixes": ["80.187", "91.0", "92.72", "109.42"],
+                        "asn": "AS3209",
+                        "as_name": "Vodafone GmbH",
+                        "type": "mobile",
+                        "mcc": "262",
+                        "mnc": "02",
+                    },
+                    "o2_de": {
+                        "prefixes": ["82.113", "83.169", "92.224", "109.40"],
+                        "asn": "AS8422",
+                        "as_name": "O2 (Germany) GmbH & Co. OHG",
+                        "type": "mobile",
+                        "mcc": "262",
+                        "mnc": "03",
+                    }
+                },
+                "cities": [
+                    {"name": "Berlin", "lat": 52.5200, "lon": 13.4050, "region": "Berlin"},
+                    {"name": "Munich", "lat": 48.1351, "lon": 11.5820, "region": "Bavaria"},
+                    {"name": "Hamburg", "lat": 53.5511, "lon": 9.9937, "region": "Hamburg"},
+                    {"name": "Frankfurt", "lat": 50.1109, "lon": 8.6821, "region": "Hesse"},
+                ],
+                "devices": [
+                    {"brand": "Samsung", "models": ["SM-S928B", "SM-S918B", "SM-A546B"]},
+                    {"brand": "Apple", "models": ["iPhone15,2", "iPhone15,3", "iPhone14,5"]},
+                    {"brand": "Google", "models": ["Pixel 8 Pro", "Pixel 8"]},
+                ]
+            }
+        }
+    
+    def _generate_us_mobile_ips(self) -> List[Dict[str, Any]]:
+        """Generate US mobile carrier IPs"""
+        return self._generate_country_ips("US", ["verizon", "att", "tmobile"])
+    
+    def _generate_us_isp_ips(self) -> List[Dict[str, Any]]:
+        """Generate US ISP IPs"""
+        return self._generate_country_ips("US", ["comcast", "spectrum"])
+    
+    def _generate_brazil_ips(self) -> List[Dict[str, Any]]:
+        """Generate Brazil IPs"""
+        return self._generate_country_ips("BR", ["claro_br", "vivo_br", "tim_br"])
+    
+    def _generate_india_ips(self) -> List[Dict[str, Any]]:
+        """Generate India IPs"""
+        return self._generate_country_ips("IN", ["jio", "airtel_in", "vi_in"])
+    
+    def _generate_country_ips(self, country_code: str, isp_list: List[str]) -> List[Dict[str, Any]]:
+        """Generate IPs for a specific country with full synchronization"""
+        country_config = self._get_country_config().get(country_code)
+        if not country_config:
+            return []
         
-        if cache_key in self.generation_cache:
-            cached = self.generation_cache[cache_key]
-            if current_time - cached["timestamp"] < 180:
-                return cached["ips"]
+        ip_pool = []
+        for isp_name in isp_list:
+            isp_config = country_config["isps"].get(isp_name)
+            if not isp_config:
+                continue
+            
+            for _ in range(random.randint(2, 5)):
+                # Generate IP
+                prefix = random.choice(isp_config["prefixes"])
+                parts = prefix.split('.')
+                while len(parts) < 4:
+                    parts.append(str(random.randint(2, 253)))
+                ip = '.'.join(parts[:4])
+                
+                # Validate
+                if not self._validate_ip_format_enhanced(ip):
+                    continue
+                
+                # Select city
+                city = random.choice(country_config["cities"])
+                
+                # Select device matching country
+                device_brand = random.choice(country_config["devices"])
+                device_model = random.choice(device_brand["models"])
+                
+                # Create synchronized profile
+                ip_info = {
+                    "ip": ip,
+                    "country": country_code,
+                    "country_name": country_config["name"],
+                    "isp": isp_name,
+                    "asn": isp_config["asn"],
+                    "as_name": isp_config["as_name"],
+                    "city": city["name"],
+                    "region": city["region"],
+                    "latitude": city["lat"],
+                    "longitude": city["lon"],
+                    "timezone": country_config["timezone"],
+                    "language": country_config["language"],
+                    "connection_type": isp_config["type"],
+                    "mcc": isp_config.get("mcc", ""),
+                    "mnc": isp_config.get("mnc", ""),
+                    "device_brand": device_brand["brand"],
+                    "device_model": device_model,
+                    "health_score": random.randint(85, 98),
+                    "last_used": 0,
+                    "use_count": 0,
+                    "generated_at": time.time()
+                }
+                
+                ip_pool.append(ip_info)
+        
+        return ip_pool
+    
+    def _generate_dynamic_isp_ips(self, isp_name: str) -> List[Dict[str, Any]]:
+        """Generate fresh IPs untuk ISP tertentu dengan enhanced anti-blacklist validation"""
+        current_time = time.time()
+        
+        # Disable cache for truly fresh IPs
+        # cache_key = f"{isp_name}_{int(current_time // 180)}"
         
         config = self._get_isp_config_enhanced(isp_name)
         if not config:
             return []
         
         ip_pool = []
-        ip_count = random.randint(3, 8)  # Generate 3-8 IPs per ISP
+        ip_count = random.randint(5, 12)  # Generate more IPs for better selection
+        attempts = 0
+        max_attempts = ip_count * 5  # Allow 5x attempts to find valid IPs
         
-        for i in range(ip_count):
+        while len(ip_pool) < ip_count and attempts < max_attempts:
+            attempts += 1
+            
             ip = self._generate_valid_indonesian_ip(isp_name, config)
             
-            if not ip or not self._validate_ip_format_enhanced(ip):
+            if not ip:
                 continue
             
-            # Validasi lanjutan
+            # Anti-blacklist validation chain
+            if not self._anti_blacklist_check(ip):
+                continue
+            
+            if not self._validate_ip_format_enhanced(ip):
+                continue
+            
+            # Enhanced validation with strict mode
             validation = self.validator.validate(ip, strict=True)
-            if not validation["valid"] or validation["score"] < 70:
+            if not validation["valid"] or validation["score"] < 80:  # Raised threshold to 80
                 continue
             
+            # Check global blacklist
             if ip in self.blacklisted_ips:
                 continue
             
-            # Cek duplikasi
+            # Check for known bad patterns
+            if self._is_suspicious_ip_pattern(ip):
+                continue
+            
+            # Check for duplicates in current pool
             if any(ip_info["ip"] == ip for ip_info in self.ip_pool):
                 continue
             
+            # Check for duplicates in generated pool
+            if any(ip_info["ip"] == ip for ip_info in ip_pool):
+                continue
+            
+            # Create enhanced IP profile
             ip_info = self._create_enhanced_ip_profile(ip, config, isp_name)
+            ip_info["freshness_score"] = 100  # Mark as fresh
+            ip_info["anti_blacklist_verified"] = True
+            ip_info["generation_timestamp"] = current_time
+            
             ip_pool.append(ip_info)
         
-        # Cache hasil
-        self.generation_cache[cache_key] = {
-            "ips": ip_pool,
-            "timestamp": current_time,
-            "isp": isp_name
-        }
-        
-        print(f"{cyan}    Generated {len(ip_pool)} validated IPs for {isp_name}{reset}")
+        print(f"{cyan}    Generated {len(ip_pool)} anti-blacklist verified IPs for {isp_name}{reset}")
         return ip_pool
+    
+    def _anti_blacklist_check(self, ip: str) -> bool:
+        """Comprehensive anti-blacklist verification"""
+        try:
+            parts = ip.split('.')
+            if len(parts) != 4:
+                return False
+            
+            # Known blacklisted IP patterns (datacenter, VPN, proxy)
+            blacklisted_prefixes = [
+                # Common datacenter/cloud ranges
+                "45.33", "45.56", "45.76", "45.77", "45.79",  # Linode
+                "104.131", "104.236", "104.238",  # DigitalOcean
+                "107.170", "107.173",  # DigitalOcean
+                "128.199", "138.68", "139.59",  # DigitalOcean
+                "167.71", "167.172", "167.99",  # DigitalOcean
+                "185.199", "185.220",  # Known VPN ranges
+                "192.241", "198.211", "198.199",  # DigitalOcean
+                "209.97", "209.122",  # Various
+                "35.192", "35.193", "35.194", "35.195",  # Google Cloud
+                "34.64", "34.65", "34.66", "34.67",  # Google Cloud
+                "52.0", "52.1", "52.2", "52.3",  # AWS
+                "54.0", "54.1", "54.2", "54.3",  # AWS
+                "13.52", "13.53", "13.54", "13.55",  # AWS
+                "18.216", "18.217", "18.218", "18.219",  # AWS
+                # Known VPN/Proxy ranges
+                "193.138", "193.178",
+                "146.70", "146.71", "146.158",
+                "89.163", "89.187", "89.238",
+                "91.90", "91.132", "91.134",
+                "95.211", "95.215", "95.216",
+                "176.56", "176.57", "176.58",
+                "178.162", "178.175",
+                "185.65", "185.69", "185.94", "185.99",
+                "217.138", "217.182",
+            ]
+            
+            # Check against blacklisted prefixes
+            for prefix in blacklisted_prefixes:
+                if ip.startswith(prefix):
+                    return False
+            
+            # Check for private/reserved ranges
+            first_octet = int(parts[0])
+            second_octet = int(parts[1])
+            
+            # Private ranges
+            if first_octet == 10:
+                return False
+            if first_octet == 172 and 16 <= second_octet <= 31:
+                return False
+            if first_octet == 192 and second_octet == 168:
+                return False
+            
+            # Reserved/special ranges
+            if first_octet in [0, 127, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255]:
+                return False
+            
+            # Link-local
+            if first_octet == 169 and second_octet == 254:
+                return False
+            
+            # Check for suspicious patterns
+            if parts[3] in ['0', '1', '254', '255']:  # Network/broadcast addresses
+                return False
+            
+            # All same octets (like 111.111.111.111)
+            if len(set(parts)) == 1:
+                return False
+            
+            # Sequential octets (like 1.2.3.4)
+            if parts == sorted(parts) and int(parts[3]) - int(parts[0]) == 3:
+                return False
+            
+            return True
+            
+        except Exception:
+            return False
+    
+    def _is_suspicious_ip_pattern(self, ip: str) -> bool:
+        """Check for suspicious IP patterns that might be flagged"""
+        try:
+            parts = [int(p) for p in ip.split('.')]
+            
+            # Avoid common test/example IPs
+            if ip.startswith("192.0.2.") or ip.startswith("198.51.100.") or ip.startswith("203.0.113."):
+                return True
+            
+            # Avoid round numbers that might be suspicious
+            if parts[3] in [0, 10, 20, 50, 100, 128, 200, 250, 255]:
+                return True
+            
+            # Avoid sequential patterns
+            if parts[2] == parts[3] or parts[1] == parts[2] == parts[3]:
+                return True
+            
+            # Avoid too-high health in last octet (often datacenter)
+            if parts[3] > 250:
+                return True
+            
+            return False
+            
+        except Exception:
+            return True
     
     def _get_isp_config_enhanced(self, isp_name: str) -> Optional[Dict[str, Any]]:
         """Enhanced ISP configuration dengan lebih banyak detail"""
@@ -9139,9 +9604,14 @@ class InstagramAccountCreator2025:
             return None
     
     async def _get_username_suggestion(self, session_id: str, email: str, 
-                                 hint: Optional[str] = None) -> Optional[str]:
+                                 hint: Optional[str] = None, retry_count: int = 0) -> Optional[str]:
         """Dapatkan username suggestion dari Instagram - DIPERBAIKI"""
         print(f"{cyan}👤  Getting username suggestions...{reset}")
+        
+        # Limit retries to prevent infinite loop
+        if retry_count >= 2:
+            print(f"{kuning}    Max retries reached, using fallback{reset}")
+            return self._generate_fallback_username(email, hint)
         
         try:
             # Get session data
@@ -9155,18 +9625,18 @@ class InstagramAccountCreator2025:
                 print(f"{kuning}    No CSRF token, using fallback{reset}")
                 return self._generate_fallback_username(email, hint)
             
-            # Prepare request data dengan lebih banyak parameter
+            # Get session headers
+            session_headers = session.get("headers", {})
+            ajax_id = session.get("tokens", {}).get("ajax_id", "1029952363")
+            web_session_id = session.get("extra_session_id", "")
+            
+            # Prepare request data
             name = hint or email.split('@')[0]
             request_data = {
                 "email": email,
                 "first_name": name,
                 "username": "",
                 "opt_into_one_tap": "false",
-                "guid": str(uuid.uuid4()),
-                "device_id": session.get("device_id", f"android-{hashlib.sha256(session_id.encode()).hexdigest()[:20]}"),
-                "waterfall_id": str(uuid.uuid4()),
-                "fb_api_req_friendly_name": "IgWebAccountCreationUsernameSuggestions",
-                "fb_api_caller_class": "RelayAPIMethod"
             }
             
             # ENCODE data dengan urlencode
@@ -9174,17 +9644,44 @@ class InstagramAccountCreator2025:
             
             print(f"{cyan}    Requesting username for: {email}{reset}")
             
+            # Build headers matching real Instagram request
+            headers = {
+                "Accept": "*/*",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Origin": "https://www.instagram.com",
+                "Priority": "u=1, i",
+                "Referer": "https://www.instagram.com/accounts/emailsignup/",
+                "Sec-Ch-Prefers-Color-Scheme": "dark",
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-origin",
+                "X-Asbd-Id": "359341",
+                "X-Csrftoken": csrf_token,
+                "X-Ig-App-Id": "936619743392459",
+                "X-Ig-Www-Claim": session.get("ig_www_claim", "0"),
+                "X-Instagram-Ajax": ajax_id,
+                "X-Requested-With": "XMLHttpRequest",
+            }
+            
+            # Add web session id if available
+            if web_session_id:
+                headers["X-Web-Session-Id"] = web_session_id
+            
+            # Add User-Agent and Sec-Ch-* from session
+            for key in ["Sec-Ch-Ua-Full-Version-List", "Sec-Ch-Ua-Platform", "Sec-Ch-Ua", 
+                       "Sec-Ch-Ua-Model", "Sec-Ch-Ua-Mobile", "User-Agent", "Sec-Ch-Ua-Platform-Version"]:
+                if key in session_headers:
+                    headers[key] = session_headers[key]
+            
             # Make request
             response = await self.request_orchestrator.make_request(
                 session_id=session_id,
                 method="POST",
                 url="https://www.instagram.com/api/v1/web/accounts/web_create_ajax/attempt/",
-                headers={
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "X-CSRFToken": session.get("tokens", {}).get("csrftoken", ""),
-                    "X-Instagram-AJAX": "1"
-                },
-                data=encoded_data,  # Gunakan encoded_data, bukan raw dict
+                headers=headers,
+                data=encoded_data,
                 cookies=session.get("cookies", {})
             )
             
@@ -9280,17 +9777,21 @@ class InstagramAccountCreator2025:
             
             elif status == 429:
                 print(f"{kuning}    Rate limited by Instagram{reset}")
-                await asyncio.sleep(random.uniform(30, 60))
-                # Coba sekali lagi
-                return await self._get_username_suggestion(session_id, email, hint)
+                if retry_count < 1:  # Only retry once for rate limit
+                    await asyncio.sleep(random.uniform(30, 60))
+                    return await self._get_username_suggestion(session_id, email, hint, retry_count + 1)
+                else:
+                    print(f"{kuning}    Max rate limit retries reached{reset}")
             
             elif status == 403:
-                print(f"{merah}    Access forbidden -可能需要新的 CSRF token{reset}")
-                # Coba dapatkan CSRF token baru
-                new_csrf = await self._get_initial_csrf(session_id)
-                if new_csrf:
-                    print(f"{cyan}    Got new CSRF, retrying...{reset}")
-                    return await self._get_username_suggestion(session_id, email, hint)
+                print(f"{merah}    Access forbidden - need new CSRF token{reset}")
+                if retry_count < 1:  # Only retry once for 403
+                    new_csrf = await self._get_initial_csrf(session_id)
+                    if new_csrf:
+                        print(f"{cyan}    Got new CSRF, retrying...{reset}")
+                        return await self._get_username_suggestion(session_id, email, hint, retry_count + 1)
+                else:
+                    print(f"{kuning}    Max 403 retries reached, using fallback{reset}")
             
             # Fallback: generate username
             fallback_username = self._generate_fallback_username(email, hint)
