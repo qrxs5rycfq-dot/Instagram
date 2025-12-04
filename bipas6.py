@@ -13054,7 +13054,11 @@ class RequestOrchestrator2025:
     
     async def _make_real_http_request(self, request_data: Dict[str, Any], 
                                     session: Dict[str, Any]) -> Dict[str, Any]:
-        """Make HTTP request with realistic browser behavior"""
+        """
+        Make HTTP request with realistic browser behavior.
+        Uses curl_cffi for realistic TLS/JA3 fingerprinting when available.
+        Falls back to aiohttp if curl_cffi is not installed.
+        """
         method = request_data["method"]
         url = request_data["url"]
         headers = request_data["headers"]
@@ -13115,6 +13119,76 @@ class RequestOrchestrator2025:
         request_cookies = request_data.get("cookies", {})
         all_cookies = {**session_cookies, **request_cookies}
         
+        # ========== TRY CURL_CFFI FIRST (Realistic TLS/JA3 Fingerprinting) ==========
+        if HAVE_CURL_CFFI:
+            try:
+                # Get Chrome version from session fingerprint
+                metadata = session.get("metadata", {})
+                chrome_version = metadata.get("chrome_version", 131)
+                
+                # Map Chrome version to curl_cffi impersonate profile
+                impersonate_map = {
+                    131: "chrome131", 130: "chrome130", 129: "chrome129",
+                    128: "chrome128", 127: "chrome127", 126: "chrome126",
+                    124: "chrome124", 123: "chrome123", 120: "chrome120",
+                }
+                impersonate = impersonate_map.get(chrome_version, "chrome131")
+                
+                # Build cookie string for curl_cffi
+                cookie_str = "; ".join([f"{k}={v}" for k, v in all_cookies.items()]) if all_cookies else None
+                if cookie_str:
+                    all_headers["Cookie"] = cookie_str
+                
+                start_time = time.time()
+                
+                # Use curl_cffi with browser impersonation
+                if method.upper() == "GET":
+                    response = curl_requests.get(
+                        url, 
+                        headers=all_headers, 
+                        impersonate=impersonate,
+                        timeout=30
+                    )
+                elif method.upper() == "POST":
+                    response = curl_requests.post(
+                        url, 
+                        headers=all_headers, 
+                        data=data,
+                        impersonate=impersonate,
+                        timeout=30
+                    )
+                else:
+                    response = curl_requests.request(
+                        method, 
+                        url, 
+                        headers=all_headers, 
+                        data=data,
+                        impersonate=impersonate,
+                        timeout=30
+                    )
+                
+                response_time = time.time() - start_time
+                
+                # Parse cookies from response
+                response_cookies = {}
+                if hasattr(response, 'cookies'):
+                    for cookie in response.cookies:
+                        response_cookies[cookie.name] = cookie.value
+                
+                return {
+                    "status": response.status_code,
+                    "body": response.content,
+                    "headers": dict(response.headers),
+                    "cookies": response_cookies,
+                    "response_time": response_time,
+                    "tls_fingerprint": impersonate,  # Track which fingerprint was used
+                }
+                
+            except Exception as e:
+                print(f"{kuning}    curl_cffi error, falling back to aiohttp: {e}{reset}")
+                # Fall through to aiohttp
+        
+        # ========== FALLBACK TO AIOHTTP ==========
         try:
             # Create SSL context that mimics Chrome
             ssl_context = ssl.create_default_context()
