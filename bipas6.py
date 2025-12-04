@@ -502,139 +502,429 @@ class AdvancedIPStealthSystem2025:
         return ip_pool
     
     def _generate_dynamic_isp_ips(self, isp_name: str) -> List[Dict[str, Any]]:
-        """Generate fresh IPs untuk ISP tertentu dengan enhanced anti-blacklist validation"""
+        """Generate ultra-fresh residential IPs with advanced anti-detection"""
         current_time = time.time()
-        
-        # Disable cache for truly fresh IPs
-        # cache_key = f"{isp_name}_{int(current_time // 180)}"
         
         config = self._get_isp_config_enhanced(isp_name)
         if not config:
             return []
         
         ip_pool = []
-        ip_count = random.randint(5, 12)  # Generate more IPs for better selection
+        ip_count = random.randint(5, 12)
         attempts = 0
-        max_attempts = ip_count * 5  # Allow 5x attempts to find valid IPs
+        max_attempts = ip_count * 10  # More attempts for stricter validation
         
         while len(ip_pool) < ip_count and attempts < max_attempts:
             attempts += 1
             
-            ip = self._generate_valid_indonesian_ip(isp_name, config)
+            ip = self._generate_residential_ip(isp_name, config)
             
             if not ip:
                 continue
             
-            # Anti-blacklist validation chain
-            if not self._anti_blacklist_check(ip):
+            # Ultra-strict validation chain
+            if not self._ultra_anti_blacklist_check(ip):
                 continue
             
             if not self._validate_ip_format_enhanced(ip):
                 continue
             
-            # Enhanced validation with strict mode
-            validation = self.validator.validate(ip, strict=True)
-            if not validation["valid"] or validation["score"] < 80:  # Raised threshold to 80
+            # Residential IP verification
+            if not self._verify_residential_ip(ip, isp_name):
                 continue
             
-            # Check global blacklist
+            # Enhanced validation with very strict mode
+            validation = self.validator.validate(ip, strict=True)
+            if not validation["valid"] or validation["score"] < 85:  # Raised to 85
+                continue
+            
+            # Check all blacklists
             if ip in self.blacklisted_ips:
                 continue
             
-            # Check for known bad patterns
             if self._is_suspicious_ip_pattern(ip):
                 continue
             
-            # Check for duplicates in current pool
+            # Check duplicates
             if any(ip_info["ip"] == ip for ip_info in self.ip_pool):
                 continue
-            
-            # Check for duplicates in generated pool
             if any(ip_info["ip"] == ip for ip_info in ip_pool):
                 continue
             
-            # Create enhanced IP profile
-            ip_info = self._create_enhanced_ip_profile(ip, config, isp_name)
-            ip_info["freshness_score"] = 100  # Mark as fresh
+            # Create ultra-fresh IP profile
+            ip_info = self._create_residential_ip_profile(ip, config, isp_name)
+            ip_info["freshness_score"] = 100
+            ip_info["residential_verified"] = True
             ip_info["anti_blacklist_verified"] = True
             ip_info["generation_timestamp"] = current_time
+            ip_info["never_used"] = True
             
             ip_pool.append(ip_info)
         
-        print(f"{cyan}    Generated {len(ip_pool)} anti-blacklist verified IPs for {isp_name}{reset}")
+        print(f"{cyan}    Generated {len(ip_pool)} residential-verified IPs for {isp_name}{reset}")
         return ip_pool
     
-    def _anti_blacklist_check(self, ip: str) -> bool:
-        """Comprehensive anti-blacklist verification"""
+    def _generate_residential_ip(self, isp_name: str, config: Dict[str, Any]) -> Optional[str]:
+        """Generate IP that looks like residential/mobile IP"""
+        try:
+            prefix = random.choice(config["prefixes"])
+            parts = prefix.split('.')
+            
+            # Generate realistic residential IP patterns
+            while len(parts) < 4:
+                if len(parts) == 2:
+                    # Third octet - use common residential ranges
+                    parts.append(str(random.choice([
+                        random.randint(0, 63),    # Low range
+                        random.randint(64, 127),  # Mid-low range
+                        random.randint(128, 191), # Mid-high range
+                        random.randint(192, 223), # High range (avoid 224+)
+                    ])))
+                elif len(parts) == 3:
+                    # Fourth octet - avoid suspicious patterns
+                    fourth = self._generate_residential_fourth_octet()
+                    parts.append(str(fourth))
+            
+            ip = '.'.join(parts[:4])
+            return ip if self._validate_ip_format_enhanced(ip) else None
+            
+        except Exception:
+            return None
+    
+    def _generate_residential_fourth_octet(self) -> int:
+        """Generate fourth octet that looks residential"""
+        # Avoid: 0, 1, 2, 254, 255 (network/broadcast)
+        # Avoid: 10, 20, 50, 100, 128, 200, 250 (round numbers - often servers)
+        # Prefer: random-looking numbers
+        
+        avoid = {0, 1, 2, 10, 20, 50, 100, 128, 200, 250, 254, 255}
+        
+        # Generate with natural distribution
+        while True:
+            # Bias towards middle range (more common for residential)
+            if random.random() < 0.6:
+                octet = random.randint(30, 220)
+            else:
+                octet = random.randint(3, 253)
+            
+            if octet not in avoid:
+                return octet
+    
+    def _verify_residential_ip(self, ip: str, isp_name: str) -> bool:
+        """Verify IP looks like residential/mobile IP"""
+        try:
+            parts = [int(p) for p in ip.split('.')]
+            
+            # Check IP is in valid residential ranges for ISP
+            config = self._get_isp_config_enhanced(isp_name)
+            if not config:
+                return False
+            
+            # Verify prefix matches ISP
+            ip_prefix = f"{parts[0]}.{parts[1]}"
+            valid_prefixes = config.get("prefixes", [])
+            
+            if not any(ip.startswith(prefix) for prefix in valid_prefixes):
+                return False
+            
+            # Additional residential checks
+            # Avoid sequential patterns
+            if parts[2] == parts[3]:
+                return False
+            
+            # Avoid common server patterns
+            if parts[3] in [1, 2, 254, 255]:
+                return False
+            
+            # Check for natural-looking distribution
+            variance = max(parts) - min(parts)
+            if variance < 10:  # Too uniform, might be generated
+                return False
+            
+            return True
+            
+        except Exception:
+            return False
+    
+    def _create_residential_ip_profile(self, ip: str, config: Dict[str, Any], 
+                                       isp_name: str) -> Dict[str, Any]:
+        """Create comprehensive residential IP profile"""
+        city = random.choice(config.get("cities", ["Jakarta"]))
+        city_coords = self._get_city_coordinates_enhanced(city)
+        
+        connection_type = self._get_connection_type_for_isp(isp_name)
+        network_type = self._get_network_type_for_isp(isp_name, connection_type)
+        
+        # Generate realistic network metrics for residential
+        if connection_type == "mobile":
+            latency = random.uniform(20, 80)  # Mobile has higher latency
+            jitter = random.uniform(5, 25)
+            download_speed = random.uniform(10, 100)  # Mbps
+            upload_speed = random.uniform(5, 30)
+        else:
+            latency = random.uniform(5, 30)  # WiFi lower latency
+            jitter = random.uniform(1, 10)
+            download_speed = random.uniform(50, 300)
+            upload_speed = random.uniform(20, 100)
+        
+        return {
+            "ip": ip,
+            "isp": isp_name,
+            "asn": config.get("asn", ""),
+            "as_name": config.get("as_name", ""),
+            "country": "ID",
+            "city": city,
+            "region": city_coords.get("region", ""),
+            "latitude": city_coords.get("lat", 0) + random.uniform(-0.05, 0.05),
+            "longitude": city_coords.get("lon", 0) + random.uniform(-0.05, 0.05),
+            "timezone": "Asia/Jakarta",
+            "connection_type": connection_type,
+            "network_type": network_type,
+            "carrier": isp_name.upper() if connection_type == "mobile" else "",
+            "mcc": self._get_mcc_for_isp(isp_name) if connection_type == "mobile" else "",
+            "mnc": self._get_mnc_for_isp(isp_name) if connection_type == "mobile" else "",
+            "health_score": random.randint(88, 98),
+            "latency_ms": latency,
+            "jitter_ms": jitter,
+            "download_mbps": download_speed,
+            "upload_mbps": upload_speed,
+            "timestamp": time.time(),
+            "usage_count": 0,
+            "last_used": 0,
+            "residential": True,
+            "mobile": connection_type == "mobile",
+            "proxy_detected": False,
+            "vpn_detected": False,
+            "datacenter_detected": False,
+        }
+    
+    def _ultra_anti_blacklist_check(self, ip: str) -> bool:
+        """Ultra-comprehensive anti-blacklist verification"""
         try:
             parts = ip.split('.')
             if len(parts) != 4:
                 return False
             
-            # Known blacklisted IP patterns (datacenter, VPN, proxy)
-            blacklisted_prefixes = [
-                # Common datacenter/cloud ranges
-                "45.33", "45.56", "45.76", "45.77", "45.79",  # Linode
-                "104.131", "104.236", "104.238",  # DigitalOcean
-                "107.170", "107.173",  # DigitalOcean
-                "128.199", "138.68", "139.59",  # DigitalOcean
-                "167.71", "167.172", "167.99",  # DigitalOcean
-                "185.199", "185.220",  # Known VPN ranges
-                "192.241", "198.211", "198.199",  # DigitalOcean
-                "209.97", "209.122",  # Various
-                "35.192", "35.193", "35.194", "35.195",  # Google Cloud
-                "34.64", "34.65", "34.66", "34.67",  # Google Cloud
-                "52.0", "52.1", "52.2", "52.3",  # AWS
-                "54.0", "54.1", "54.2", "54.3",  # AWS
-                "13.52", "13.53", "13.54", "13.55",  # AWS
-                "18.216", "18.217", "18.218", "18.219",  # AWS
-                # Known VPN/Proxy ranges
-                "193.138", "193.178",
-                "146.70", "146.71", "146.158",
-                "89.163", "89.187", "89.238",
-                "91.90", "91.132", "91.134",
-                "95.211", "95.215", "95.216",
-                "176.56", "176.57", "176.58",
-                "178.162", "178.175",
-                "185.65", "185.69", "185.94", "185.99",
-                "217.138", "217.182",
+            first = int(parts[0])
+            second = int(parts[1])
+            third = int(parts[2])
+            fourth = int(parts[3])
+            
+            # === DATACENTER/CLOUD PROVIDER RANGES ===
+            datacenter_prefixes = [
+                # AWS
+                "3.0", "3.1", "3.2", "3.5", "3.6",
+                "13.52", "13.53", "13.54", "13.55", "13.56", "13.57", "13.58", "13.59",
+                "18.130", "18.131", "18.132", "18.133", "18.134", "18.135",
+                "18.188", "18.189", "18.190", "18.191",
+                "18.216", "18.217", "18.218", "18.219", "18.220", "18.221",
+                "34.192", "34.193", "34.194", "34.195", "34.196", "34.197", "34.198", "34.199",
+                "34.200", "34.201", "34.202", "34.203", "34.204", "34.205", "34.206", "34.207",
+                "35.153", "35.154", "35.155", "35.156", "35.157", "35.158", "35.159",
+                "44.192", "44.193", "44.194", "44.195", "44.196", "44.197", "44.198", "44.199",
+                "52.0", "52.1", "52.2", "52.3", "52.4", "52.5", "52.6", "52.7",
+                "52.20", "52.21", "52.22", "52.23", "52.24", "52.25", "52.26", "52.27",
+                "54.80", "54.81", "54.82", "54.83", "54.84", "54.85", "54.86", "54.87",
+                "54.88", "54.89", "54.90", "54.91", "54.92", "54.93", "54.94", "54.95",
+                # Google Cloud
+                "34.64", "34.65", "34.66", "34.67", "34.68", "34.69", "34.70", "34.71",
+                "35.184", "35.185", "35.186", "35.187", "35.188", "35.189", "35.190", "35.191",
+                "35.192", "35.193", "35.194", "35.195", "35.196", "35.197", "35.198", "35.199",
+                "35.200", "35.201", "35.202", "35.203", "35.204", "35.205", "35.206", "35.207",
+                "35.208", "35.209", "35.210", "35.211", "35.212", "35.213", "35.214", "35.215",
+                # Azure
+                "13.64", "13.65", "13.66", "13.67", "13.68", "13.69", "13.70", "13.71",
+                "20.36", "20.37", "20.38", "20.39", "20.40", "20.41", "20.42", "20.43",
+                "40.64", "40.65", "40.66", "40.67", "40.68", "40.69", "40.70", "40.71",
+                "52.136", "52.137", "52.138", "52.139", "52.140", "52.141", "52.142", "52.143",
+                # DigitalOcean
+                "104.131", "104.236", "104.238",
+                "107.170", "107.173",
+                "128.199", "134.122", "134.209",
+                "137.184", "138.68", "138.197",
+                "139.59", "142.93",
+                "157.230", "157.245",
+                "159.65", "159.89", "159.203",
+                "161.35", "162.243",
+                "164.90", "164.92",
+                "165.22", "165.227",
+                "167.71", "167.172", "167.99",
+                "178.62", "178.128",
+                "188.166",
+                "192.241", "198.199", "198.211",
+                "206.81", "206.189",
+                "209.97",
+                # Linode
+                "45.33", "45.56", "45.79",
+                "50.116",
+                "66.175", "66.228",
+                "69.164",
+                "72.14",
+                "74.207",
+                "96.126",
+                "97.107",
+                "139.162",
+                "172.104", "172.105",
+                "173.230", "173.255",
+                "176.58",
+                "178.79",
+                "192.155",
+                "194.195",
+                "198.58",
+                "212.71",
+                # Vultr
+                "45.32", "45.63", "45.76", "45.77",
+                "64.156", "64.237",
+                "66.42",
+                "95.179",
+                "104.156", "104.207", "104.238",
+                "108.61",
+                "136.244",
+                "140.82",
+                "144.202",
+                "149.28",
+                "155.138",
+                "207.148",
+                "208.167",
+                "209.250",
+                "216.128",
+                # OVH
+                "51.38", "51.68", "51.75", "51.77", "51.79", "51.81", "51.83", "51.89",
+                "54.36", "54.37", "54.38", "54.39",
+                "91.121",
+                "92.222",
+                "135.125", "137.74",
+                "139.99",
+                "142.44",
+                "144.217",
+                "145.239",
+                "147.135",
+                "149.56",
+                "151.80",
+                "158.69",
+                "164.132",
+                "167.114",
+                "176.31",
+                "178.32", "178.33",
+                "188.165",
+                "192.95", "192.99",
+                "193.70",
+                "195.154",
+                "198.27", "198.50", "198.100",
+                "213.32", "213.186", "213.251",
+                "217.182",
             ]
             
-            # Check against blacklisted prefixes
-            for prefix in blacklisted_prefixes:
-                if ip.startswith(prefix):
+            # === VPN PROVIDER RANGES ===
+            vpn_prefixes = [
+                # NordVPN
+                "5.253", "37.120", "62.102", "68.71", "82.102", "84.17", "89.36", "89.187",
+                "91.207", "92.119", "93.115", "94.140", "103.75", "109.70", "138.199",
+                "146.70", "149.34", "154.47", "156.67", "159.69", "165.231", "169.150",
+                "181.215", "185.159", "185.195", "185.220", "185.230", "188.95",
+                "193.9", "193.27", "193.176", "193.178",
+                "194.99", "194.127", "194.156",
+                "195.181", "195.206", "196.196",
+                "198.44",
+                "212.102", "213.152", "217.138",
+                # ExpressVPN
+                "89.238", "91.90", "91.132", "91.134",
+                "109.200", "146.158",
+                "176.56", "176.57", "176.67",
+                "185.59", "185.94",
+                "195.8",
+                # Surfshark
+                "89.44", "89.147", "95.174",
+                "104.129", "149.86", "149.88",
+                "185.65", "185.93", "185.153",
+                "191.101",
+                "212.8", "212.22", "212.32",
+                # ProtonVPN
+                "146.70", "156.146", "185.107", "185.159",
+                # Private Internet Access
+                "162.245", "169.197", "178.162", "185.217",
+                "191.96", "193.25",
+                # Mullvad
+                "45.83", "86.106", "86.107",
+                "141.98", "185.213", "193.27",
+                "198.54",
+            ]
+            
+            # === PROXY/HOSTING RANGES ===
+            proxy_prefixes = [
+                "23.94", "23.95",  # ColoCrossing
+                "64.145",  # Psychz
+                "66.70", "66.206",  # Various
+                "69.30", "69.46", "69.167",  # Various hosting
+                "72.52",  # QuadraNet
+                "76.164",  # Cogent
+                "96.8", "96.9",  # Wholesale Internet
+                "103.21", "103.22", "103.31",  # Cloudflare
+                "104.16", "104.17", "104.18", "104.19", "104.20", "104.21", "104.22", "104.23",  # Cloudflare
+                "104.24", "104.25", "104.26", "104.27",  # Cloudflare
+                "141.101",  # Cloudflare
+                "162.158", "162.159",  # Cloudflare
+                "172.64", "172.65", "172.66", "172.67",  # Cloudflare
+                "173.245",  # Cloudflare
+                "188.114",  # Cloudflare
+                "190.93",  # Cloudflare
+                "197.234",  # Cloudflare
+                "198.41",  # Cloudflare
+                "199.27",  # Cloudflare
+            ]
+            
+            # Check against all blacklisted prefixes
+            ip_prefix_2 = f"{parts[0]}.{parts[1]}"
+            ip_prefix_3 = f"{parts[0]}.{parts[1]}.{parts[2]}"
+            
+            all_blacklisted = datacenter_prefixes + vpn_prefixes + proxy_prefixes
+            
+            for prefix in all_blacklisted:
+                if ip.startswith(prefix) or ip_prefix_2.startswith(prefix) or ip_prefix_3.startswith(prefix):
                     return False
             
-            # Check for private/reserved ranges
-            first_octet = int(parts[0])
-            second_octet = int(parts[1])
-            
-            # Private ranges
-            if first_octet == 10:
+            # === RESERVED/SPECIAL RANGES ===
+            # Private
+            if first == 10:
                 return False
-            if first_octet == 172 and 16 <= second_octet <= 31:
+            if first == 172 and 16 <= second <= 31:
                 return False
-            if first_octet == 192 and second_octet == 168:
+            if first == 192 and second == 168:
                 return False
             
-            # Reserved/special ranges
-            if first_octet in [0, 127, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255]:
+            # Reserved
+            if first in [0, 127] or first >= 224:
                 return False
             
             # Link-local
-            if first_octet == 169 and second_octet == 254:
+            if first == 169 and second == 254:
                 return False
             
-            # Check for suspicious patterns
-            if parts[3] in ['0', '1', '254', '255']:  # Network/broadcast addresses
+            # Shared address space (CGNAT)
+            if first == 100 and 64 <= second <= 127:
                 return False
             
-            # All same octets (like 111.111.111.111)
-            if len(set(parts)) == 1:
+            # Documentation ranges
+            if (first == 192 and second == 0 and third == 2) or \
+               (first == 198 and second == 51 and third == 100) or \
+               (first == 203 and second == 0 and third == 113):
                 return False
             
-            # Sequential octets (like 1.2.3.4)
-            if parts == sorted(parts) and int(parts[3]) - int(parts[0]) == 3:
+            # === SUSPICIOUS PATTERNS ===
+            # Network/broadcast addresses
+            if fourth in [0, 1, 254, 255]:
+                return False
+            
+            # All same octets
+            if first == second == third == fourth:
+                return False
+            
+            # Sequential
+            if abs(fourth - third) == 1 and abs(third - second) == 1 and abs(second - first) == 1:
+                return False
+            
+            # Round numbers (often server IPs)
+            if fourth in [10, 20, 50, 100, 150, 200, 250]:
                 return False
             
             return True
@@ -1155,50 +1445,83 @@ class AdvancedIPStealthSystem2025:
             self._generate_fresh_ip_batch_enhanced()
     
     def _generate_fresh_ip_batch_enhanced(self):
-        """Generate fresh batch of IPs dengan enhanced algorithm"""
-        print(f"{cyan}🌐  Generating enhanced IP batch...{reset}")
+        """Generate fresh batch of IPs with multi-country support"""
+        print(f"{cyan}🌐  Generating enhanced multi-country IP batch...{reset}")
         
         new_ips = []
-        isps = ["telkomsel", "indosat", "xl", "tri", "smartfren", "biznet", "cbn"]
         
-        for isp in isps:
-            try:
-                print(f"{cyan}    Generating {isp} IPs...{reset}")
-                isp_ips = self._generate_dynamic_isp_ips(isp)
-                
-                if isp_ips:
-                    # Validasi setiap IP
-                    validated_ips = []
-                    for ip_info in isp_ips:
-                        validation = self.validator.validate(ip_info["ip"], strict=True)
-                        if validation["valid"] and validation["score"] >= 70:
-                            ip_info["validation_score"] = validation["score"]
-                            ip_info["last_validated"] = time.time()
-                            validated_ips.append(ip_info)
+        # Multi-country ISP list with weighted selection
+        country_isps = {
+            "ID": ["telkomsel", "indosat", "xl", "tri", "smartfren"],  # Indonesia
+            "US": ["verizon", "att", "tmobile", "comcast", "spectrum"],  # USA
+            "BR": ["claro_br", "vivo_br", "tim_br"],  # Brazil
+            "IN": ["jio", "airtel_in", "vi_in"],  # India
+            "DE": ["telekom_de", "vodafone_de", "o2_de"],  # Germany
+        }
+        
+        # Random country selection with weights (more variety)
+        countries = list(country_isps.keys())
+        country_weights = [30, 25, 20, 15, 10]  # ID gets more weight but others also selected
+        
+        # Select 3-4 countries randomly
+        selected_countries = random.choices(countries, weights=country_weights, k=random.randint(3, 4))
+        selected_countries = list(set(selected_countries))  # Remove duplicates
+        
+        print(f"{cyan}    Selected countries: {selected_countries}{reset}")
+        
+        for country in selected_countries:
+            isps = country_isps.get(country, [])
+            for isp in isps:
+                try:
+                    print(f"{cyan}    Generating {isp} ({country}) IPs...{reset}")
                     
-                    if validated_ips:
-                        new_ips.extend(validated_ips)
-                        print(f"{hijau}    Added {len(validated_ips)} validated {isp} IPs{reset}")
+                    # Use country-specific generation for non-ID countries
+                    if country != "ID":
+                        isp_ips = self._generate_country_ips(country, [isp])
                     else:
-                        print(f"{kuning}    No validated IPs for {isp}{reset}")
+                        isp_ips = self._generate_dynamic_isp_ips(isp)
+                    
+                    if isp_ips:
+                        # Validate each IP
+                        validated_ips = []
+                        for ip_info in isp_ips:
+                            validation = self.validator.validate(ip_info["ip"], strict=True)
+                            if validation["valid"] and validation["score"] >= 70:
+                                ip_info["validation_score"] = validation["score"]
+                                ip_info["last_validated"] = time.time()
+                                ip_info["country"] = country
+                                validated_ips.append(ip_info)
                         
-            except Exception as e:
-                print(f"{merah}    Error generating {isp} IPs: {str(e)[:50]}{reset}")
-                continue
+                        if validated_ips:
+                            new_ips.extend(validated_ips)
+                            print(f"{hijau}    Added {len(validated_ips)} validated {isp} ({country}) IPs{reset}")
+                        else:
+                            print(f"{kuning}    No validated IPs for {isp}{reset}")
+                            
+                except Exception as e:
+                    print(f"{merah}    Error generating {isp} IPs: {str(e)[:50]}{reset}")
+                    continue
         
-        # Tambahkan ke pool dengan deduplication
+        # Add to pool with deduplication
         existing_ips = {ip["ip"] for ip in self.ip_pool}
         unique_new_ips = [ip for ip in new_ips if ip["ip"] not in existing_ips]
         
         if unique_new_ips:
             self.ip_pool.extend(unique_new_ips)
             
-            # Batasi pool size (keep freshest 100 IPs)
+            # Limit pool size (keep freshest 100 IPs)
             if len(self.ip_pool) > 100:
                 self.ip_pool.sort(key=lambda x: x.get("timestamp", 0), reverse=True)
                 self.ip_pool = self.ip_pool[:100]
             
             print(f"{hijau}✅  Added {len(unique_new_ips)} fresh IPs | Total pool: {len(self.ip_pool)}{reset}")
+            
+            # Print country distribution
+            country_dist = {}
+            for ip in self.ip_pool:
+                c = ip.get("country", "ID")
+                country_dist[c] = country_dist.get(c, 0) + 1
+            print(f"{cyan}    Country distribution: {country_dist}{reset}")
             
             # Update statistics
             avg_health = sum(ip.get("health_score", 0) for ip in self.ip_pool) / len(self.ip_pool)
@@ -1208,24 +1531,36 @@ class AdvancedIPStealthSystem2025:
             self._generate_emergency_ip_batch()
     
     def _generate_emergency_ip_batch(self):
-        """Generate emergency IP batch ketika semua gagal"""
-        print(f"{merah}🚨  Generating emergency IP batch{reset}")
+        """Generate emergency IP batch with multi-country support"""
+        print(f"{merah}🚨  Generating emergency multi-country IP batch{reset}")
         
         emergency_ips = []
         
-        # Generate manual IPs dengan format yang valid
+        # Multi-country manual prefixes
         manual_prefixes = [
-            ("110.136", "telkomsel"),
-            ("112.215", "indosat"),
-            ("36.86", "xl"),
-            ("116.206", "tri"),
-            ("202.67", "smartfren"),
-            ("103.23", "biznet"),
-            ("114.120", "cbn")
+            # Indonesia
+            ("110.136", "telkomsel", "ID"),
+            ("112.215", "indosat", "ID"),
+            ("36.86", "xl", "ID"),
+            ("116.206", "tri", "ID"),
+            # USA
+            ("174.192", "verizon", "US"),
+            ("166.137", "att", "US"),
+            ("172.32", "tmobile", "US"),
+            ("73.93", "comcast", "US"),
+            # Brazil
+            ("177.32", "claro_br", "BR"),
+            ("179.152", "vivo_br", "BR"),
+            # India
+            ("49.36", "jio", "IN"),
+            ("106.76", "airtel_in", "IN"),
+            # Germany
+            ("91.64", "telekom_de", "DE"),
+            ("80.187", "vodafone_de", "DE"),
         ]
         
-        for prefix, isp in manual_prefixes:
-            for _ in range(3):  # 3 IPs per prefix
+        for prefix, isp, country in manual_prefixes:
+            for _ in range(2):  # 2 IPs per prefix
                 # Generate valid IP
                 third = random.randint(0, 255)
                 fourth = random.randint(10, 240)
@@ -1235,16 +1570,34 @@ class AdvancedIPStealthSystem2025:
                 if not self._validate_ip_format_enhanced(ip):
                     continue
                 
+                # Anti-blacklist check
+                if not self._anti_blacklist_check(ip):
+                    continue
+                
                 # Create IP info
-                ip_info = self._create_enhanced_ip_profile(ip, self._get_isp_config_enhanced(isp), isp)
+                config = self._get_isp_config_enhanced(isp)
+                if config:
+                    ip_info = self._create_enhanced_ip_profile(ip, config, isp)
+                else:
+                    # Create basic IP info for non-ID countries
+                    ip_info = {
+                        "ip": ip,
+                        "isp": isp,
+                        "country": country,
+                        "health_score": 75,
+                        "connection_type": "mobile",
+                        "timestamp": time.time(),
+                    }
+                
                 ip_info["emergency"] = True
-                ip_info["health_score"] = 75  # Lower score untuk emergency IPs
+                ip_info["country"] = country
+                ip_info["health_score"] = 75
                 
                 emergency_ips.append(ip_info)
-                print(f"{cyan}      Generated emergency IP: {ip} ({isp}){reset}")
+                print(f"{cyan}      Generated emergency IP: {ip} ({isp}, {country}){reset}")
         
         if emergency_ips:
-            self.ip_pool = emergency_ips[:25]  # Keep 25 emergency IPs
+            self.ip_pool = emergency_ips[:30]  # Keep 30 emergency IPs
             print(f"{hijau}✅  Emergency batch generated: {len(self.ip_pool)} IPs{reset}")
         else:
             print(f"{merah}❌  Failed to generate emergency IPs{reset}")
@@ -7767,8 +8120,20 @@ class RequestOrchestrator2025:
                           cookies: Optional[Dict[str, str]] = None,
                           priority: int = 5,
                           cache_key: Optional[str] = None,
-                          require_cookies: bool = True) -> Dict[str, Any]:  # FIXED: tambah parameter
-        """Make request dengan COMPLETE session synchronization - FIXED"""
+                          require_cookies: bool = True,
+                          request_type: str = "default") -> Dict[str, Any]:
+        """
+        Make request with FULL AUTO-SYNC for headers, cookies, and CSRF.
+        
+        request_type options:
+        - "default": Standard page request
+        - "ajax": AJAX/API request (adds X-* Instagram headers)
+        - "form": Form submission
+        - "navigate": Page navigation
+        
+        All headers and cookies are automatically synchronized from session.
+        CSRF token is automatically included for POST requests.
+        """
         
         # Check cache
         if cache_key and cache_key in self.request_cache:
@@ -7777,36 +8142,36 @@ class RequestOrchestrator2025:
                 print(f"{cyan}💾  Using cached response for {cache_key}{reset}")
                 return cached["response"]
         
-        # Get session dengan semua komponen sinkron - FIXED
+        # Get session with all synced components
         session = self.session_manager.get_session_with_headers(session_id)
         if not session:
             return {"status": None, "error": f"Session {session_id} not found or expired"}
         
-        # Get cookies dari session jika diperlukan - FIXED
+        # AUTO-SYNC: Build complete headers based on request type
+        auto_headers = self._build_auto_sync_headers(session, method, url, request_type)
+        
+        # Merge with any custom headers (custom headers override auto headers)
+        if headers:
+            auto_headers.update(headers)
+        
+        # AUTO-SYNC: Get all cookies from session
         session_cookies = {}
         if require_cookies:
             session_cookies = self.session_manager.get_session_cookies(session_id)
-            
-            # Juga ambil cookies spesifik untuk domain
             if "instagram.com" in url:
                 instagram_cookies = self.session_manager.get_session_cookies(session_id, "instagram.com")
                 session_cookies.update(instagram_cookies)
         
-        # Merge cookies: session cookies + request cookies - FIXED
+        # Merge cookies
         all_cookies = {**session_cookies, **(cookies or {})}
         
-        # Get current headers dari session - FIXED
-        current_headers = session.get("current_headers", {}).copy()
+        # AUTO-SYNC: Add CSRF token to cookies if available
+        csrf_token = session.get("tokens", {}).get("csrftoken", "")
+        if csrf_token and "csrftoken" not in all_cookies:
+            all_cookies["csrftoken"] = csrf_token
         
-        # Merge headers: session headers + request headers - FIXED
-        all_headers = {**current_headers, **(headers or {})}
-        
-        # Update User-Agent jika ada di session metadata - FIXED
+        # Get connection type
         metadata = session.get("metadata", {})
-        if "user_agent" in metadata and metadata["user_agent"]:
-            all_headers["User-Agent"] = metadata["user_agent"]
-        
-        # Get connection type from session metadata
         connection_type = metadata.get("connection_type", "mobile")
         
         # Create request object
@@ -7817,22 +8182,145 @@ class RequestOrchestrator2025:
             "session_id": session_id,
             "method": method,
             "url": url,
-            "headers": all_headers,  # FIXED: gunakan merged headers
+            "headers": auto_headers,
             "data": data,
-            "cookies": all_cookies,  # FIXED: gunakan merged cookies
+            "cookies": all_cookies,
             "priority": priority,
             "cache_key": cache_key,
             "require_cookies": require_cookies,
             "timestamp": time.time(),
             "retry_count": 0,
-            "connection_type": connection_type  # FIXED: simpan connection type
+            "connection_type": connection_type,
+            "request_type": request_type
         }
         
         # Put in queue
         await self.request_queue.put(request_data)
         
         # Wait for result
-        return await self._wait_for_result(request_id)
+        result = await self._wait_for_result(request_id)
+        
+        # AUTO-SYNC: Update session with response cookies
+        if result.get("cookies"):
+            self.session_manager.update_session_cookies(session_id, result["cookies"])
+        
+        # AUTO-SYNC: Update CSRF token if present in response
+        if result.get("cookies", {}).get("csrftoken"):
+            self.session_manager.update_session(session_id, {
+                "tokens": {
+                    **session.get("tokens", {}),
+                    "csrftoken": result["cookies"]["csrftoken"]
+                }
+            })
+        
+        return result
+    
+    def _build_auto_sync_headers(self, session: Dict[str, Any], method: str, 
+                                  url: str, request_type: str) -> Dict[str, str]:
+        """Build complete headers automatically based on session and request type"""
+        
+        # Get session headers as base
+        session_headers = session.get("headers", {})
+        current_headers = session.get("current_headers", {})
+        metadata = session.get("metadata", {})
+        tokens = session.get("tokens", {})
+        
+        # Start with base headers from session
+        headers = {}
+        
+        # Add User-Agent (consistent across all requests)
+        if "User-Agent" in session_headers:
+            headers["User-Agent"] = session_headers["User-Agent"]
+        elif "user_agent" in metadata:
+            headers["User-Agent"] = metadata["user_agent"]
+        
+        # Add Sec-Ch-* headers from session
+        sec_ch_keys = ["Sec-Ch-Ua", "Sec-Ch-Ua-Mobile", "Sec-Ch-Ua-Platform", 
+                      "Sec-Ch-Ua-Model", "Sec-Ch-Ua-Full-Version-List", "Sec-Ch-Ua-Platform-Version"]
+        for key in sec_ch_keys:
+            if key in session_headers:
+                headers[key] = session_headers[key]
+        
+        # Build headers based on request type
+        if request_type == "navigate" or (method == "GET" and request_type == "default"):
+            # Page navigation headers
+            headers.update({
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": metadata.get("language", "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"),
+                "Cache-Control": "max-age=0",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1",
+            })
+            
+        elif request_type == "ajax" or (method == "POST" and "api" in url):
+            # AJAX/API request headers
+            csrf_token = tokens.get("csrftoken", "")
+            ajax_id = tokens.get("ajax_id", "1029952363")
+            web_session_id = session.get("extra_session_id", "")
+            
+            headers.update({
+                "Accept": "*/*",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": metadata.get("language", "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"),
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Origin": "https://www.instagram.com",
+                "Priority": "u=1, i",
+                "Referer": "https://www.instagram.com/accounts/emailsignup/",
+                "Sec-Ch-Prefers-Color-Scheme": "dark",
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-origin",
+                "X-Asbd-Id": "359341",
+                "X-Csrftoken": csrf_token,
+                "X-Ig-App-Id": "936619743392459",
+                "X-Ig-Www-Claim": session.get("ig_www_claim", "0"),
+                "X-Instagram-Ajax": ajax_id,
+                "X-Requested-With": "XMLHttpRequest",
+            })
+            
+            if web_session_id:
+                headers["X-Web-Session-Id"] = web_session_id
+                
+        elif request_type == "form":
+            # Form submission headers
+            csrf_token = tokens.get("csrftoken", "")
+            
+            headers.update({
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": metadata.get("language", "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"),
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Origin": "https://www.instagram.com",
+                "Referer": "https://www.instagram.com/",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "same-origin",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1",
+            })
+            
+            if csrf_token:
+                headers["X-Csrftoken"] = csrf_token
+                
+        else:
+            # Default headers
+            headers.update({
+                "Accept": "*/*",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": metadata.get("language", "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"),
+            })
+            
+            if method == "POST":
+                headers["Content-Type"] = "application/x-www-form-urlencoded"
+                csrf_token = tokens.get("csrftoken", "")
+                if csrf_token:
+                    headers["X-Csrftoken"] = csrf_token
+        
+        return headers
     
     async def _wait_for_result(self, request_id: str) -> Dict[str, Any]:
         """Wait for request result - FIXED dengan polling result_store"""
