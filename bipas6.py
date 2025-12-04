@@ -1874,10 +1874,74 @@ class RealIPGeoSyncSystem:
             "android_models": ["SO-51D", "SM-S928C", "Pixel 8"],
         },
         "ID": {
-            "models": ["Galaxy A54", "Redmi Note 12", "OPPO A78"],
-            "os_dist": {"iOS": 0.15, "Android": 0.85},
-            "iphone_models": ["iPhone14,5", "iPhone13,4"],
-            "android_models": ["SM-A546B", "23021RAA2Y", "CPH2483"],
+            "models": [
+                # Samsung Galaxy Series (paling populer di Indonesia)
+                "Galaxy A54", "Galaxy A34", "Galaxy A14", "Galaxy A04", "Galaxy A04s",
+                "Galaxy A15", "Galaxy A25", "Galaxy A35", "Galaxy A55",
+                "Galaxy M14", "Galaxy M34", "Galaxy M54", "Galaxy M55",
+                "Galaxy S23 FE", "Galaxy S24", "Galaxy S24+", "Galaxy S24 Ultra",
+                "Galaxy Z Flip5", "Galaxy Z Fold5",
+                # Xiaomi/Redmi (sangat populer)
+                "Redmi Note 12", "Redmi Note 12 Pro", "Redmi Note 12 Pro+",
+                "Redmi Note 13", "Redmi Note 13 Pro", "Redmi Note 13 Pro+",
+                "Redmi 12", "Redmi 12C", "Redmi 13", "Redmi 13C",
+                "POCO M6 Pro", "POCO X6", "POCO X6 Pro", "POCO F5",
+                "Xiaomi 14", "Xiaomi 13T", "Xiaomi 13T Pro",
+                # OPPO (populer di Indonesia)
+                "OPPO A78", "OPPO A58", "OPPO A38", "OPPO A18",
+                "OPPO A79", "OPPO A98", "OPPO A2",
+                "OPPO Reno 10", "OPPO Reno 11", "OPPO Reno 11 Pro",
+                "OPPO Find X6 Pro", "OPPO Find N3",
+                # Vivo (populer di Indonesia)
+                "Vivo Y17s", "Vivo Y27", "Vivo Y36", "Vivo Y100",
+                "Vivo V29", "Vivo V29e", "Vivo V30", "Vivo V30 Pro",
+                "Vivo X100", "Vivo X100 Pro",
+                # Realme
+                "Realme C55", "Realme C53", "Realme C67",
+                "Realme 11", "Realme 11 Pro", "Realme 11 Pro+",
+                "Realme 12 Pro", "Realme 12 Pro+",
+                "Realme GT5", "Realme GT Neo 5",
+                # Infinix (budget populer)
+                "Infinix Hot 30", "Infinix Hot 40 Pro", "Infinix Note 30",
+                "Infinix Zero 30", "Infinix GT 10 Pro",
+                # Tecno
+                "Tecno Spark 10 Pro", "Tecno Camon 20", "Tecno Pova 5",
+            ],
+            "os_dist": {"iOS": 0.12, "Android": 0.88},
+            "iphone_models": ["iPhone14,5", "iPhone13,4", "iPhone12,1", "iPhone11,8"],
+            "android_models": [
+                # Samsung - A Series (budget/mid-range paling populer)
+                "SM-A546B", "SM-A546E", "SM-A346B", "SM-A145F", "SM-A047F", "SM-A047M",
+                "SM-A156B", "SM-A256B", "SM-A356B", "SM-A556B",
+                "SM-M146B", "SM-M346B", "SM-M546B", "SM-M556B",
+                # Samsung - S Series
+                "SM-S711B", "SM-S921B", "SM-S926B", "SM-S928B",
+                "SM-F731B", "SM-F946B",
+                # Xiaomi/Redmi
+                "23021RAA2Y", "23021RAAEG", "23076RN4BI", "23076RA4BI",
+                "2312DRA50G", "2312FPCA4G", "23106RN0DA",
+                "23049RAD8C", "23049RN44G", "23053RN02A",
+                "23078RKD5C", "23090RA98G", "23113RKC6G",
+                "2311DRK48G", "2311DRK48C", "2311FPCD6G",
+                # OPPO
+                "CPH2483", "CPH2467", "CPH2457", "CPH2525",
+                "CPH2529", "CPH2495", "CPH2473",
+                "CPH2491", "CPH2531", "CPH2521",
+                "CPH2519", "CPH2551",
+                # Vivo
+                "V2243", "V2250", "V2231", "V2238",
+                "V2254", "V2237", "V2246",
+                "V2242", "V2241", "V2219",
+                # Realme
+                "RMX3710", "RMX3709", "RMX3761",
+                "RMX3741", "RMX3740", "RMX3785",
+                "RMX3760", "RMX3771", "RMX3772",
+                "RMX3706", "RMX3770",
+                # Infinix
+                "X6831", "X6833", "X6711", "X6820", "X6739",
+                # Tecno
+                "KI7", "CK8n", "LH7n", "BG7",
+            ],
         },
         "IN": {
             "models": ["Redmi Note 12 Pro", "Galaxy M34", "OnePlus Nord"],
@@ -5292,8 +5356,7 @@ class AdvancedIPStealthSystem2025:
             },
             "headers": {
                 "User-Agent": "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Mobile Safari/537.36",
-                "X-Forwarded-For": fallback["ip"],
-                "X-Real-IP": fallback["ip"]
+                # IP spoofing headers removed - use real IP from VPN/Proxy/Connection
             },
             "metadata": {
                 "is_fallback": True,
