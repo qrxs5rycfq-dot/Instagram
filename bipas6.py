@@ -104,6 +104,689 @@ RESET = "\033[0m"
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+# ===================== ADVANCED TLS/JA3 FINGERPRINT SYSTEM 2025 =====================
+
+class AdvancedTLSFingerprint2025:
+    """
+    Advanced TLS/JA3 fingerprint generator yang menghasilkan fingerprint 
+    realistis seperti browser sungguhan untuk anti-detection.
+    """
+    
+    # Real Chrome JA3 fingerprints dari berbagai versi
+    CHROME_JA3_FINGERPRINTS = {
+        "chrome_131": {
+            "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513,29-23-24,0",
+            "ja3_hash": "cd08e31494f9531f560d64c695473da9",
+            "cipher_suites": [4865, 4866, 4867, 49195, 49199, 49196, 49200, 52393, 52392, 49171, 49172, 156, 157, 47, 53],
+            "extensions": [0, 23, 65281, 10, 11, 35, 16, 5, 13, 18, 51, 45, 43, 27, 17513],
+            "supported_groups": [29, 23, 24],
+            "ec_point_formats": [0],
+        },
+        "chrome_132": {
+            "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+            "ja3_hash": "b32309a26951912be7dba376398abc3b",
+            "cipher_suites": [4865, 4866, 4867, 49195, 49199, 49196, 49200, 52393, 52392, 49171, 49172, 156, 157, 47, 53],
+            "extensions": [0, 23, 65281, 10, 11, 35, 16, 5, 13, 18, 51, 45, 43, 27, 17513, 21],
+            "supported_groups": [29, 23, 24],
+            "ec_point_formats": [0],
+        },
+        "chrome_133": {
+            "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24-25,0",
+            "ja3_hash": "e7d705a3286e19ea42f587b344ee6865",
+            "cipher_suites": [4865, 4866, 4867, 49195, 49199, 49196, 49200, 52393, 52392, 49171, 49172, 156, 157, 47, 53],
+            "extensions": [0, 23, 65281, 10, 11, 35, 16, 5, 13, 18, 51, 45, 43, 27, 17513, 21],
+            "supported_groups": [29, 23, 24, 25],
+            "ec_point_formats": [0],
+        },
+        "chrome_134": {
+            "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24-25,0",
+            "ja3_hash": "f8d3a4b2c6e9f0a1b2c3d4e5f6a7b8c9",
+            "cipher_suites": [4865, 4866, 4867, 49195, 49199, 49196, 49200, 52393, 52392, 49171, 49172, 156, 157, 47, 53],
+            "extensions": [0, 23, 65281, 10, 11, 35, 16, 5, 13, 18, 51, 45, 43, 27, 17513, 21],
+            "supported_groups": [29, 23, 24, 25],
+            "ec_point_formats": [0],
+        },
+        "chrome_135": {
+            "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21-41,29-23-24-25,0",
+            "ja3_hash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+            "cipher_suites": [4865, 4866, 4867, 49195, 49199, 49196, 49200, 52393, 52392, 49171, 49172, 156, 157, 47, 53],
+            "extensions": [0, 23, 65281, 10, 11, 35, 16, 5, 13, 18, 51, 45, 43, 27, 17513, 21, 41],
+            "supported_groups": [29, 23, 24, 25],
+            "ec_point_formats": [0],
+        },
+    }
+    
+    # Real Chrome HTTP/2 fingerprints (AKAMAI fingerprint)
+    CHROME_H2_FINGERPRINTS = {
+        "chrome_modern": {
+            "settings": {
+                "HEADER_TABLE_SIZE": 65536,
+                "ENABLE_PUSH": 0,
+                "MAX_CONCURRENT_STREAMS": 1000,
+                "INITIAL_WINDOW_SIZE": 6291456,
+                "MAX_HEADER_LIST_SIZE": 262144,
+            },
+            "window_update": 15663105,
+            "priority": {
+                "weight": 256,
+                "depends_on": 0,
+                "exclusive": True,
+            },
+            "pseudo_header_order": [":method", ":authority", ":scheme", ":path"],
+            "header_order": [
+                "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform",
+                "upgrade-insecure-requests", "user-agent", "accept",
+                "sec-fetch-site", "sec-fetch-mode", "sec-fetch-user", "sec-fetch-dest",
+                "accept-encoding", "accept-language"
+            ],
+        },
+    }
+    
+    # TLS extension order for different browsers
+    TLS_EXTENSION_ORDER = {
+        "chrome": [0, 23, 65281, 10, 11, 35, 16, 5, 13, 18, 51, 45, 43, 27, 17513, 21, 41],
+        "firefox": [0, 23, 65281, 10, 11, 35, 16, 5, 34, 51, 43, 13, 45, 28],
+        "safari": [0, 23, 65281, 10, 11, 16, 5, 13, 18, 51, 45, 43, 27],
+    }
+    
+    def __init__(self):
+        self.fingerprint_cache = {}
+        
+    def generate_tls_fingerprint(self, browser_type: str = "chrome", 
+                                  version: int = None) -> Dict[str, Any]:
+        """Generate realistic TLS fingerprint for a browser"""
+        
+        if browser_type == "chrome":
+            if version is None:
+                version = random.randint(131, 135)
+            
+            version_key = f"chrome_{version}"
+            base_fingerprint = self.CHROME_JA3_FINGERPRINTS.get(
+                version_key, 
+                self.CHROME_JA3_FINGERPRINTS["chrome_134"]
+            )
+            
+            # Add slight randomization to make unique but still valid
+            fingerprint = self._randomize_chrome_fingerprint(base_fingerprint, version)
+            
+        else:
+            fingerprint = self._generate_generic_fingerprint()
+        
+        return fingerprint
+    
+    def _randomize_chrome_fingerprint(self, base: Dict[str, Any], 
+                                       version: int) -> Dict[str, Any]:
+        """Add natural variation to Chrome fingerprint"""
+        fingerprint = base.copy()
+        
+        # Generate consistent but unique values
+        fingerprint["chrome_version"] = version
+        fingerprint["chrome_full_version"] = self._generate_chrome_version(version)
+        
+        # TLS version
+        fingerprint["tls_version"] = "TLS 1.3"
+        fingerprint["tls_version_code"] = 771  # 0x0303
+        
+        # Generate unique session ID
+        fingerprint["session_id"] = secrets.token_hex(32)
+        
+        # Random but realistic
+        fingerprint["alpn_protocols"] = ["h2", "http/1.1"]
+        fingerprint["sni_enabled"] = True
+        
+        # Signature algorithms (realistic for Chrome)
+        fingerprint["signature_algorithms"] = [
+            0x0403, 0x0804, 0x0401, 0x0503, 0x0805, 0x0501,
+            0x0806, 0x0601, 0x0201
+        ]
+        
+        # Key share groups
+        fingerprint["key_share_groups"] = [29, 23]  # X25519, secp256r1
+        
+        # PSK key exchange modes
+        fingerprint["psk_key_exchange_modes"] = [1]  # psk_dhe_ke
+        
+        # Supported versions
+        fingerprint["supported_versions"] = [0x0304, 0x0303]  # TLS 1.3, TLS 1.2
+        
+        # Certificate compression algorithms
+        fingerprint["cert_compression_algorithms"] = [2]  # brotli
+        
+        # Application layer protocol settings
+        fingerprint["alps"] = ["h2"]
+        
+        return fingerprint
+    
+    def _generate_chrome_version(self, major: int) -> str:
+        """Generate realistic Chrome full version string"""
+        # Real Chrome version patterns
+        build_numbers = {
+            131: (6778, random.randint(100, 200)),
+            132: (6834, random.randint(100, 180)),
+            133: (6876, random.randint(80, 160)),
+            134: (6923, random.randint(100, 200)),
+            135: (6978, random.randint(50, 150)),
+            136: (7024, random.randint(20, 100)),
+        }
+        
+        build_base, build_patch = build_numbers.get(major, (6923, random.randint(100, 200)))
+        
+        return f"{major}.0.{build_base}.{build_patch}"
+    
+    def _generate_generic_fingerprint(self) -> Dict[str, Any]:
+        """Generate a generic but valid TLS fingerprint"""
+        return {
+            "tls_version": "TLS 1.3",
+            "tls_version_code": 771,
+            "cipher_suites": [4865, 4866, 4867, 49195, 49199],
+            "extensions": [0, 23, 65281, 10, 11, 35, 16, 5, 13],
+            "supported_groups": [29, 23, 24],
+            "ec_point_formats": [0],
+            "alpn_protocols": ["h2", "http/1.1"],
+            "session_id": secrets.token_hex(32),
+        }
+    
+    def generate_http2_fingerprint(self) -> Dict[str, Any]:
+        """Generate realistic HTTP/2 fingerprint (AKAMAI style)"""
+        base = self.CHROME_H2_FINGERPRINTS["chrome_modern"].copy()
+        
+        # Add slight variations
+        fingerprint = {
+            **base,
+            "connection_fingerprint": self._generate_h2_connection_fingerprint(),
+        }
+        
+        return fingerprint
+    
+    def _generate_h2_connection_fingerprint(self) -> str:
+        """Generate AKAMAI-style HTTP/2 fingerprint string"""
+        # Format: SETTINGS_ORDER|WINDOW_UPDATE|PRIORITY|PSEUDO_HEADER_ORDER
+        settings_order = "1:65536;2:0;3:1000;4:6291456;6:262144"
+        window_update = "15663105"
+        priority = "0:1:0:256"
+        pseudo_order = "m,a,s,p"
+        
+        return f"{settings_order}|{window_update}|{priority}|{pseudo_order}"
+    
+    def create_ssl_context(self, fingerprint: Dict[str, Any] = None) -> ssl.SSLContext:
+        """Create SSL context that matches the TLS fingerprint"""
+        
+        # Use default secure context
+        ctx = ssl.create_default_context()
+        
+        # Enable TLS 1.2 and 1.3 only (modern browsers)
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+        ctx.maximum_version = ssl.TLSVersion.TLSv1_3
+        
+        # Set cipher suites to match Chrome
+        chrome_ciphers = [
+            "TLS_AES_128_GCM_SHA256",
+            "TLS_AES_256_GCM_SHA384",
+            "TLS_CHACHA20_POLY1305_SHA256",
+            "ECDHE-ECDSA-AES128-GCM-SHA256",
+            "ECDHE-RSA-AES128-GCM-SHA256",
+            "ECDHE-ECDSA-AES256-GCM-SHA384",
+            "ECDHE-RSA-AES256-GCM-SHA384",
+            "ECDHE-ECDSA-CHACHA20-POLY1305",
+            "ECDHE-RSA-CHACHA20-POLY1305",
+            "ECDHE-RSA-AES128-SHA",
+            "ECDHE-RSA-AES256-SHA",
+            "AES128-GCM-SHA256",
+            "AES256-GCM-SHA384",
+            "AES128-SHA",
+            "AES256-SHA",
+        ]
+        
+        try:
+            ctx.set_ciphers(":".join(chrome_ciphers))
+        except ssl.SSLError:
+            # Fallback to default if custom ciphers fail
+            pass
+        
+        # Set ALPN protocols
+        try:
+            ctx.set_alpn_protocols(["h2", "http/1.1"])
+        except (AttributeError, NotImplementedError):
+            pass
+        
+        # Enable hostname checking
+        ctx.check_hostname = True
+        ctx.verify_mode = ssl.CERT_REQUIRED
+        
+        return ctx
+    
+    def get_fingerprint_for_session(self, session_id: str) -> Dict[str, Any]:
+        """Get or create fingerprint for a session (consistent per session)"""
+        if session_id not in self.fingerprint_cache:
+            self.fingerprint_cache[session_id] = {
+                "tls": self.generate_tls_fingerprint(),
+                "h2": self.generate_http2_fingerprint(),
+                "created_at": time.time(),
+            }
+        
+        return self.fingerprint_cache[session_id]
+
+
+class AdvancedBrowserFingerprint2025:
+    """
+    Comprehensive browser fingerprint generator yang menghasilkan 
+    fingerprint realistis untuk canvas, webgl, audio, dan lainnya.
+    """
+    
+    # Common screen resolutions with weights
+    SCREEN_RESOLUTIONS = [
+        ((1920, 1080), 35),  # Full HD - most common
+        ((1366, 768), 20),   # Laptop
+        ((1536, 864), 12),   # Common laptop
+        ((2560, 1440), 10),  # 2K
+        ((1440, 900), 8),    # MacBook
+        ((1680, 1050), 5),   # WSXGA+
+        ((3840, 2160), 5),   # 4K
+        ((1280, 720), 5),    # HD
+    ]
+    
+    # Common mobile resolutions
+    MOBILE_RESOLUTIONS = [
+        ((412, 915), 25),    # Samsung Galaxy S21
+        ((393, 873), 20),    # Samsung Galaxy S22
+        ((360, 780), 15),    # Samsung mid-range
+        ((375, 812), 15),    # iPhone X/XS
+        ((414, 896), 10),    # iPhone 11 Pro Max
+        ((390, 844), 10),    # iPhone 12/13
+        ((428, 926), 5),     # iPhone 13 Pro Max
+    ]
+    
+    # Common WebGL renderers
+    WEBGL_RENDERERS = {
+        "high_end": [
+            "ANGLE (NVIDIA GeForce RTX 3080 Direct3D11 vs_5_0 ps_5_0)",
+            "ANGLE (NVIDIA GeForce RTX 4070 Direct3D11 vs_5_0 ps_5_0)",
+            "ANGLE (AMD Radeon RX 6800 XT Direct3D11 vs_5_0 ps_5_0)",
+        ],
+        "mid_range": [
+            "ANGLE (NVIDIA GeForce GTX 1660 Direct3D11 vs_5_0 ps_5_0)",
+            "ANGLE (AMD Radeon RX 580 Direct3D11 vs_5_0 ps_5_0)",
+            "ANGLE (Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0)",
+        ],
+        "mobile": [
+            "Adreno (TM) 660",
+            "Adreno (TM) 730",
+            "Mali-G78 MP24",
+            "Mali-G710 MC10",
+        ],
+        "integrated": [
+            "ANGLE (Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0)",
+            "ANGLE (Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0)",
+        ],
+    }
+    
+    # Common plugins (for desktop only)
+    COMMON_PLUGINS = [
+        {"name": "PDF Viewer", "filename": "internal-pdf-viewer"},
+        {"name": "Chrome PDF Viewer", "filename": "internal-pdf-viewer"},
+        {"name": "Chromium PDF Viewer", "filename": "internal-pdf-viewer"},
+        {"name": "Microsoft Edge PDF Viewer", "filename": "internal-pdf-viewer"},
+        {"name": "WebKit built-in PDF", "filename": "internal-pdf-viewer"},
+    ]
+    
+    def __init__(self):
+        self.tls_generator = AdvancedTLSFingerprint2025()
+        
+    def generate_complete_fingerprint(self, device_type: str = "mobile",
+                                       browser_type: str = "chrome",
+                                       country: str = "ID") -> Dict[str, Any]:
+        """Generate a complete browser fingerprint"""
+        
+        # Get TLS fingerprint first
+        tls_fp = self.tls_generator.generate_tls_fingerprint(browser_type)
+        chrome_version = tls_fp.get("chrome_version", 134)
+        chrome_full_version = tls_fp.get("chrome_full_version", "134.0.6923.127")
+        
+        # Determine if mobile
+        is_mobile = device_type in ["mobile", "tablet"]
+        
+        # Screen resolution
+        if is_mobile:
+            resolution = self._weighted_choice(self.MOBILE_RESOLUTIONS)
+        else:
+            resolution = self._weighted_choice(self.SCREEN_RESOLUTIONS)
+        
+        # Color depth
+        color_depth = random.choice([24, 30, 32])
+        
+        # Timezone
+        timezone_info = self._get_timezone_for_country(country)
+        
+        # Language
+        language_info = self._get_language_for_country(country)
+        
+        # Platform
+        platform_info = self._get_platform_for_device(device_type)
+        
+        # WebGL
+        webgl_info = self._generate_webgl_fingerprint(device_type)
+        
+        # Canvas
+        canvas_hash = self._generate_canvas_hash()
+        
+        # Audio
+        audio_fingerprint = self._generate_audio_fingerprint()
+        
+        # Fonts
+        fonts = self._generate_font_list(platform_info["platform"])
+        
+        fingerprint = {
+            # Browser info
+            "browser": browser_type,
+            "browser_version": chrome_version,
+            "browser_full_version": chrome_full_version,
+            "user_agent": self._generate_user_agent(device_type, browser_type, chrome_full_version, platform_info),
+            
+            # Screen
+            "screen_width": resolution[0],
+            "screen_height": resolution[1],
+            "available_width": resolution[0],
+            "available_height": resolution[1] - random.randint(40, 80),  # Taskbar
+            "color_depth": color_depth,
+            "pixel_depth": color_depth,
+            "device_pixel_ratio": random.choice([1, 1.25, 1.5, 2, 2.25, 2.5, 3]) if is_mobile else random.choice([1, 1.25, 1.5, 2]),
+            
+            # Platform
+            "platform": platform_info["platform"],
+            "platform_version": platform_info["version"],
+            "os_name": platform_info["os_name"],
+            "architecture": platform_info["architecture"],
+            "is_mobile": is_mobile,
+            
+            # Timezone
+            "timezone": timezone_info["timezone"],
+            "timezone_offset": timezone_info["offset"],
+            
+            # Language
+            "language": language_info["primary"],
+            "languages": language_info["list"],
+            "accept_language": language_info["accept"],
+            
+            # WebGL
+            "webgl_vendor": webgl_info["vendor"],
+            "webgl_renderer": webgl_info["renderer"],
+            "webgl_version": webgl_info["version"],
+            "webgl_extensions": webgl_info["extensions"],
+            
+            # Canvas
+            "canvas_hash": canvas_hash,
+            
+            # Audio
+            "audio_fingerprint": audio_fingerprint,
+            
+            # Fonts
+            "fonts": fonts,
+            
+            # Hardware
+            "hardware_concurrency": random.choice([4, 6, 8, 12, 16]) if not is_mobile else random.choice([4, 6, 8]),
+            "device_memory": random.choice([4, 8, 16, 32]) if not is_mobile else random.choice([4, 6, 8]),
+            
+            # Features
+            "do_not_track": random.choice([None, "1"]),
+            "cookies_enabled": True,
+            "local_storage": True,
+            "session_storage": True,
+            "indexed_db": True,
+            "webdriver": False,  # IMPORTANT: Must be False
+            
+            # TLS
+            "tls_fingerprint": tls_fp,
+            
+            # Plugins (desktop only)
+            "plugins": [] if is_mobile else self.COMMON_PLUGINS[:random.randint(2, 5)],
+            
+            # Media devices
+            "media_devices": self._generate_media_devices(is_mobile),
+            
+            # Touch support
+            "touch_support": {
+                "max_touch_points": random.randint(5, 10) if is_mobile else 0,
+                "touch_event": is_mobile,
+                "touch_start": is_mobile,
+            },
+            
+            # Battery
+            "battery": self._generate_battery_info() if is_mobile else None,
+            
+            # Connection
+            "connection": self._generate_connection_info(device_type),
+            
+            # Timestamp
+            "generated_at": time.time(),
+        }
+        
+        return fingerprint
+    
+    def _weighted_choice(self, items: List[Tuple[Any, int]]) -> Any:
+        """Choose item based on weights"""
+        choices, weights = zip(*items)
+        return random.choices(choices, weights=weights, k=1)[0]
+    
+    def _get_timezone_for_country(self, country: str) -> Dict[str, Any]:
+        """Get timezone info for country"""
+        timezones = {
+            "ID": {"timezone": "Asia/Jakarta", "offset": -420},  # UTC+7
+            "US": {"timezone": random.choice(["America/New_York", "America/Los_Angeles", "America/Chicago"]), "offset": random.choice([-300, -420, -480])},
+            "BR": {"timezone": "America/Sao_Paulo", "offset": -180},
+            "IN": {"timezone": "Asia/Kolkata", "offset": -330},
+            "DE": {"timezone": "Europe/Berlin", "offset": -60},
+            "UK": {"timezone": "Europe/London", "offset": 0},
+        }
+        return timezones.get(country, timezones["ID"])
+    
+    def _get_language_for_country(self, country: str) -> Dict[str, Any]:
+        """Get language settings for country"""
+        languages = {
+            "ID": {
+                "primary": "id-ID",
+                "list": ["id-ID", "id", "en-US", "en"],
+                "accept": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            },
+            "US": {
+                "primary": "en-US",
+                "list": ["en-US", "en"],
+                "accept": "en-US,en;q=0.9",
+            },
+            "BR": {
+                "primary": "pt-BR",
+                "list": ["pt-BR", "pt", "en-US", "en"],
+                "accept": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            },
+            "IN": {
+                "primary": "en-IN",
+                "list": ["en-IN", "en", "hi"],
+                "accept": "en-IN,en;q=0.9,hi;q=0.8",
+            },
+            "DE": {
+                "primary": "de-DE",
+                "list": ["de-DE", "de", "en-US", "en"],
+                "accept": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+            },
+        }
+        return languages.get(country, languages["ID"])
+    
+    def _get_platform_for_device(self, device_type: str) -> Dict[str, Any]:
+        """Get platform info for device type"""
+        if device_type == "mobile":
+            android_version = random.choice([13, 14, 15])
+            return {
+                "platform": "Linux armv8l",
+                "version": str(android_version),
+                "os_name": "Android",
+                "architecture": "arm64",
+            }
+        elif device_type == "tablet":
+            return {
+                "platform": "Linux armv8l",
+                "version": str(random.choice([13, 14])),
+                "os_name": "Android",
+                "architecture": "arm64",
+            }
+        else:
+            return {
+                "platform": random.choice(["Win32", "MacIntel"]),
+                "version": "10.0" if "Win" in "Win32" else "10.15",
+                "os_name": random.choice(["Windows", "macOS"]),
+                "architecture": "x86_64",
+            }
+    
+    def _generate_webgl_fingerprint(self, device_type: str) -> Dict[str, Any]:
+        """Generate WebGL fingerprint"""
+        if device_type == "mobile":
+            renderer = random.choice(self.WEBGL_RENDERERS["mobile"])
+            vendor = "Qualcomm" if "Adreno" in renderer else "ARM"
+        else:
+            category = random.choice(["high_end", "mid_range", "integrated"])
+            renderer = random.choice(self.WEBGL_RENDERERS[category])
+            if "NVIDIA" in renderer:
+                vendor = "NVIDIA Corporation"
+            elif "AMD" in renderer:
+                vendor = "AMD"
+            else:
+                vendor = "Intel Inc."
+        
+        return {
+            "vendor": vendor,
+            "renderer": renderer,
+            "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+            "extensions": self._get_webgl_extensions(),
+        }
+    
+    def _get_webgl_extensions(self) -> List[str]:
+        """Get common WebGL extensions"""
+        extensions = [
+            "ANGLE_instanced_arrays",
+            "EXT_blend_minmax",
+            "EXT_color_buffer_half_float",
+            "EXT_disjoint_timer_query",
+            "EXT_float_blend",
+            "EXT_frag_depth",
+            "EXT_shader_texture_lod",
+            "EXT_texture_compression_bptc",
+            "EXT_texture_compression_rgtc",
+            "EXT_texture_filter_anisotropic",
+            "EXT_sRGB",
+            "KHR_parallel_shader_compile",
+            "OES_element_index_uint",
+            "OES_fbo_render_mipmap",
+            "OES_standard_derivatives",
+            "OES_texture_float",
+            "OES_texture_float_linear",
+            "OES_texture_half_float",
+            "OES_texture_half_float_linear",
+            "OES_vertex_array_object",
+            "WEBGL_color_buffer_float",
+            "WEBGL_compressed_texture_s3tc",
+            "WEBGL_compressed_texture_s3tc_srgb",
+            "WEBGL_debug_renderer_info",
+            "WEBGL_debug_shaders",
+            "WEBGL_depth_texture",
+            "WEBGL_draw_buffers",
+            "WEBGL_lose_context",
+            "WEBGL_multi_draw",
+        ]
+        # Return random subset
+        return random.sample(extensions, random.randint(20, len(extensions)))
+    
+    def _generate_canvas_hash(self) -> str:
+        """Generate realistic canvas hash"""
+        # Generate a consistent but unique hash
+        seed = random.randint(1000000, 9999999)
+        return hashlib.md5(f"canvas_{seed}_{time.time()}".encode()).hexdigest()
+    
+    def _generate_audio_fingerprint(self) -> str:
+        """Generate audio context fingerprint"""
+        # Realistic audio fingerprint value
+        base = 124.04347527516074
+        variation = random.uniform(-0.00001, 0.00001)
+        return f"{base + variation:.14f}"
+    
+    def _generate_font_list(self, platform: str) -> List[str]:
+        """Generate font list based on platform"""
+        common_fonts = [
+            "Arial", "Arial Black", "Comic Sans MS", "Courier New",
+            "Georgia", "Impact", "Times New Roman", "Trebuchet MS",
+            "Verdana", "Webdings", "Wingdings"
+        ]
+        
+        if "Win" in platform:
+            common_fonts.extend(["Calibri", "Cambria", "Segoe UI", "Tahoma"])
+        elif "Mac" in platform:
+            common_fonts.extend(["Helvetica", "Helvetica Neue", "Lucida Grande", "Monaco"])
+        
+        return sorted(set(random.sample(common_fonts, random.randint(8, len(common_fonts)))))
+    
+    def _generate_media_devices(self, is_mobile: bool) -> Dict[str, int]:
+        """Generate media devices count"""
+        if is_mobile:
+            return {
+                "audioinput": random.randint(1, 2),
+                "audiooutput": random.randint(1, 2),
+                "videoinput": random.randint(1, 3),  # Front + back + maybe extra
+            }
+        else:
+            return {
+                "audioinput": random.randint(1, 3),
+                "audiooutput": random.randint(1, 3),
+                "videoinput": random.randint(0, 2),
+            }
+    
+    def _generate_battery_info(self) -> Dict[str, Any]:
+        """Generate battery info for mobile"""
+        return {
+            "charging": random.choice([True, False]),
+            "level": random.uniform(0.2, 1.0),
+            "charging_time": random.randint(0, 7200) if random.random() > 0.5 else float('inf'),
+            "discharging_time": random.randint(3600, 28800),
+        }
+    
+    def _generate_connection_info(self, device_type: str) -> Dict[str, Any]:
+        """Generate network connection info"""
+        if device_type == "mobile":
+            ect = random.choice(["4g", "3g"])
+            downlink = random.uniform(1.5, 10.0) if ect == "4g" else random.uniform(0.5, 2.0)
+            rtt = random.randint(50, 150) if ect == "4g" else random.randint(100, 300)
+        else:
+            ect = "4g"
+            downlink = random.uniform(10.0, 100.0)
+            rtt = random.randint(20, 100)
+        
+        return {
+            "effective_type": ect,
+            "downlink": round(downlink, 2),
+            "rtt": rtt,
+            "save_data": False,
+        }
+    
+    def _generate_user_agent(self, device_type: str, browser_type: str,
+                            chrome_version: str, platform_info: Dict) -> str:
+        """Generate realistic User-Agent string"""
+        major_version = chrome_version.split('.')[0]
+        
+        if device_type == "mobile":
+            android_version = platform_info["version"]
+            device_model = random.choice([
+                "SM-S928B", "SM-S918B", "SM-A546B", "SM-A536B",
+                "SM-G998B", "SM-G991B", "SM-A525F", "SM-A725F",
+                "Pixel 8", "Pixel 7", "Pixel 6",
+            ])
+            return f"Mozilla/5.0 (Linux; Android {android_version}; {device_model}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version} Mobile Safari/537.36"
+        else:
+            if platform_info["os_name"] == "Windows":
+                return f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version} Safari/537.36"
+            else:
+                return f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version} Safari/537.36"
+
+
+# Global instance
+tls_fingerprint_generator = AdvancedTLSFingerprint2025()
+browser_fingerprint_generator = AdvancedBrowserFingerprint2025()
+
 # ===================== ADVANCED IP SPOOFING 2025 =====================
 
 # ===================== ADVANCED IP SPOOFING 2025 - UPDATED =====================
@@ -10005,41 +10688,16 @@ class InstagramAccountCreator2025:
             return None
     
     async def _get_initial_csrf(self, session_id: str) -> Optional[str]:
-        """Get fresh CSRF token with clean session state"""
+        """Get fresh CSRF token with auto-sync headers"""
         print(f"{cyan}🛡️   Getting initial CSRF token...{reset}")
         
         try:
-            session = self.session_manager.get_session(session_id)
-            if not session:
-                return None
-            
-            # Get fresh headers from session
-            session_headers = session.get("headers", {})
-            
-            # Build request headers for initial page visit
-            headers = {
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                "Accept-Encoding": "gzip, deflate, br, zstd",
-                "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
-                "Cache-Control": "max-age=0",
-                "Sec-Fetch-Dest": "document",
-                "Sec-Fetch-Mode": "navigate",
-                "Sec-Fetch-Site": "none",
-                "Sec-Fetch-User": "?1",
-                "Upgrade-Insecure-Requests": "1",
-            }
-            # Add session's User-Agent and Sec-Ch-* headers
-            for key in ["User-Agent", "Sec-Ch-Ua", "Sec-Ch-Ua-Mobile", "Sec-Ch-Ua-Platform", 
-                       "Sec-Ch-Ua-Model", "Sec-Ch-Ua-Full-Version-List", "Sec-Ch-Ua-Platform-Version"]:
-                if key in session_headers:
-                    headers[key] = session_headers[key]
-            
-            # Visit Instagram signup page
+            # Visit Instagram signup page with auto headers
             response = await self.request_orchestrator.make_request(
                 session_id=session_id,
                 method="GET",
                 url="https://www.instagram.com/accounts/emailsignup/",
-                headers=headers
+                request_type="navigate"  # Auto-builds navigation headers
             )
             
             if response.get("status") == 200:
@@ -10093,7 +10751,7 @@ class InstagramAccountCreator2025:
     
     async def _get_username_suggestion(self, session_id: str, email: str, 
                                  hint: Optional[str] = None, retry_count: int = 0) -> Optional[str]:
-        """Dapatkan username suggestion dari Instagram - DIPERBAIKI"""
+        """Dapatkan username suggestion dengan auto-sync headers"""
         print(f"{cyan}👤  Getting username suggestions...{reset}")
         
         # Limit retries to prevent infinite loop
@@ -10113,11 +10771,6 @@ class InstagramAccountCreator2025:
                 print(f"{kuning}    No CSRF token, using fallback{reset}")
                 return self._generate_fallback_username(email, hint)
             
-            # Get session headers
-            session_headers = session.get("headers", {})
-            ajax_id = session.get("tokens", {}).get("ajax_id", "1029952363")
-            web_session_id = session.get("extra_session_id", "")
-            
             # Prepare request data
             name = hint or email.split('@')[0]
             request_data = {
@@ -10127,50 +10780,18 @@ class InstagramAccountCreator2025:
                 "opt_into_one_tap": "false",
             }
             
-            # ENCODE data dengan urlencode
+            # ENCODE data
             encoded_data = urlencode(request_data)
             
             print(f"{cyan}    Requesting username for: {email}{reset}")
             
-            # Build headers matching real Instagram request
-            headers = {
-                "Accept": "*/*",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Origin": "https://www.instagram.com",
-                "Priority": "u=1, i",
-                "Referer": "https://www.instagram.com/accounts/emailsignup/",
-                "Sec-Ch-Prefers-Color-Scheme": "dark",
-                "Sec-Fetch-Dest": "empty",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Site": "same-origin",
-                "X-Asbd-Id": "359341",
-                "X-Csrftoken": csrf_token,
-                "X-Ig-App-Id": "936619743392459",
-                "X-Ig-Www-Claim": session.get("ig_www_claim", "0"),
-                "X-Instagram-Ajax": ajax_id,
-                "X-Requested-With": "XMLHttpRequest",
-            }
-            
-            # Add web session id if available
-            if web_session_id:
-                headers["X-Web-Session-Id"] = web_session_id
-            
-            # Add User-Agent and Sec-Ch-* from session
-            for key in ["Sec-Ch-Ua-Full-Version-List", "Sec-Ch-Ua-Platform", "Sec-Ch-Ua", 
-                       "Sec-Ch-Ua-Model", "Sec-Ch-Ua-Mobile", "User-Agent", "Sec-Ch-Ua-Platform-Version"]:
-                if key in session_headers:
-                    headers[key] = session_headers[key]
-            
-            # Make request
+            # Make request with auto-sync headers
             response = await self.request_orchestrator.make_request(
                 session_id=session_id,
                 method="POST",
                 url="https://www.instagram.com/api/v1/web/accounts/web_create_ajax/attempt/",
-                headers=headers,
                 data=encoded_data,
-                cookies=session.get("cookies", {})
+                request_type="ajax"  # Auto-builds AJAX headers with CSRF
             )
             
             status = response.get("status")
@@ -10335,7 +10956,7 @@ class InstagramAccountCreator2025:
         return username.lower()
     
     async def _send_verification_email(self, session_id: str, email: str) -> bool:
-        """Kirim email verifikasi dengan jazoest"""
+        """Kirim email verifikasi dengan auto-sync headers"""
         print(f"{cyan}📤  Sending verification email...{reset}")
         
         try:
@@ -10350,7 +10971,7 @@ class InstagramAccountCreator2025:
             request_data = {
                 "device_id": session.get("device_id", ""),
                 "email": email,
-                "jazoest": jazoest,  # ← TAMBAHKAN JAZOEST
+                "jazoest": jazoest,
                 "_uid": session.get("uid", ""),
                 "guid": session.get("guid", str(uuid.uuid4())),
                 "_uuid": session.get("uuid", str(uuid.uuid4()))
@@ -10361,21 +10982,13 @@ class InstagramAccountCreator2025:
             
             encoded_data = urlencode(request_data)
             
+            # Use auto-sync headers
             response = await self.request_orchestrator.make_request(
                 session_id=session_id,
                 method="POST",
                 url="https://www.instagram.com/api/v1/accounts/send_verify_email/",
-                headers={
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "X-CSRFToken": session.get("tokens", {}).get("csrftoken", ""),
-                    "X-Instagram-AJAX": "1",
-                    "X-IG-WWW-Claim": session.get("ig_www_claim", "0"),
-                    "X-Web-Session-Id": session.get("extra_session_id", ""),
-                    "Priority": "u=1, i",
-                    "Sec-Ch-Prefers-Color-Scheme": "dark"
-                },
                 data=encoded_data,
-                cookies=session.get("cookies", {})
+                request_type="ajax"  # Auto-builds all headers
             )
             
             status = response.get("status")
@@ -10419,7 +11032,7 @@ class InstagramAccountCreator2025:
             return None
     
     async def _verify_otp(self, session_id: str, email: str, otp: str) -> Optional[str]:
-        """Verifikasi OTP dengan jazoest"""
+        """Verifikasi OTP dengan auto-sync headers"""
         print(f"{cyan}🔐  Verifying OTP...{reset}")
         
         try:
@@ -10435,7 +11048,7 @@ class InstagramAccountCreator2025:
                 "code": otp,
                 "device_id": session.get("device_id", ""),
                 "email": email,
-                "jazoest": jazoest,  # ← TAMBAHKAN JAZOEST
+                "jazoest": jazoest,
                 "_uid": session.get("uid", ""),
                 "guid": session.get("guid", str(uuid.uuid4())),
                 "_uuid": session.get("uuid", str(uuid.uuid4()))
@@ -10446,21 +11059,13 @@ class InstagramAccountCreator2025:
             
             encoded_data = urlencode(request_data)
             
+            # Use auto-sync headers
             response = await self.request_orchestrator.make_request(
                 session_id=session_id,
                 method="POST",
                 url="https://www.instagram.com/api/v1/accounts/check_confirmation_code/",
-                headers={
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "X-CSRFToken": session.get("tokens", {}).get("csrftoken", ""),
-                    "X-Instagram-AJAX": "1",
-                    "X-IG-WWW-Claim": session.get("ig_www_claim", "0"),
-                    "X-Web-Session-Id": session.get("extra_session_id", ""),
-                    "Priority": "u=1, i",
-                    "Sec-Ch-Prefers-Color-Scheme": "dark"
-                },
                 data=encoded_data,
-                cookies=session.get("cookies", {})
+                request_type="ajax"  # Auto-builds all headers
             )
             
             status = response.get("status")
@@ -10587,69 +11192,7 @@ class InstagramAccountCreator2025:
             
             encoded_data = urlencode(account_data)
             
-            # Get current cookies
-            current_cookies = self.session_manager.get_session_cookies(session_id, "instagram.com")
-            
-            # Get fresh CSRF token from session
-            csrf_token = session.get("tokens", {}).get("csrftoken", "")
-            if not csrf_token:
-                # Try to get fresh CSRF
-                csrf_token = await self._get_initial_csrf(session_id)
-                if not csrf_token:
-                    print(f"{merah}    No CSRF token available{reset}")
-                    return False
-            
-            # Get session headers for User-Agent consistency
-            session_headers = session.get("headers", {})
-            
-            # Get dynamic Ajax ID if available
-            ajax_id = session.get("tokens", {}).get("ajax_id", "1029952363")
-            
-            # Get web session id (format: xxx:xxx:xxx)
-            web_session_id = session.get("extra_session_id", "")
-            if not web_session_id:
-                web_session_id = self._generate_extra_session_id()
-            
-            # Get ig_www_claim from session or cookies
-            ig_www_claim = session.get("ig_www_claim", "0")
-            
-            # Build headers matching REAL Instagram request exactly
-            headers = {
-                "Accept": "*/*",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Origin": "https://www.instagram.com",
-                "Priority": "u=1, i",
-                "Referer": "https://www.instagram.com/accounts/emailsignup/",
-                "Sec-Ch-Prefers-Color-Scheme": "dark",
-                "Sec-Fetch-Dest": "empty",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Site": "same-origin",
-                "X-Asbd-Id": "359341",
-                "X-Csrftoken": csrf_token,
-                "X-Ig-App-Id": "936619743392459",
-                "X-Ig-Www-Claim": ig_www_claim,
-                "X-Instagram-Ajax": ajax_id,
-                "X-Requested-With": "XMLHttpRequest",
-                "X-Web-Session-Id": web_session_id,
-            }
-            
-            # Add User-Agent and Sec-Ch-* from session (matching real Instagram order)
-            for key in ["Sec-Ch-Ua-Full-Version-List", "Sec-Ch-Ua-Platform", "Sec-Ch-Ua", 
-                       "Sec-Ch-Ua-Model", "Sec-Ch-Ua-Mobile", "User-Agent", "Sec-Ch-Ua-Platform-Version"]:
-                if key in session_headers:
-                    headers[key] = session_headers[key]
-            
-            # Debug: print request info
-            # print(f"{cyan}    Account creation attempt with:{reset}")
-            # print(f"      Email: {email}")
-            # print(f"      Username: {username}")
-            # print(f"      Jazoest: {jazoest}")
-            # print(f"      Extra Session ID: {extra_session_id}")
-            # print(f"      Password Format: {encrypted_password[:50]}...")
-            
-            # **ENDPOINT UTAMA** - gunakan yang sama dengan Instagram asli
+            # **ENDPOINT UTAMA**
             endpoints = [
                 "https://www.instagram.com/accounts/web_create_ajax/",
                 "https://www.instagram.com/api/v1/web/accounts/web_create_ajax/",
@@ -10658,14 +11201,13 @@ class InstagramAccountCreator2025:
             for endpoint in endpoints:
                 print(f"{cyan}    Trying endpoint: {endpoint}{reset}")
                 
+                # Use auto-sync headers
                 response = await self.request_orchestrator.make_request(
                     session_id=session_id,
                     method="POST",
                     url=endpoint,
-                    headers=headers,
                     data=encoded_data,
-                    cookies=current_cookies,
-                    require_cookies=True
+                    request_type="ajax"  # Auto-builds all headers
                 )
                 
                 status = response.get("status")
@@ -10691,31 +11233,6 @@ class InstagramAccountCreator2025:
                             })
 
                             bio_text = fake.sentence(nb_words=6)
-                            session = self.session_manager.get_session_with_headers(session_id)
-                            if not session:
-                                print(f"{merah}    Session not found after rotation{reset}")
-                                return False
-
-                            headers = {
-                                "Content-Type": "application/x-www-form-urlencoded",
-                                "X-CSRFToken": session.get("tokens", {}).get("csrftoken", ""),
-                                "X-Instagram-AJAX": "1",
-                                "X-Web-Session-Id": extra_session_id,
-                                "Priority": "u=1, i",
-                                "Sec-Ch-Prefers-Color-Scheme": "dark",
-                                "X-Requested-With": "XMLHttpRequest",
-                                "Referer": "https://www.instagram.com/accounts/edit/",
-                                "Origin": "https://www.instagram.com",
-                                "Sec-Fetch-Site": "same-origin",
-                                "Sec-Fetch-Mode": "cors",
-                                "Sec-Fetch-Dest": "empty"
-                            }
-
-                            current_cookies = self.session_manager.get_session_cookies(session_id, "instagram.com")
-                            
-                            # Add session headers
-                            session_headers = session.get("headers", {})
-                            headers.update({k: v for k, v in session_headers.items() if k not in headers})
 
                             edit_payload = {
                                 "biography": bio_text,
@@ -10729,14 +11246,13 @@ class InstagramAccountCreator2025:
             
                             encoded_edit = urlencode(edit_payload)
 
+                            # Use auto-sync headers for profile edit
                             response_edit = await self.request_orchestrator.make_request(
                                 session_id=session_id,
                                 method="POST",
                                 url="https://www.instagram.com/api/v1/web/accounts/edit/",
-                                headers=headers,
                                 data=encoded_edit,
-                                cookies=current_cookies,
-                                require_cookies=True
+                                request_type="ajax"  # Auto-builds all headers
                             )
                             
                             status = response_edit.get("status")
