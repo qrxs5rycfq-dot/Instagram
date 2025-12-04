@@ -2355,7 +2355,7 @@ class AdvancedIPStealthSystem2025:
                     return octet
     
     def _validate_ip_format_enhanced(self, ip: str) -> bool:
-        """Enhanced IP format validation"""
+        """Ultra-enhanced IP format validation - anti rate limit and IP block"""
         try:
             # Basic format check
             parts = ip.split('.')
@@ -2375,43 +2375,144 @@ class AdvancedIPStealthSystem2025:
             ip_obj = ipaddress.ip_address(ip)
             
             if ip_obj.is_private:
-                print(f"{merah}    IP {ip} is private{reset}")
                 return False
             
             if ip_obj.is_reserved:
-                print(f"{merah}    IP {ip} is reserved{reset}")
                 return False
             
             if ip_obj.is_loopback:
-                print(f"{merah}    IP {ip} is loopback{reset}")
                 return False
             
             if ip_obj.is_multicast:
-                print(f"{merah}    IP {ip} is multicast{reset}")
                 return False
             
             if ip_obj.is_link_local:
-                print(f"{merah}    IP {ip} is link-local{reset}")
                 return False
             
-            # Check for suspicious patterns
+            # ===== ULTRA BLACKLIST CHECK =====
+            # Known datacenter/VPN/proxy IP ranges that Instagram blocks
+            blacklisted_prefixes = [
+                # AWS
+                "3.", "13.", "15.", "18.", "34.", "35.", "43.", "44.", "46.", "50.", "52.", "54.", "63.", "65.", "75.", "76.", "99.", "100.", "107.", "108.", "174.", "175.", "176.", "177.", "184.",
+                # Google Cloud
+                "8.8.", "8.34.", "8.35.", "23.236.", "23.251.", "34.64.", "34.65.", "34.66.", "34.67.", "34.68.", "34.69.", "34.70.", "34.71.", "35.184.", "35.185.", "35.186.", "35.187.", "35.188.", "35.189.", "35.190.", "35.191.", "35.192.", "35.193.", "35.194.", "35.195.", "35.196.", "35.197.", "35.198.", "35.199.", "35.200.", "35.201.", "35.202.", "35.203.", "35.204.", "35.205.", "35.206.", "35.207.", "35.208.", "35.209.", "35.210.", "35.211.", "35.212.", "35.213.", "35.214.", "35.215.", "35.216.", "35.217.", "35.218.", "35.219.", "35.220.", "104.154.", "104.155.", "104.196.", "104.197.", "104.198.", "104.199.", "130.211.", "146.148.", "199.192.", "199.223.",
+                # Azure
+                "13.64.", "13.65.", "13.66.", "13.67.", "13.68.", "13.69.", "13.70.", "13.71.", "13.72.", "13.73.", "13.74.", "13.75.", "13.76.", "13.77.", "13.78.", "13.79.", "13.80.", "13.81.", "13.82.", "13.83.", "13.84.", "13.85.", "13.86.", "13.87.", "13.88.", "13.89.", "13.90.", "13.91.", "13.92.", "13.93.", "13.94.", "13.95.", "20.", "23.96.", "23.97.", "23.98.", "23.99.", "23.100.", "23.101.", "23.102.", "40.64.", "40.65.", "40.66.", "40.67.", "40.68.", "40.69.", "40.70.", "40.71.", "40.72.", "40.73.", "40.74.", "40.75.", "40.76.", "40.77.", "40.78.", "40.79.", "40.80.", "40.81.", "40.82.", "40.83.", "40.84.", "40.85.", "40.86.", "40.87.", "40.88.", "40.89.", "40.90.", "40.91.", "40.92.", "40.112.", "40.113.", "40.114.", "40.115.", "40.116.", "40.117.", "40.118.", "40.119.", "40.120.", "40.121.", "40.122.", "40.123.", "40.124.", "40.125.", "40.126.", "40.127.", "51.104.", "51.105.", "52.", "65.52.", "70.37.", "104.40.", "104.41.", "104.42.", "104.43.", "104.44.", "104.45.", "104.46.", "104.47.", "104.208.", "104.209.", "104.210.", "104.211.", "104.212.", "104.213.", "104.214.", "104.215.",
+                # DigitalOcean
+                "45.55.", "64.225.", "67.205.", "68.183.", "104.131.", "104.236.", "107.170.", "128.199.", "134.209.", "138.68.", "138.197.", "139.59.", "142.93.", "143.198.", "144.126.", "146.185.", "157.230.", "159.65.", "159.89.", "159.203.", "161.35.", "162.243.", "164.90.", "165.22.", "165.227.", "167.71.", "167.99.", "167.172.", "174.138.", "178.62.", "178.128.", "188.166.", "192.34.", "192.81.", "192.241.", "198.199.", "198.211.", "203.161.", "206.81.", "206.189.", "207.154.", "209.97.",
+                # Linode
+                "45.33.", "45.56.", "45.79.", "50.116.", "66.228.", "69.164.", "72.14.", "74.207.", "85.90.", "96.126.", "97.107.", "139.162.", "170.187.", "172.104.", "172.105.", "178.79.", "192.155.", "198.58.", "198.74.", "207.192.",
+                # Vultr
+                "45.32.", "45.63.", "45.76.", "45.77.", "66.42.", "78.141.", "80.240.", "95.179.", "104.156.", "104.207.", "104.238.", "108.61.", "136.244.", "140.82.", "141.164.", "144.202.", "149.28.", "149.248.", "155.138.", "167.179.", "199.247.", "207.246.", "208.167.", "209.222.", "216.128.", "217.163.",
+                # OVH
+                "51.68.", "51.75.", "51.77.", "51.79.", "51.81.", "51.83.", "51.89.", "51.91.", "51.161.", "51.178.", "51.195.", "51.210.", "51.222.", "54.36.", "54.37.", "54.38.", "54.39.", "66.70.", "79.137.", "91.121.", "92.222.", "94.23.", "135.125.", "137.74.", "139.99.", "142.44.", "144.217.", "145.239.", "147.135.", "149.56.", "151.80.", "158.69.", "162.19.", "164.132.", "167.114.", "176.31.", "178.32.", "178.33.", "185.92.", "188.165.", "192.95.", "193.70.", "198.27.", "198.50.", "198.100.", "198.245.",
+                # Hetzner
+                "5.9.", "23.88.", "46.4.", "49.12.", "49.13.", "78.46.", "78.47.", "85.10.", "88.99.", "88.198.", "91.107.", "94.130.", "95.216.", "95.217.", "116.202.", "116.203.", "128.140.", "135.181.", "136.243.", "138.201.", "142.132.", "144.76.", "148.251.", "157.90.", "159.69.", "162.55.", "167.233.", "168.119.", "176.9.", "178.63.", "188.40.", "195.201.", "213.133.", "213.239.",
+                # VPN Providers
+                "31.13.", "37.120.", "45.9.", "62.102.", "62.133.", "68.235.", "77.81.", "80.67.", "81.171.", "84.17.", "85.203.", "86.106.", "89.35.", "89.36.", "89.37.", "89.38.", "89.40.", "89.41.", "89.42.", "89.44.", "89.45.", "89.46.", "91.90.", "91.203.", "91.207.", "94.140.", "103.75.", "103.86.", "103.108.", "104.153.", "104.167.", "107.181.", "109.70.", "109.201.", "128.90.", "129.227.", "138.199.", "141.98.", "141.255.", "146.70.", "149.88.", "154.47.", "169.150.", "172.83.", "172.86.", "172.93.", "172.98.", "172.111.", "176.67.", "178.17.", "178.73.", "179.43.", "181.214.", "185.56.", "185.65.", "185.73.", "185.93.", "185.107.", "185.156.", "185.159.", "185.181.", "185.189.", "185.203.", "185.213.", "185.220.", "185.230.", "185.232.", "185.236.", "185.242.", "185.244.", "185.246.", "185.248.", "186.179.", "188.214.", "191.96.", "193.9.", "193.27.", "193.32.", "193.37.", "193.56.", "193.148.", "193.182.", "194.110.", "194.187.", "195.154.", "195.181.", "195.206.", "196.240.", "198.8.", "198.16.", "199.19.", "203.12.", "203.23.", "206.217.", "207.244.", "209.95.", "212.102.", "213.152.", "216.24.", "217.138.", "217.146.", "217.182.",
+                # Proxy/Hosting known for abuse
+                "23.81.", "23.82.", "23.83.", "23.108.", "23.226.", "23.227.", "23.228.", "23.229.", "23.234.", "23.235.", "23.238.", "23.239.", "23.254.", "37.9.", "37.19.", "37.44.", "37.48.", "37.59.", "37.187.", "45.8.", "45.10.", "45.11.", "45.12.", "45.14.", "45.15.", "45.41.", "45.42.", "45.58.", "45.61.", "45.62.", "45.66.", "45.67.", "45.72.", "45.80.", "45.81.", "45.82.", "45.83.", "45.84.", "45.86.", "45.87.", "45.88.", "45.89.", "45.90.", "45.92.", "45.93.", "45.94.", "45.95.", "45.128.", "45.129.", "45.130.", "45.131.", "45.132.", "45.133.", "45.134.", "45.135.", "45.136.", "45.137.", "45.138.", "45.139.", "45.140.", "45.141.", "45.142.", "45.143.", "45.144.", "45.145.", "45.146.", "45.147.", "45.148.", "45.149.", "45.150.", "45.151.", "45.152.", "45.153.", "45.154.", "45.155.", "45.156.", "45.157.", "45.158.", "45.159.",
+            ]
+            
+            # Check if IP starts with any blacklisted prefix
+            for prefix in blacklisted_prefixes:
+                if ip.startswith(prefix):
+                    return False
+            
+            # ===== RESIDENTIAL IP PATTERN CHECK =====
+            # Instagram is less suspicious of IPs with natural residential patterns
+            first_octet = int(parts[0])
+            fourth_octet = int(parts[3])
+            
+            # Avoid datacenter-typical first octets
+            datacenter_first_octets = [3, 8, 13, 15, 18, 20, 23, 34, 35, 40, 43, 44, 45, 46, 50, 51, 52, 54, 63, 65, 75, 76, 99, 100, 104, 107, 108, 128, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 151, 155, 157, 158, 159, 161, 162, 164, 165, 167, 168, 170, 172, 174, 175, 176, 177, 178, 184, 185, 188, 192, 193, 194, 195, 196, 198, 199, 203, 206, 207, 208, 209, 213, 216, 217]
+            if first_octet in datacenter_first_octets:
+                # Additional check - some residential IPs use these octets
+                # Only block if combined with suspicious patterns
+                if fourth_octet in [0, 1, 2, 3, 4, 5, 254, 255] or fourth_octet % 10 == 0:
+                    return False
+            
+            # Check for suspicious patterns - server IPs often have round numbers
             suspicious_patterns = [
                 ip.endswith('.0'),
                 ip.endswith('.255'),
                 ip.endswith('.1'),
                 ip.endswith('.254'),
                 all(p == parts[0] for p in parts),  # All same
-                parts[3] in ['0', '255', '1', '254']
+                parts[3] in ['0', '255', '1', '254'],
+                # Round number patterns typical of server allocations
+                fourth_octet % 50 == 0,
+                fourth_octet % 100 == 0,
+                # Sequential patterns (e.g., .10, .20, .30)
+                fourth_octet % 10 == 0 and fourth_octet < 100,
             ]
             
             if any(suspicious_patterns):
-                print(f"{merah}    IP {ip} has suspicious pattern{reset}")
+                return False
+            
+            # ===== RESIDENTIAL-LIKE FOURTH OCTET =====
+            # Real residential IPs tend to have "random-looking" fourth octets
+            # Avoid: 0-10, 250-255, multiples of 10, multiples of 50
+            bad_fourth_octets = list(range(0, 11)) + list(range(250, 256)) + [x for x in range(0, 256) if x % 50 == 0]
+            if fourth_octet in bad_fourth_octets:
                 return False
             
             return True
             
         except Exception:
             return False
+    
+    def _generate_ultra_fresh_residential_ip(self, isp_name: str, config: Dict[str, Any]) -> Optional[str]:
+        """Generate ultra-fresh residential IP that passes all anti-bot checks"""
+        max_attempts = 50
+        
+        for attempt in range(max_attempts):
+            try:
+                prefix = random.choice(config["prefixes"])
+                prefix_parts = prefix.split('.')
+                
+                # Generate remaining octets
+                while len(prefix_parts) < 3:
+                    prefix_parts.append(str(random.randint(1, 254)))
+                
+                # Generate residential-looking fourth octet
+                # Avoid: 0-10, 250-255, round numbers, sequential patterns
+                fourth_octet = self._generate_residential_fourth_octet()
+                
+                ip = f"{'.'.join(prefix_parts[:3])}.{fourth_octet}"
+                
+                # Validate the generated IP
+                if self._validate_ip_format_enhanced(ip):
+                    return ip
+                    
+            except Exception:
+                continue
+        
+        return None
+    
+    def _generate_residential_fourth_octet(self) -> int:
+        """Generate realistic residential fourth octet"""
+        # Residential IPs typically have random-looking fourth octets
+        # Avoid: 0-10, 250-255, multiples of 10/50/100, gateway addresses
+        
+        while True:
+            octet = random.randint(11, 249)
+            
+            # Skip round numbers that look like server allocations
+            if octet % 10 == 0:
+                continue
+            if octet % 50 == 0:
+                continue
+            if octet % 100 == 0:
+                continue
+            
+            # Skip common gateway/router addresses
+            if octet in [1, 254, 100, 200, 128, 64]:
+                continue
+            
+            # Add some natural randomness - residential IPs often cluster
+            # in certain ranges based on ISP allocation patterns
+            return octet
     
     def _create_enhanced_ip_profile(self, ip: str, config: Dict[str, Any], isp_name: str) -> Dict[str, Any]:
         """Create enhanced IP profile dengan network type yang BENAR - FIXED"""
@@ -8203,9 +8304,9 @@ class TenMinuteMailService2025:
         self.otp_patterns = self._init_otp_patterns()
     
     def _init_otp_patterns(self) -> List[Tuple[str, str, int]]:
-        """Initialize semua pattern OTP dengan priority"""
+        """Initialize semua pattern OTP dengan priority untuk semua bahasa negara yang didukung"""
         # Format: (pattern_name, regex_pattern, priority)
-        # Priority: 3 = tinggi (Indonesian), 2 = sedang (English), 1 = rendah (General)
+        # Priority: 3 = tinggi (Indonesian), 2 = sedang (English/European), 1 = rendah (General)
         
         patterns = [
             # ===== BAHASA INDONESIA - HIGH PRIORITY (3) =====
@@ -8245,6 +8346,187 @@ class TenMinuteMailService2025:
             ("EN_BODY_VERIF_4", r'Instagram\s+code[:\s]*(\d{6})', 2),
             ("EN_BODY_VERIF_5", r'use\s+this\s+code[:\s]*(\d{6})', 2),
             ("EN_BODY_VERIF_6", r'verification\s+code[:\s]*(\d{6})', 2),
+            
+            # ===== GERMAN (DEUTSCH) - MEDIUM PRIORITY (2) =====
+            ("DE_SUBJECT_CODE_1", r"'subject':\s*'(\d{6})\s+ist\s+dein\s+Instagram-Code'", 2),
+            ("DE_SUBJECT_CODE_2", r"'subject':\s*'Dein\s+Instagram-Code:?\s*(\d{6})'", 2),
+            ("DE_SUBJECT_VERIF_1", r"'subject':\s*'Instagram-Bestätigungscode:\s*(\d{6})'", 2),
+            ("DE_BODY_CODE_1", r'(\d{6})\s+ist\s+dein\s+Instagram-Code', 2),
+            ("DE_BODY_CODE_2", r'Dein\s+Instagram-Code[:\s]*(\d{6})', 2),
+            ("DE_BODY_VERIF_1", r'Bestätigungscode[:\s]*(\d{6})', 2),
+            ("DE_BODY_VERIF_2", r'Verifizierungscode[:\s]*(\d{6})', 2),
+            ("DE_BODY_VERIF_3", r'Gib\s+den\s+folgenden\s+Code\s+ein[:\s]*(\d{6})', 2),
+            ("DE_BODY_VERIF_4", r'Instagram-Code[:\s]*(\d{6})', 2),
+            ("DE_BODY_VERIF_5", r'Verwende\s+diesen\s+Code[:\s]*(\d{6})', 2),
+            
+            # ===== FRENCH (FRANÇAIS) - MEDIUM PRIORITY (2) =====
+            ("FR_SUBJECT_CODE_1", r"'subject':\s*'(\d{6})\s+est\s+votre\s+code\s+Instagram'", 2),
+            ("FR_SUBJECT_CODE_2", r"'subject':\s*'Votre\s+code\s+Instagram:?\s*(\d{6})'", 2),
+            ("FR_SUBJECT_VERIF_1", r"'subject':\s*'Code\s+de\s+vérification\s+Instagram:\s*(\d{6})'", 2),
+            ("FR_BODY_CODE_1", r'(\d{6})\s+est\s+votre\s+code\s+Instagram', 2),
+            ("FR_BODY_CODE_2", r'Votre\s+code\s+Instagram[:\s]*(\d{6})', 2),
+            ("FR_BODY_VERIF_1", r'code\s+de\s+vérification[:\s]*(\d{6})', 2),
+            ("FR_BODY_VERIF_2", r'code\s+de\s+confirmation[:\s]*(\d{6})', 2),
+            ("FR_BODY_VERIF_3", r'Entrez\s+le\s+code\s+suivant[:\s]*(\d{6})', 2),
+            ("FR_BODY_VERIF_4", r'code\s+Instagram[:\s]*(\d{6})', 2),
+            ("FR_BODY_VERIF_5", r'Utilisez\s+ce\s+code[:\s]*(\d{6})', 2),
+            
+            # ===== DUTCH (NEDERLANDS) - MEDIUM PRIORITY (2) =====
+            ("NL_SUBJECT_CODE_1", r"'subject':\s*'(\d{6})\s+is\s+je\s+Instagram-code'", 2),
+            ("NL_SUBJECT_CODE_2", r"'subject':\s*'Je\s+Instagram-code:?\s*(\d{6})'", 2),
+            ("NL_BODY_CODE_1", r'(\d{6})\s+is\s+je\s+Instagram-code', 2),
+            ("NL_BODY_CODE_2", r'Je\s+Instagram-code[:\s]*(\d{6})', 2),
+            ("NL_BODY_VERIF_1", r'verificatiecode[:\s]*(\d{6})', 2),
+            ("NL_BODY_VERIF_2", r'bevestigingscode[:\s]*(\d{6})', 2),
+            ("NL_BODY_VERIF_3", r'Voer\s+de\s+volgende\s+code\s+in[:\s]*(\d{6})', 2),
+            ("NL_BODY_VERIF_4", r'Gebruik\s+deze\s+code[:\s]*(\d{6})', 2),
+            
+            # ===== JAPANESE (日本語) - MEDIUM PRIORITY (2) =====
+            ("JP_SUBJECT_CODE_1", r"'subject':\s*'(\d{6})\s*(?:は|が)Instagram(?:の)?コード(?:です)?'", 2),
+            ("JP_SUBJECT_CODE_2", r"'subject':\s*'Instagram(?:の)?コード:?\s*(\d{6})'", 2),
+            ("JP_BODY_CODE_1", r'(\d{6})\s*(?:は|が)Instagram(?:の)?コード', 2),
+            ("JP_BODY_CODE_2", r'Instagram(?:の)?コード[:\s]*(\d{6})', 2),
+            ("JP_BODY_VERIF_1", r'認証コード[:\s]*(\d{6})', 2),
+            ("JP_BODY_VERIF_2", r'確認コード[:\s]*(\d{6})', 2),
+            ("JP_BODY_VERIF_3", r'コードを入力[:\s]*(\d{6})', 2),
+            ("JP_BODY_VERIF_4", r'このコードを使用[:\s]*(\d{6})', 2),
+            
+            # ===== PORTUGUESE (PORTUGUÊS) - MEDIUM PRIORITY (2) =====
+            ("PT_SUBJECT_CODE_1", r"'subject':\s*'(\d{6})\s+é\s+o?\s*seu\s+código\s+(?:do\s+)?Instagram'", 2),
+            ("PT_SUBJECT_CODE_2", r"'subject':\s*'Seu\s+código\s+(?:do\s+)?Instagram:?\s*(\d{6})'", 2),
+            ("PT_BODY_CODE_1", r'(\d{6})\s+é\s+o?\s*seu\s+código\s+(?:do\s+)?Instagram', 2),
+            ("PT_BODY_CODE_2", r'Seu\s+código\s+(?:do\s+)?Instagram[:\s]*(\d{6})', 2),
+            ("PT_BODY_VERIF_1", r'código\s+de\s+verificação[:\s]*(\d{6})', 2),
+            ("PT_BODY_VERIF_2", r'código\s+de\s+confirmação[:\s]*(\d{6})', 2),
+            ("PT_BODY_VERIF_3", r'Insira\s+o\s+seguinte\s+código[:\s]*(\d{6})', 2),
+            ("PT_BODY_VERIF_4", r'código\s+Instagram[:\s]*(\d{6})', 2),
+            ("PT_BODY_VERIF_5", r'Use\s+este\s+código[:\s]*(\d{6})', 2),
+            
+            # ===== SPANISH (ESPAÑOL) - MEDIUM PRIORITY (2) =====
+            ("ES_SUBJECT_CODE_1", r"'subject':\s*'(\d{6})\s+es\s+tu\s+código\s+de\s+Instagram'", 2),
+            ("ES_SUBJECT_CODE_2", r"'subject':\s*'Tu\s+código\s+de\s+Instagram:?\s*(\d{6})'", 2),
+            ("ES_BODY_CODE_1", r'(\d{6})\s+es\s+tu\s+código\s+de\s+Instagram', 2),
+            ("ES_BODY_CODE_2", r'Tu\s+código\s+de\s+Instagram[:\s]*(\d{6})', 2),
+            ("ES_BODY_VERIF_1", r'código\s+de\s+verificación[:\s]*(\d{6})', 2),
+            ("ES_BODY_VERIF_2", r'código\s+de\s+confirmación[:\s]*(\d{6})', 2),
+            ("ES_BODY_VERIF_3", r'Introduce\s+el\s+siguiente\s+código[:\s]*(\d{6})', 2),
+            ("ES_BODY_VERIF_4", r'Ingresa\s+el\s+código[:\s]*(\d{6})', 2),
+            ("ES_BODY_VERIF_5", r'Usa\s+este\s+código[:\s]*(\d{6})', 2),
+            
+            # ===== ITALIAN (ITALIANO) - MEDIUM PRIORITY (2) =====
+            ("IT_SUBJECT_CODE_1", r"'subject':\s*'(\d{6})\s+è\s+il\s+tuo\s+codice\s+Instagram'", 2),
+            ("IT_SUBJECT_CODE_2", r"'subject':\s*'Il\s+tuo\s+codice\s+Instagram:?\s*(\d{6})'", 2),
+            ("IT_BODY_CODE_1", r'(\d{6})\s+è\s+il\s+tuo\s+codice\s+Instagram', 2),
+            ("IT_BODY_CODE_2", r'Il\s+tuo\s+codice\s+Instagram[:\s]*(\d{6})', 2),
+            ("IT_BODY_VERIF_1", r'codice\s+di\s+verifica[:\s]*(\d{6})', 2),
+            ("IT_BODY_VERIF_2", r'codice\s+di\s+conferma[:\s]*(\d{6})', 2),
+            ("IT_BODY_VERIF_3", r'Inserisci\s+il\s+seguente\s+codice[:\s]*(\d{6})', 2),
+            ("IT_BODY_VERIF_4", r'codice\s+Instagram[:\s]*(\d{6})', 2),
+            ("IT_BODY_VERIF_5", r'Usa\s+questo\s+codice[:\s]*(\d{6})', 2),
+            
+            # ===== KOREAN (한국어) - MEDIUM PRIORITY (2) =====
+            ("KR_BODY_CODE_1", r'(\d{6})\s*(?:은|는)\s*Instagram\s*코드입니다', 2),
+            ("KR_BODY_CODE_2", r'Instagram\s*코드[:\s]*(\d{6})', 2),
+            ("KR_BODY_VERIF_1", r'인증\s*코드[:\s]*(\d{6})', 2),
+            ("KR_BODY_VERIF_2", r'확인\s*코드[:\s]*(\d{6})', 2),
+            ("KR_BODY_VERIF_3", r'다음\s*코드를\s*입력[:\s]*(\d{6})', 2),
+            
+            # ===== CHINESE (中文) - MEDIUM PRIORITY (2) =====
+            ("ZH_BODY_CODE_1", r'(\d{6})\s*是(?:您的)?Instagram\s*(?:验证)?(?:代)?码', 2),
+            ("ZH_BODY_CODE_2", r'(?:您的)?Instagram\s*(?:验证)?码[:\s]*(\d{6})', 2),
+            ("ZH_BODY_VERIF_1", r'验证码[:\s]*(\d{6})', 2),
+            ("ZH_BODY_VERIF_2", r'确认码[:\s]*(\d{6})', 2),
+            ("ZH_BODY_VERIF_3", r'请输入以下代码[:\s]*(\d{6})', 2),
+            
+            # ===== RUSSIAN (РУССКИЙ) - MEDIUM PRIORITY (2) =====
+            ("RU_BODY_CODE_1", r'(\d{6})\s*[—–-]?\s*(?:это\s+)?(?:ваш\s+)?код\s+Instagram', 2),
+            ("RU_BODY_CODE_2", r'(?:Ваш\s+)?код\s+Instagram[:\s]*(\d{6})', 2),
+            ("RU_BODY_VERIF_1", r'код\s+подтверждения[:\s]*(\d{6})', 2),
+            ("RU_BODY_VERIF_2", r'проверочный\s+код[:\s]*(\d{6})', 2),
+            ("RU_BODY_VERIF_3", r'Введите\s+следующий\s+код[:\s]*(\d{6})', 2),
+            
+            # ===== TURKISH (TÜRKÇE) - MEDIUM PRIORITY (2) =====
+            ("TR_BODY_CODE_1", r'(\d{6})\s+Instagram\s+kodunuz', 2),
+            ("TR_BODY_CODE_2", r'Instagram\s+kodunuz[:\s]*(\d{6})', 2),
+            ("TR_BODY_VERIF_1", r'doğrulama\s+kodu[:\s]*(\d{6})', 2),
+            ("TR_BODY_VERIF_2", r'onay\s+kodu[:\s]*(\d{6})', 2),
+            ("TR_BODY_VERIF_3", r'Şu\s+kodu\s+girin[:\s]*(\d{6})', 2),
+            
+            # ===== ARABIC (العربية) - MEDIUM PRIORITY (2) =====
+            ("AR_BODY_CODE_1", r'(\d{6})\s+هو\s+رمز\s+Instagram', 2),
+            ("AR_BODY_CODE_2", r'رمز\s+Instagram[:\s]*(\d{6})', 2),
+            ("AR_BODY_VERIF_1", r'رمز\s+التحقق[:\s]*(\d{6})', 2),
+            ("AR_BODY_VERIF_2", r'رمز\s+التأكيد[:\s]*(\d{6})', 2),
+            
+            # ===== HINDI (हिन्दी) - MEDIUM PRIORITY (2) =====
+            ("HI_BODY_CODE_1", r'(\d{6})\s+आपका\s+Instagram\s+कोड\s+है', 2),
+            ("HI_BODY_CODE_2", r'Instagram\s+कोड[:\s]*(\d{6})', 2),
+            ("HI_BODY_VERIF_1", r'सत्यापन\s+कोड[:\s]*(\d{6})', 2),
+            ("HI_BODY_VERIF_2", r'पुष्टि\s+कोड[:\s]*(\d{6})', 2),
+            
+            # ===== THAI (ไทย) - MEDIUM PRIORITY (2) =====
+            ("TH_BODY_CODE_1", r'(\d{6})\s+คือรหัส\s+Instagram\s+ของคุณ', 2),
+            ("TH_BODY_CODE_2", r'รหัส\s+Instagram[:\s]*(\d{6})', 2),
+            ("TH_BODY_VERIF_1", r'รหัสยืนยัน[:\s]*(\d{6})', 2),
+            ("TH_BODY_VERIF_2", r'รหัสตรวจสอบ[:\s]*(\d{6})', 2),
+            
+            # ===== VIETNAMESE (TIẾNG VIỆT) - MEDIUM PRIORITY (2) =====
+            ("VI_BODY_CODE_1", r'(\d{6})\s+là\s+mã\s+Instagram\s+của\s+bạn', 2),
+            ("VI_BODY_CODE_2", r'Mã\s+Instagram\s+của\s+bạn[:\s]*(\d{6})', 2),
+            ("VI_BODY_VERIF_1", r'mã\s+xác\s+minh[:\s]*(\d{6})', 2),
+            ("VI_BODY_VERIF_2", r'mã\s+xác\s+nhận[:\s]*(\d{6})', 2),
+            
+            # ===== POLISH (POLSKI) - MEDIUM PRIORITY (2) =====
+            ("PL_BODY_CODE_1", r'(\d{6})\s+to\s+Twój\s+kod\s+Instagram', 2),
+            ("PL_BODY_CODE_2", r'Twój\s+kod\s+Instagram[:\s]*(\d{6})', 2),
+            ("PL_BODY_VERIF_1", r'kod\s+weryfikacyjny[:\s]*(\d{6})', 2),
+            ("PL_BODY_VERIF_2", r'kod\s+potwierdzający[:\s]*(\d{6})', 2),
+            
+            # ===== MALAY (BAHASA MELAYU) - MEDIUM PRIORITY (2) =====
+            ("MS_BODY_CODE_1", r'(\d{6})\s+adalah\s+kod\s+Instagram\s+anda', 2),
+            ("MS_BODY_CODE_2", r'Kod\s+Instagram\s+anda[:\s]*(\d{6})', 2),
+            ("MS_BODY_VERIF_1", r'kod\s+pengesahan[:\s]*(\d{6})', 2),
+            ("MS_BODY_VERIF_2", r'kod\s+verifikasi[:\s]*(\d{6})', 2),
+            
+            # ===== SWEDISH (SVENSKA) - MEDIUM PRIORITY (2) =====
+            ("SV_BODY_CODE_1", r'(\d{6})\s+är\s+din\s+Instagram-kod', 2),
+            ("SV_BODY_CODE_2", r'Din\s+Instagram-kod[:\s]*(\d{6})', 2),
+            ("SV_BODY_VERIF_1", r'verifieringskod[:\s]*(\d{6})', 2),
+            
+            # ===== NORWEGIAN (NORSK) - MEDIUM PRIORITY (2) =====
+            ("NO_BODY_CODE_1", r'(\d{6})\s+er\s+Instagram-koden\s+din', 2),
+            ("NO_BODY_CODE_2", r'Instagram-koden\s+din[:\s]*(\d{6})', 2),
+            ("NO_BODY_VERIF_1", r'bekreftelseskode[:\s]*(\d{6})', 2),
+            
+            # ===== DANISH (DANSK) - MEDIUM PRIORITY (2) =====
+            ("DA_BODY_CODE_1", r'(\d{6})\s+er\s+din\s+Instagram-kode', 2),
+            ("DA_BODY_CODE_2", r'Din\s+Instagram-kode[:\s]*(\d{6})', 2),
+            ("DA_BODY_VERIF_1", r'bekræftelseskode[:\s]*(\d{6})', 2),
+            
+            # ===== FINNISH (SUOMI) - MEDIUM PRIORITY (2) =====
+            ("FI_BODY_CODE_1", r'(\d{6})\s+on\s+Instagram-koodisi', 2),
+            ("FI_BODY_CODE_2", r'Instagram-koodisi[:\s]*(\d{6})', 2),
+            ("FI_BODY_VERIF_1", r'vahvistuskoodi[:\s]*(\d{6})', 2),
+            
+            # ===== GREEK (ΕΛΛΗΝΙΚΑ) - MEDIUM PRIORITY (2) =====
+            ("EL_BODY_CODE_1", r'(\d{6})\s+είναι\s+ο\s+κωδικός\s+Instagram\s+σας', 2),
+            ("EL_BODY_CODE_2", r'κωδικός\s+Instagram[:\s]*(\d{6})', 2),
+            ("EL_BODY_VERIF_1", r'κωδικός\s+επαλήθευσης[:\s]*(\d{6})', 2),
+            
+            # ===== CZECH (ČEŠTINA) - MEDIUM PRIORITY (2) =====
+            ("CS_BODY_CODE_1", r'(\d{6})\s+je\s+váš\s+kód\s+Instagram', 2),
+            ("CS_BODY_CODE_2", r'Váš\s+kód\s+Instagram[:\s]*(\d{6})', 2),
+            ("CS_BODY_VERIF_1", r'ověřovací\s+kód[:\s]*(\d{6})', 2),
+            
+            # ===== ROMANIAN (ROMÂNĂ) - MEDIUM PRIORITY (2) =====
+            ("RO_BODY_CODE_1", r'(\d{6})\s+este\s+codul\s+tău\s+Instagram', 2),
+            ("RO_BODY_CODE_2", r'Codul\s+tău\s+Instagram[:\s]*(\d{6})', 2),
+            ("RO_BODY_VERIF_1", r'cod\s+de\s+verificare[:\s]*(\d{6})', 2),
+            
+            # ===== HUNGARIAN (MAGYAR) - MEDIUM PRIORITY (2) =====
+            ("HU_BODY_CODE_1", r'(\d{6})\s+az\s+Instagram-kódod', 2),
+            ("HU_BODY_CODE_2", r'Instagram-kódod[:\s]*(\d{6})', 2),
+            ("HU_BODY_VERIF_1", r'megerősítő\s+kód[:\s]*(\d{6})', 2),
             
             # ===== GENERAL PATTERNS - LOW PRIORITY (1) =====
             ("GEN_6DIGIT", r'\b(\d{6})\b', 1),
