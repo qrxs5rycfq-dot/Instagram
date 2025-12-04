@@ -1780,6 +1780,411 @@ class UltraStealthIPGenerator2025:
             }
 
 
+# ===================== REAL IP GEO-SYNC SYSTEM 2025 =====================
+
+class RealIPGeoSyncSystem:
+    """
+    Sistem untuk mendeteksi IP asli dari VPN/Proxy dan menyinkronkan
+    fingerprint, geolocation, dan device info dengan IP tersebut.
+    
+    Features:
+    1. Auto-detect real IP menggunakan multiple IP lookup services
+    2. Get geolocation data (country, city, ISP, timezone)
+    3. Generate matching fingerprints berdasarkan lokasi
+    4. Generate matching device profiles
+    5. Generate matching browser headers
+    """
+    
+    # IP lookup services (prioritized by reliability)
+    IP_LOOKUP_SERVICES = [
+        {"url": "https://api.ipify.org?format=json", "ip_field": "ip"},
+        {"url": "https://ipinfo.io/json", "ip_field": "ip"},
+        {"url": "https://api.ip.sb/geoip", "ip_field": "ip"},
+        {"url": "https://ifconfig.me/all.json", "ip_field": "ip_addr"},
+        {"url": "https://httpbin.org/ip", "ip_field": "origin"},
+    ]
+    
+    # Geolocation services
+    GEO_LOOKUP_SERVICES = [
+        {"url": "https://ipinfo.io/{ip}/json", "type": "ipinfo"},
+        {"url": "https://api.ip.sb/geoip/{ip}", "type": "ipsb"},
+        {"url": "http://ip-api.com/json/{ip}?fields=status,message,country,countryCode,region,city,zip,lat,lon,timezone,isp,org,as,mobile,proxy,hosting", "type": "ipapi"},
+    ]
+    
+    # Country to locale/language mapping
+    COUNTRY_LOCALES = {
+        "US": {"locale": "en-US", "language": "en-US,en;q=0.9", "timezone": "America/New_York"},
+        "GB": {"locale": "en-GB", "language": "en-GB,en;q=0.9", "timezone": "Europe/London"},
+        "AU": {"locale": "en-AU", "language": "en-AU,en;q=0.9", "timezone": "Australia/Sydney"},
+        "CA": {"locale": "en-CA", "language": "en-CA,en;q=0.9", "timezone": "America/Toronto"},
+        "NZ": {"locale": "en-NZ", "language": "en-NZ,en;q=0.9", "timezone": "Pacific/Auckland"},
+        "DE": {"locale": "de-DE", "language": "de-DE,de;q=0.9,en;q=0.8", "timezone": "Europe/Berlin"},
+        "FR": {"locale": "fr-FR", "language": "fr-FR,fr;q=0.9,en;q=0.8", "timezone": "Europe/Paris"},
+        "NL": {"locale": "nl-NL", "language": "nl-NL,nl;q=0.9,en;q=0.8", "timezone": "Europe/Amsterdam"},
+        "JP": {"locale": "ja-JP", "language": "ja-JP,ja;q=0.9,en;q=0.8", "timezone": "Asia/Tokyo"},
+        "SG": {"locale": "en-SG", "language": "en-SG,en;q=0.9,zh;q=0.8", "timezone": "Asia/Singapore"},
+        "ID": {"locale": "id-ID", "language": "id-ID,id;q=0.9,en;q=0.8", "timezone": "Asia/Jakarta"},
+        "IN": {"locale": "en-IN", "language": "en-IN,en;q=0.9,hi;q=0.8", "timezone": "Asia/Kolkata"},
+        "BR": {"locale": "pt-BR", "language": "pt-BR,pt;q=0.9,en;q=0.8", "timezone": "America/Sao_Paulo"},
+        "MX": {"locale": "es-MX", "language": "es-MX,es;q=0.9,en;q=0.8", "timezone": "America/Mexico_City"},
+        "ES": {"locale": "es-ES", "language": "es-ES,es;q=0.9,en;q=0.8", "timezone": "Europe/Madrid"},
+        "IT": {"locale": "it-IT", "language": "it-IT,it;q=0.9,en;q=0.8", "timezone": "Europe/Rome"},
+        "KR": {"locale": "ko-KR", "language": "ko-KR,ko;q=0.9,en;q=0.8", "timezone": "Asia/Seoul"},
+        "PH": {"locale": "en-PH", "language": "en-PH,en;q=0.9,tl;q=0.8", "timezone": "Asia/Manila"},
+        "TH": {"locale": "th-TH", "language": "th-TH,th;q=0.9,en;q=0.8", "timezone": "Asia/Bangkok"},
+        "VN": {"locale": "vi-VN", "language": "vi-VN,vi;q=0.9,en;q=0.8", "timezone": "Asia/Ho_Chi_Minh"},
+        "MY": {"locale": "ms-MY", "language": "ms-MY,ms;q=0.9,en;q=0.8", "timezone": "Asia/Kuala_Lumpur"},
+        "RU": {"locale": "ru-RU", "language": "ru-RU,ru;q=0.9,en;q=0.8", "timezone": "Europe/Moscow"},
+        "PL": {"locale": "pl-PL", "language": "pl-PL,pl;q=0.9,en;q=0.8", "timezone": "Europe/Warsaw"},
+        "TR": {"locale": "tr-TR", "language": "tr-TR,tr;q=0.9,en;q=0.8", "timezone": "Europe/Istanbul"},
+        "AE": {"locale": "ar-AE", "language": "ar-AE,ar;q=0.9,en;q=0.8", "timezone": "Asia/Dubai"},
+        "SA": {"locale": "ar-SA", "language": "ar-SA,ar;q=0.9,en;q=0.8", "timezone": "Asia/Riyadh"},
+    }
+    
+    # Country to popular device models
+    COUNTRY_DEVICES = {
+        "US": {
+            "models": ["iPhone 15 Pro Max", "iPhone 15 Pro", "iPhone 14 Pro", "Galaxy S24 Ultra", "Pixel 8 Pro"],
+            "os_dist": {"iOS": 0.55, "Android": 0.45},
+            "iphone_models": ["iPhone16,2", "iPhone16,1", "iPhone15,3", "iPhone15,2"],
+            "android_models": ["SM-S928U", "SM-S918U", "Pixel 8 Pro", "Pixel 8"],
+        },
+        "GB": {
+            "models": ["iPhone 15 Pro", "iPhone 14 Pro", "Galaxy S24", "Pixel 8"],
+            "os_dist": {"iOS": 0.50, "Android": 0.50},
+            "iphone_models": ["iPhone16,1", "iPhone15,3", "iPhone15,2"],
+            "android_models": ["SM-S928B", "SM-S918B", "Pixel 8"],
+        },
+        "AU": {
+            "models": ["iPhone 15 Pro", "Galaxy S24 Ultra", "Pixel 8"],
+            "os_dist": {"iOS": 0.52, "Android": 0.48},
+            "iphone_models": ["iPhone16,1", "iPhone15,3"],
+            "android_models": ["SM-S928B", "SM-S918B", "Pixel 8 Pro"],
+        },
+        "DE": {
+            "models": ["Galaxy S24", "iPhone 15", "Pixel 8"],
+            "os_dist": {"iOS": 0.35, "Android": 0.65},
+            "iphone_models": ["iPhone16,1", "iPhone15,2"],
+            "android_models": ["SM-S928B", "SM-S918B", "SM-A546B"],
+        },
+        "JP": {
+            "models": ["iPhone 15 Pro", "Xperia 1 V", "Galaxy S24"],
+            "os_dist": {"iOS": 0.65, "Android": 0.35},
+            "iphone_models": ["iPhone16,2", "iPhone16,1", "iPhone15,3"],
+            "android_models": ["SO-51D", "SM-S928C", "Pixel 8"],
+        },
+        "ID": {
+            "models": ["Galaxy A54", "Redmi Note 12", "OPPO A78"],
+            "os_dist": {"iOS": 0.15, "Android": 0.85},
+            "iphone_models": ["iPhone14,5", "iPhone13,4"],
+            "android_models": ["SM-A546B", "23021RAA2Y", "CPH2483"],
+        },
+        "IN": {
+            "models": ["Redmi Note 12 Pro", "Galaxy M34", "OnePlus Nord"],
+            "os_dist": {"iOS": 0.10, "Android": 0.90},
+            "iphone_models": ["iPhone14,5", "iPhone13,2"],
+            "android_models": ["23021RAA2Y", "SM-M346B", "AC2003"],
+        },
+        "BR": {
+            "models": ["Galaxy A54", "Moto G84", "Redmi Note 12"],
+            "os_dist": {"iOS": 0.20, "Android": 0.80},
+            "iphone_models": ["iPhone14,5", "iPhone13,4"],
+            "android_models": ["SM-A546B", "XT2347-2", "23021RAA2Y"],
+        },
+        "DEFAULT": {
+            "models": ["Galaxy S24", "iPhone 15", "Pixel 8"],
+            "os_dist": {"iOS": 0.40, "Android": 0.60},
+            "iphone_models": ["iPhone16,1", "iPhone15,2"],
+            "android_models": ["SM-S928B", "SM-S918B", "Pixel 8"],
+        }
+    }
+    
+    def __init__(self):
+        self.cached_ip_info = None
+        self.cache_timestamp = 0
+        self.cache_ttl = 300  # 5 minutes cache
+        
+    def detect_real_ip(self, timeout: int = 10) -> Optional[str]:
+        """Detect real IP address using multiple services"""
+        for service in self.IP_LOOKUP_SERVICES:
+            try:
+                response = requests.get(service["url"], timeout=timeout)
+                if response.status_code == 200:
+                    data = response.json()
+                    ip = data.get(service["ip_field"])
+                    if ip:
+                        # Handle comma-separated IPs (proxy chain)
+                        if "," in ip:
+                            ip = ip.split(",")[0].strip()
+                        print(f"{hijau}✅  Detected real IP: {ip}{reset}")
+                        return ip
+            except Exception as e:
+                continue
+        print(f"{merah}❌  Failed to detect real IP{reset}")
+        return None
+    
+    def get_ip_geolocation(self, ip: str, timeout: int = 10) -> Dict[str, Any]:
+        """Get detailed geolocation information for an IP"""
+        for service in self.GEO_LOOKUP_SERVICES:
+            try:
+                url = service["url"].format(ip=ip)
+                response = requests.get(url, timeout=timeout)
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    # Parse based on service type
+                    if service["type"] == "ipinfo":
+                        loc = data.get("loc", "0,0").split(",")
+                        geo_info = {
+                            "ip": ip,
+                            "country": data.get("country", "US"),
+                            "country_name": data.get("country", "United States"),
+                            "city": data.get("city", "Unknown"),
+                            "region": data.get("region", ""),
+                            "isp": data.get("org", "Unknown ISP"),
+                            "timezone": data.get("timezone", "UTC"),
+                            "latitude": float(loc[0]) if len(loc) > 0 else 0,
+                            "longitude": float(loc[1]) if len(loc) > 1 else 0,
+                            "is_mobile": False,
+                            "is_proxy": False,
+                            "is_hosting": False,
+                        }
+                    elif service["type"] == "ipapi":
+                        if data.get("status") == "success":
+                            geo_info = {
+                                "ip": ip,
+                                "country": data.get("countryCode", "US"),
+                                "country_name": data.get("country", "United States"),
+                                "city": data.get("city", "Unknown"),
+                                "region": data.get("region", ""),
+                                "isp": data.get("isp", "Unknown ISP"),
+                                "timezone": data.get("timezone", "UTC"),
+                                "latitude": data.get("lat", 0),
+                                "longitude": data.get("lon", 0),
+                                "is_mobile": data.get("mobile", False),
+                                "is_proxy": data.get("proxy", False),
+                                "is_hosting": data.get("hosting", False),
+                            }
+                        else:
+                            continue
+                    elif service["type"] == "ipsb":
+                        geo_info = {
+                            "ip": ip,
+                            "country": data.get("country_code", "US"),
+                            "country_name": data.get("country", "United States"),
+                            "city": data.get("city", "Unknown"),
+                            "region": data.get("region", ""),
+                            "isp": data.get("isp", "Unknown ISP"),
+                            "timezone": data.get("timezone", "UTC"),
+                            "latitude": data.get("latitude", 0),
+                            "longitude": data.get("longitude", 0),
+                            "is_mobile": False,
+                            "is_proxy": False,
+                            "is_hosting": False,
+                        }
+                    else:
+                        continue
+                    
+                    print(f"{hijau}✅  Geo info: {geo_info['city']}, {geo_info['country']} ({geo_info['isp']}){reset}")
+                    return geo_info
+                    
+            except Exception as e:
+                continue
+        
+        # Fallback
+        return {
+            "ip": ip,
+            "country": "US",
+            "country_name": "United States",
+            "city": "New York",
+            "region": "New York",
+            "isp": "Unknown ISP",
+            "timezone": "America/New_York",
+            "latitude": 40.7128,
+            "longitude": -74.0060,
+            "is_mobile": False,
+            "is_proxy": False,
+            "is_hosting": False,
+        }
+    
+    def generate_synced_fingerprint(self, geo_info: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate browser fingerprint that matches the geolocation"""
+        country = geo_info.get("country", "US")
+        locale_info = self.COUNTRY_LOCALES.get(country, self.COUNTRY_LOCALES["US"])
+        device_info = self.COUNTRY_DEVICES.get(country, self.COUNTRY_DEVICES["DEFAULT"])
+        
+        # Decide OS based on country distribution
+        os_choice = random.choices(
+            list(device_info["os_dist"].keys()),
+            weights=list(device_info["os_dist"].values())
+        )[0]
+        
+        # Generate Chrome version (latest stable versions)
+        chrome_version = random.randint(130, 136)
+        chrome_full_version = f"{chrome_version}.0.{random.randint(6700, 6900)}.{random.randint(100, 200)}"
+        
+        if os_choice == "iOS":
+            device_model = random.choice(device_info.get("iphone_models", ["iPhone16,1"]))
+            platform = "iPhone"
+            os_version = f"{random.randint(17, 18)}.{random.randint(0, 4)}"
+            user_agent = f"Mozilla/5.0 (iPhone; CPU iPhone OS {os_version.replace('.', '_')} like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/{chrome_version}.0.{random.randint(6700, 6900)}.{random.randint(50, 150)} Mobile/15E148 Safari/604.1"
+            sec_ch_ua_mobile = "?1"
+            sec_ch_ua_platform = '"iOS"'
+        else:
+            device_model = random.choice(device_info.get("android_models", ["SM-S928B"]))
+            platform = "Android"
+            os_version = f"{random.randint(13, 15)}"
+            user_agent = f"Mozilla/5.0 (Linux; Android {os_version}; {device_model}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_full_version} Mobile Safari/537.36"
+            sec_ch_ua_mobile = "?1"
+            sec_ch_ua_platform = '"Android"'
+        
+        # Screen resolution based on device
+        if platform == "iPhone":
+            screen_resolutions = [(1179, 2556), (1284, 2778), (1170, 2532), (1290, 2796)]
+        else:
+            screen_resolutions = [(1080, 2340), (1080, 2400), (1440, 3200), (1080, 2220)]
+        
+        screen = random.choice(screen_resolutions)
+        
+        # Timezone offset from timezone name
+        timezone = locale_info.get("timezone", "UTC")
+        timezone_offsets = {
+            "America/New_York": -5, "America/Los_Angeles": -8, "America/Chicago": -6,
+            "America/Toronto": -5, "America/Sao_Paulo": -3, "America/Mexico_City": -6,
+            "Europe/London": 0, "Europe/Paris": 1, "Europe/Berlin": 1, "Europe/Amsterdam": 1,
+            "Europe/Madrid": 1, "Europe/Rome": 1, "Europe/Moscow": 3, "Europe/Warsaw": 1,
+            "Europe/Istanbul": 3, "Asia/Tokyo": 9, "Asia/Seoul": 9, "Asia/Singapore": 8,
+            "Asia/Hong_Kong": 8, "Asia/Jakarta": 7, "Asia/Kolkata": 5.5, "Asia/Dubai": 4,
+            "Asia/Bangkok": 7, "Asia/Ho_Chi_Minh": 7, "Asia/Manila": 8, "Asia/Kuala_Lumpur": 8,
+            "Australia/Sydney": 11, "Pacific/Auckland": 13,
+        }
+        tz_offset = timezone_offsets.get(timezone, 0)
+        
+        fingerprint = {
+            "user_agent": user_agent,
+            "platform": platform,
+            "device_model": device_model,
+            "os_version": os_version,
+            "chrome_version": chrome_version,
+            "chrome_full_version": chrome_full_version,
+            "screen_width": screen[0],
+            "screen_height": screen[1],
+            "color_depth": 24,
+            "pixel_ratio": random.choice([2, 3, 3.5]) if platform == "Android" else random.choice([2, 3]),
+            "timezone": timezone,
+            "timezone_offset": int(tz_offset * -60),  # Convert to minutes
+            "language": locale_info.get("language", "en-US,en;q=0.9"),
+            "locale": locale_info.get("locale", "en-US"),
+            "hardware_concurrency": random.choice([4, 6, 8]),
+            "device_memory": random.choice([4, 6, 8]) if platform == "Android" else 4,
+            "touch_support": True,
+            "webgl_vendor": "Qualcomm" if platform == "Android" else "Apple Inc.",
+            "webgl_renderer": "Adreno (TM) 740" if platform == "Android" else "Apple GPU",
+            "sec_ch_ua": f'"Chromium";v="{chrome_version}", "Google Chrome";v="{chrome_version}", "Not-A.Brand";v="24"',
+            "sec_ch_ua_mobile": sec_ch_ua_mobile,
+            "sec_ch_ua_platform": sec_ch_ua_platform,
+            "sec_ch_ua_model": f'"{device_model}"' if platform == "Android" else '""',
+            "sec_ch_ua_full_version_list": f'"Chromium";v="{chrome_full_version}", "Google Chrome";v="{chrome_full_version}", "Not-A.Brand";v="24.0.0.0"',
+        }
+        
+        return fingerprint
+    
+    def generate_synced_headers(self, fingerprint: Dict[str, Any], geo_info: Dict[str, Any]) -> Dict[str, str]:
+        """Generate HTTP headers that match the fingerprint and geolocation"""
+        headers = {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br, zstd",
+            "Accept-Language": fingerprint.get("language", "en-US,en;q=0.9"),
+            "Cache-Control": "max-age=0",
+            "Sec-Ch-Ua": fingerprint.get("sec_ch_ua"),
+            "Sec-Ch-Ua-Mobile": fingerprint.get("sec_ch_ua_mobile"),
+            "Sec-Ch-Ua-Platform": fingerprint.get("sec_ch_ua_platform"),
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Upgrade-Insecure-Requests": "1",
+            "User-Agent": fingerprint.get("user_agent"),
+        }
+        
+        # Add model header for Android
+        if fingerprint.get("platform") == "Android":
+            headers["Sec-Ch-Ua-Model"] = fingerprint.get("sec_ch_ua_model", '""')
+        
+        return headers
+    
+    def get_full_synced_config(self, timeout: int = 10) -> Optional[Dict[str, Any]]:
+        """
+        Get complete synced configuration:
+        1. Detect real IP
+        2. Get geolocation
+        3. Generate matching fingerprint
+        4. Generate matching headers
+        
+        Returns complete config or None if failed
+        """
+        # Check cache
+        current_time = time.time()
+        if self.cached_ip_info and (current_time - self.cache_timestamp) < self.cache_ttl:
+            print(f"{kuning}📦  Using cached IP config{reset}")
+            return self.cached_ip_info
+        
+        print(f"{cyan}🔍  Detecting real IP and syncing fingerprints...{reset}")
+        
+        # Step 1: Detect real IP
+        real_ip = self.detect_real_ip(timeout)
+        if not real_ip:
+            return None
+        
+        # Step 2: Get geolocation
+        geo_info = self.get_ip_geolocation(real_ip, timeout)
+        
+        # Step 3: Generate matching fingerprint
+        fingerprint = self.generate_synced_fingerprint(geo_info)
+        
+        # Step 4: Generate matching headers
+        headers = self.generate_synced_headers(fingerprint, geo_info)
+        
+        # Build complete config
+        config = {
+            "ip": real_ip,
+            "geo": geo_info,
+            "fingerprint": fingerprint,
+            "headers": headers,
+            "country": geo_info.get("country", "US"),
+            "city": geo_info.get("city", "Unknown"),
+            "isp": geo_info.get("isp", "Unknown ISP"),
+            "timezone": fingerprint.get("timezone"),
+            "language": fingerprint.get("language"),
+            "device_model": fingerprint.get("device_model"),
+            "platform": fingerprint.get("platform"),
+            "user_agent": fingerprint.get("user_agent"),
+            # Additional session data
+            "is_mobile": geo_info.get("is_mobile", False),
+            "is_proxy": geo_info.get("is_proxy", False),
+            "is_hosting": geo_info.get("is_hosting", False),
+            "timestamp": current_time,
+        }
+        
+        # Cache the result
+        self.cached_ip_info = config
+        self.cache_timestamp = current_time
+        
+        print(f"{hijau}✅  Synced config ready:{reset}")
+        print(f"    IP: {real_ip}")
+        print(f"    Location: {geo_info.get('city')}, {geo_info.get('country')}")
+        print(f"    ISP: {geo_info.get('isp')}")
+        print(f"    Device: {fingerprint.get('platform')} - {fingerprint.get('device_model')}")
+        print(f"    Language: {fingerprint.get('language')}")
+        
+        return config
+    
+    def clear_cache(self):
+        """Clear cached IP info to force refresh"""
+        self.cached_ip_info = None
+        self.cache_timestamp = 0
+
+
 # ===================== ADVANCED IP SPOOFING 2025 - UPDATED =====================
 
 class AdvancedIPStealthSystem2025:
