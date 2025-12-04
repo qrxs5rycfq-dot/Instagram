@@ -4655,25 +4655,55 @@ class AdvancedIPStealthSystem2025:
         }
     
     def get_fresh_ip_config(self, session_id: str = None, min_health: int = 80, connection_type: str = "mobile") -> Dict[str, Any]:
-        """Get ultra-fresh IP configuration using next-gen stealth system"""
-        print(f"{cyan}🌐  Getting fresh IP config for session {session_id[:8] if session_id else 'new'} (connection: {connection_type})...{reset}")
+        """
+        Get IP configuration using REAL IP detection (VPN/Proxy/Mobile/WiFi).
+        NO IP SPOOFING - Uses actual connection IP with synced fingerprints.
+        Prioritizes Indonesia with super dynamic fingerprints.
+        """
+        print(f"{cyan}🌐  Getting REAL IP config for session {session_id[:8] if session_id else 'new'} (connection: {connection_type})...{reset}")
         
-        # ===== USE ULTRA STEALTH IP GENERATOR =====
-        # This new system generates IPs from real ISP allocations
+        # ===== USE REAL IP DETECTION SYSTEM =====
+        # This detects actual IP from VPN/Proxy/Mobile Data/WiFi and syncs fingerprints
         try:
-            ultra_generator = UltraStealthIPGenerator2025()
-            ip_type = "mobile" if connection_type == "mobile" else "residential"
+            geo_sync = RealIPGeoSyncSystem()
             
-            # Generate ultra-stealth IP
-            ultra_ip_config = ultra_generator.generate_ultra_stealth_ip(ip_type=ip_type)
+            # Get full synced config with TLS/JA3 fingerprints
+            synced_config = geo_sync.get_full_synced_config_with_tls(timeout=15)
             
-            if ultra_ip_config and ultra_ip_config.get("ip"):
-                # Convert to standard format
-                config = self._convert_ultra_stealth_to_standard(ultra_ip_config, session_id)
-                print(f"{hijau}✅  Selected IP: {ultra_ip_config['ip']} ({ultra_ip_config['isp']}) [{ultra_ip_config['country']}] - Health: {ultra_ip_config['health_score']}{reset}")
+            if synced_config and synced_config.get("ip"):
+                real_ip = synced_config["ip"]
+                country = synced_config.get("country", "ID")
+                city = synced_config.get("city", "Jakarta")
+                isp = synced_config.get("isp", "Unknown")
+                
+                # Generate super dynamic Indonesia-optimized fingerprints
+                fingerprint = synced_config.get("fingerprint", {})
+                ja3_data = synced_config.get("ja3", {})
+                http2_data = synced_config.get("http2", {})
+                device_data = synced_config.get("device", {})
+                
+                # Build config compatible with existing system
+                config = self._build_real_ip_config(
+                    real_ip=real_ip,
+                    geo_info=synced_config.get("geo", {}),
+                    fingerprint=fingerprint,
+                    ja3_data=ja3_data,
+                    http2_data=http2_data,
+                    device_data=device_data,
+                    connection_type=connection_type,
+                    session_id=session_id
+                )
+                
+                print(f"{hijau}✅  REAL IP Detected: {real_ip}{reset}")
+                print(f"    📍 Location: {city}, {country}")
+                print(f"    🏢 ISP: {isp}")
+                print(f"    📱 Device: {fingerprint.get('device_model', 'Unknown')}")
+                print(f"    🔐 JA3: {ja3_data.get('ja3_hash', 'N/A')[:16]}...")
+                
                 return config
+                
         except Exception as e:
-            print(f"{kuning}    Ultra stealth generator error: {e}, falling back...{reset}")
+            print(f"{kuning}    Real IP detection error: {e}, using fallback...{reset}")
         
         # ===== FALLBACK TO ORIGINAL SYSTEM =====
         # Refresh pool jika diperlukan
