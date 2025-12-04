@@ -11895,219 +11895,209 @@ class InstagramAccountCreator2025:
         # NO IP ROTATION - single attempt per session to avoid detection
         # If this fails, caller should create a completely new session
         print(f"{cyan}    Attempting account creation (no IP rotation for stealth){reset}")
-            
-            # Get session dengan headers terkini
-            session = self.session_manager.get_session_with_headers(session_id)
-            if not session:
-                print(f"{merah}    Session not found after rotation{reset}")
-                return False
-            
-            # Get fresh jazoest from real signup page
-            jazoest = await self.get_jazoest(session_id=session_id)
-            
-            # Prepare account data dengan FORMAT YANG BENAR
-            month, day, year = self._generate_birthdate()
-            
-            # **PERBAIKAN KRITIS: FORMAT PASSWORD ENCRYPTION v10**
-            current_timestamp = int(time.time())  # DETIK, bukan milidetik
-            encrypted_password = f"#PWD_INSTAGRAM_BROWSER:0:{current_timestamp}:{password}"
-            
-            # Extra session ID
-            extra_session_id = session.get("extra_session_id", "")
-            if not extra_session_id:
-                extra_session_id = self._generate_extra_session_id()
+        
+        # Get session dengan headers terkini
+        session = self.session_manager.get_session_with_headers(session_id)
+        if not session:
+            print(f"{merah}    Session not found{reset}")
+            return False
+        
+        # Get fresh jazoest from real signup page
+        jazoest = await self.get_jazoest(session_id=session_id)
+        
+        # Prepare account data dengan FORMAT YANG BENAR
+        month, day, year = self._generate_birthdate()
+        
+        # **PERBAIKAN KRITIS: FORMAT PASSWORD ENCRYPTION v10**
+        current_timestamp = int(time.time())  # DETIK, bukan milidetik
+        encrypted_password = f"#PWD_INSTAGRAM_BROWSER:0:{current_timestamp}:{password}"
+        
+        # Extra session ID
+        extra_session_id = session.get("extra_session_id", "")
+        if not extra_session_id:
+            extra_session_id = self._generate_extra_session_id()
 
-            name_first = fake_indonesia.first_name()
+        name_first = fake_indonesia.first_name()
+        
+        account_data = {
+            "email": email,
+            "username": username,
+            "first_name": name_first,
+            "last_name": fake_indonesia.last_name(),
+            "enc_password": encrypted_password,  # **FORMAT YANG BENAR**
+            "month": month,
+            "day": day,
+            "year": year,
+            "client_id": session.get("device_id", ""),  # **GUNAKAN client_id**
+            "seamless_login_enabled": "1",
+            "tos_version": "row",
+            "force_sign_up_code": signup_code,
+            "failed_birthday_year_count": "{}",
+            "extra_session_id": extra_session_id,
+            "jazoest": jazoest,
+        }
+        
+        # Filter out empty values
+        account_data = {k: v for k, v in account_data.items() if v}
+        
+        encoded_data = urlencode(account_data)
+        
+        # **ENDPOINT UTAMA - Try both endpoints**
+        endpoints = [
+            "https://www.instagram.com/api/v1/web/accounts/web_create_ajax/",
+            "https://www.instagram.com/accounts/web_create_ajax/",
+        ]
+        
+        for endpoint in endpoints:
+            print(f"{cyan}    Trying endpoint: {endpoint}{reset}")
             
-            account_data = {
-                "email": email,
-                "username": username,
-                "first_name": name_first,
-                "last_name": fake_indonesia.last_name(),
-                "enc_password": encrypted_password,  # **FORMAT YANG BENAR**
-                "month": month,
-                "day": day,
-                "year": year,
-                "client_id": session.get("device_id", ""),  # **GUNAKAN client_id**
-                "seamless_login_enabled": "1",
-                "tos_version": "row",
-                "force_sign_up_code": signup_code,
-                "failed_birthday_year_count": "{}",
-                "extra_session_id": extra_session_id,
-                "jazoest": jazoest,
-            }
+            # Use auto-sync headers
+            response = await self.request_orchestrator.make_request(
+                session_id=session_id,
+                method="POST",
+                url=endpoint,
+                data=encoded_data,
+                request_type="ajax"  # Auto-builds all headers
+            )
             
-            # Filter out empty values
-            account_data = {k: v for k, v in account_data.items() if v}
+            status = response.get("status")
             
-            encoded_data = urlencode(account_data)
-            
-            # **ENDPOINT UTAMA**
-            endpoints = [
-                "https://www.instagram.com/accounts/web_create_ajax/",
-                "https://www.instagram.com/api/v1/web/accounts/web_create_ajax/",
-            ]
-            
-            for endpoint in endpoints:
-                print(f"{cyan}    Trying endpoint: {endpoint}{reset}")
-                
-                # Use auto-sync headers
-                response = await self.request_orchestrator.make_request(
-                    session_id=session_id,
-                    method="POST",
-                    url=endpoint,
-                    data=encoded_data,
-                    request_type="ajax"  # Auto-builds all headers
-                )
-                
-                status = response.get("status")
-                # print(f"{cyan}    Status: {status}{reset}")
-                
-                if status == 200:
-                    try:
-                        body = response.get("body", b"")
-                        if not body:
-                            print(f"{merah}    Empty response body{reset}")
-                            continue
+            if status == 200:
+                try:
+                    body = response.get("body", b"")
+                    if not body:
+                        print(f"{merah}    Empty response body{reset}")
+                        continue
+                    
+                    data = json.loads(body.decode('utf-8', errors='ignore'))
+                    
+                    if data.get("account_created") == True:
+                        self.session_manager.update_session(session_id, {
+                            "account_created": True,
+                            "instagram_username": username,
+                            "instagram_user_id": data.get("user_id", ""),
+                            "created_at": time.time(),
+                            "success_count": session.get("success_count", 0) + 1
+                        })
+
+                        bio_text = fake.sentence(nb_words=6)
+
+                        edit_payload = {
+                            "biography": bio_text,
+                            "chaining_enabled": "on",
+                            "external_url": "",
+                            "first_name": name_first,
+                            "username": username,
+                            "jazoest": jazoest
+                        }
+                        edit_payload = {k: v for k, v in edit_payload.items() if v}
+        
+                        encoded_edit = urlencode(edit_payload)
+
+                        # Use auto-sync headers for profile edit
+                        response_edit = await self.request_orchestrator.make_request(
+                            session_id=session_id,
+                            method="POST",
+                            url="https://www.instagram.com/api/v1/web/accounts/edit/",
+                            data=encoded_edit,
+                            request_type="ajax"  # Auto-builds all headers
+                        )
                         
-                        data = json.loads(body.decode('utf-8', errors='ignore'))
-                        # print(f"{cyan}    Response: {json.dumps(data, indent=2)[:300]}...{reset}")
-                        
-                        if data.get("account_created") == True:
-                            self.session_manager.update_session(session_id, {
-                                "account_created": True,
-                                "instagram_username": username,
-                                "instagram_user_id": data.get("user_id", ""),
-                                "created_at": time.time(),
-                                "success_count": session.get("success_count", 0) + 1
-                            })
+                        status_edit = response_edit.get("status")
 
-                            bio_text = fake.sentence(nb_words=6)
-
-                            edit_payload = {
-                                "biography": bio_text,
-                                "chaining_enabled": "on",
-                                "external_url": "",
-                                "first_name": name_first,
-                                "username": username,
-                                "jazoest": jazoest
-                            }
-                            edit_payload = {k: v for k, v in edit_payload.items() if v}
-            
-                            encoded_edit = urlencode(edit_payload)
-
-                            # Use auto-sync headers for profile edit
-                            response_edit = await self.request_orchestrator.make_request(
-                                session_id=session_id,
-                                method="POST",
-                                url="https://www.instagram.com/api/v1/web/accounts/edit/",
-                                data=encoded_edit,
-                                request_type="ajax"  # Auto-builds all headers
-                            )
-                            
-                            status = response_edit.get("status")
-
-                            if status == 200:
-                                try:
-                                    body = response_edit.get("body", b"")
-                                    if not body:
-                                        print(f"{merah}    Empty response body{reset}")
-                                        continue
-                                    
-                                    data = json.loads(body.decode('utf-8', errors='ignore'))
-                                    print(f"{cyan}    Response: {json.dumps(data, indent=2)[:300]}...{reset}")
-                                    
-                                    if data.get("status") == "ok":
-                                        # **SUCCESS!**
-                                        print(f"\n{bg_hijau}{putih}✅  ACCOUNT CREATED SUCCESSFULLY!{reset}")
-                                        print(f"{cyan}    User ID: {data.get('user_id', 'N/A')}{reset}")
-                                        print(f"{cyan}    Username: {username}{reset}")
-                                        
-                                        # Update session
-                                        self.session_manager.update_session(session_id, {
-                                            "account_created": True,
-                                            "instagram_username": username,
-                                            "instagram_user_id": data.get("user_id", ""),
-                                            "created_at": time.time(),
-                                            "success_count": session.get("success_count", 0) + 1
-                                        })
-                                        
-                                        # Save cookies
-                                        if response.get("cookies"):
-                                            self.session_manager.update_session_cookies(
-                                                session_id, 
-                                                response["cookies"], 
-                                                "instagram.com"
-                                            )
+                        if status_edit == 200:
+                            try:
+                                body_edit = response_edit.get("body", b"")
+                                if not body_edit:
+                                    print(f"{merah}    Empty response body{reset}")
+                                    continue
                                 
-                                        return True
+                                data_edit = json.loads(body_edit.decode('utf-8', errors='ignore'))
+                                print(f"{cyan}    Response: {json.dumps(data_edit, indent=2)[:300]}...{reset}")
+                                
+                                if data_edit.get("status") == "ok":
+                                    # **SUCCESS!**
+                                    print(f"\n{bg_hijau}{putih}✅  ACCOUNT CREATED SUCCESSFULLY!{reset}")
+                                    print(f"{cyan}    User ID: {data.get('user_id', 'N/A')}{reset}")
+                                    print(f"{cyan}    Username: {username}{reset}")
+                                    
+                                    # Update session
+                                    self.session_manager.update_session(session_id, {
+                                        "account_created": True,
+                                        "instagram_username": username,
+                                        "instagram_user_id": data.get("user_id", ""),
+                                        "created_at": time.time(),
+                                        "success_count": session.get("success_count", 0) + 1
+                                    })
+                                    
+                                    # Save cookies
+                                    if response.get("cookies"):
+                                        self.session_manager.update_session_cookies(
+                                            session_id, 
+                                            response["cookies"], 
+                                            "instagram.com"
+                                        )
+                            
+                                    return True
 
-                                    else:
-                                        print(f"\n{bg_kuning}{putih}✅  ACCOUNT CREATED CHECKPOINT!{reset}")
-                                        print(f"{cyan}    User ID: {data.get('user_id', 'N/A')}{reset}")
-                                        print(f"{cyan}    Username: {username}{reset}")
-                                        return False
-
-                                except Exception as e:
-                                    print(f"{merah}    Parse error: {e}{reset}")
+                                else:
                                     print(f"\n{bg_kuning}{putih}✅  ACCOUNT CREATED CHECKPOINT!{reset}")
                                     print(f"{cyan}    User ID: {data.get('user_id', 'N/A')}{reset}")
                                     print(f"{cyan}    Username: {username}{reset}")
                                     return False
 
-                            else:
-                                body = response_edit.get("body", b"")
-                                if not body:
-                                    print(f"{merah}    Empty response body{reset}")
-                                    continue
-                                
-                                data = json.loads(body.decode('utf-8', errors='ignore'))
-                                print(f"{cyan}    Response: {json.dumps(data, indent=2)[:300]}...{reset}")
+                            except Exception as e:
+                                print(f"{merah}    Parse error: {e}{reset}")
                                 print(f"\n{bg_kuning}{putih}✅  ACCOUNT CREATED CHECKPOINT!{reset}")
                                 print(f"{cyan}    User ID: {data.get('user_id', 'N/A')}{reset}")
                                 print(f"{cyan}    Username: {username}{reset}")
                                 return False
+
                         else:
-                            error_type = self._analyze_error_type(data)
-                            print(f"{merah}    Account creation failed: {error_type}{reset}")
-                            # print(f"{cyan}    Error details: {data}{reset}")
-                            
-                            # Jika error selain IP block, coba endpoint lain
-                            if error_type != "ip_block":
-                                continue
-                            else:
-                                break
-                            
-                    except json.JSONDecodeError as e:
-                        print(f"{merah}    JSON parse error: {e}{reset}")
-                        body_preview = response.get("body", b"").decode('utf-8', errors='ignore')[:500]
-                        print(f"{cyan}    Raw response: {body_preview}...{reset}")
-                        # Jika 200 OK tapi parse error, mungkin success
-                        print(f"{hijau}✅  Account likely created (200 OK){reset}")
-                        return True
-                    except Exception as e:
-                        print(f"{merah}    Parse error: {e}{reset}")
+                            body_edit = response_edit.get("body", b"")
+                            if body_edit:
+                                data_edit = json.loads(body_edit.decode('utf-8', errors='ignore'))
+                                print(f"{cyan}    Response: {json.dumps(data_edit, indent=2)[:300]}...{reset}")
+                            print(f"\n{bg_kuning}{putih}✅  ACCOUNT CREATED CHECKPOINT!{reset}")
+                            print(f"{cyan}    User ID: {data.get('user_id', 'N/A')}{reset}")
+                            print(f"{cyan}    Username: {username}{reset}")
+                            return False
+                    else:
+                        error_type = self._analyze_error_type(data)
+                        print(f"{merah}    Account creation failed: {error_type}{reset}")
+                        
+                        # If IP block, don't try other endpoint - need new session
+                        if error_type == "ip_block":
+                            print(f"{merah}❌  IP blocked - need new session{reset}")
+                            return False
+                        # For other errors, try next endpoint
                         continue
-                
-                elif status == 403:
-                    print(f"{merah}    403 Forbidden - IP likely blocked{reset}")
-                    break  # Need new IP
-                
-                elif status == 429:
-                    print(f"{kuning}    429 Rate Limited{reset}")
-                    self.stats["rate_limited"] = self.stats.get("rate_limited", 0) + 1
-                    
-                    if ip_attempt < max_ip_retries - 1:
-                        wait_time = random.uniform(60, 120)
-                        print(f"{kuning}    Rate limit cooldown {wait_time:.1f}s{reset}")
-                        await asyncio.sleep(wait_time)
-                    break
-                
-                else:
-                    print(f"{merah}    Endpoint failed with status: {status}{reset}")
+                        
+                except json.JSONDecodeError as e:
+                    print(f"{merah}    JSON parse error: {e}{reset}")
+                    body_preview = response.get("body", b"").decode('utf-8', errors='ignore')[:500]
+                    print(f"{cyan}    Raw response: {body_preview}...{reset}")
+                    # If 200 OK but parse error, might be success
+                    print(f"{hijau}✅  Account likely created (200 OK){reset}")
+                    return True
+                except Exception as e:
+                    print(f"{merah}    Parse error: {e}{reset}")
                     continue
+            
+            elif status == 403:
+                print(f"{merah}    403 Forbidden - IP likely blocked{reset}")
+                return False  # Need new session
+            
+            elif status == 429:
+                print(f"{kuning}    429 Rate Limited - need new session{reset}")
+                self.stats["rate_limited"] = self.stats.get("rate_limited", 0) + 1
+                return False  # Need new session
+            
+            else:
+                print(f"{merah}    Endpoint failed with status: {status}{reset}")
+                continue
         
-        print(f"{merah}❌  Account creation failed after {max_ip_retries} IP attempts{reset}")
+        print(f"{merah}❌  Account creation failed - need new session{reset}")
         return False
     
     def _generate_extra_session_id(self) -> str:
