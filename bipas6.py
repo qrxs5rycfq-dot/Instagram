@@ -1911,6 +1911,388 @@ class AdvancedIPStealthSystem2025:
                 "latency_range": (15, 40),
                 "jitter_range": (3, 8),
                 "packet_loss": (0.2, 0.4)
+            },
+            # TRUSTED COUNTRIES - Australia, Canada, UK, NZ, France, Netherlands, Japan, Singapore
+            # Australia ISPs - VERY TRUSTED
+            "telstra": {
+                "prefixes": ["1.120", "1.124", "101.160", "110.144", "120.144"],
+                "asn": "AS1221",
+                "as_name": "Telstra Corporation Ltd",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide"],
+                "latency_range": (10, 30),
+                "jitter_range": (1, 5),
+                "packet_loss": (0.1, 0.3)
+            },
+            "optus": {
+                "prefixes": ["49.176", "49.180", "121.44", "211.28"],
+                "asn": "AS4804",
+                "as_name": "Optus Mobile",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Sydney", "Melbourne", "Brisbane", "Gold Coast"],
+                "latency_range": (15, 35),
+                "jitter_range": (2, 6),
+                "packet_loss": (0.1, 0.3)
+            },
+            "vodafone_au": {
+                "prefixes": ["101.116", "110.174", "203.221"],
+                "asn": "AS133612",
+                "as_name": "Vodafone Australia",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Sydney", "Melbourne", "Adelaide"],
+                "latency_range": (18, 40),
+                "jitter_range": (3, 8),
+                "packet_loss": (0.2, 0.4)
+            },
+            "tpg": {
+                "prefixes": ["27.33", "49.176", "101.160", "120.148"],
+                "asn": "AS7545",
+                "as_name": "TPG Telecom Limited",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Sydney", "Melbourne", "Brisbane"],
+                "latency_range": (8, 25),
+                "jitter_range": (1, 4),
+                "packet_loss": (0.1, 0.2)
+            },
+            # Canada ISPs - VERY TRUSTED
+            "rogers": {
+                "prefixes": ["24.114", "24.153", "64.231", "99.234"],
+                "asn": "AS812",
+                "as_name": "Rogers Communications Canada Inc.",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Toronto", "Vancouver", "Montreal", "Calgary"],
+                "latency_range": (12, 35),
+                "jitter_range": (2, 6),
+                "packet_loss": (0.1, 0.3)
+            },
+            "bell": {
+                "prefixes": ["70.48", "99.224", "142.117", "174.88"],
+                "asn": "AS577",
+                "as_name": "Bell Canada",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Toronto", "Montreal", "Ottawa", "Halifax"],
+                "latency_range": (10, 30),
+                "jitter_range": (1, 5),
+                "packet_loss": (0.1, 0.2)
+            },
+            "telus": {
+                "prefixes": ["24.68", "64.180", "70.66", "184.64"],
+                "asn": "AS852",
+                "as_name": "TELUS Communications Inc.",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Vancouver", "Edmonton", "Calgary", "Victoria"],
+                "latency_range": (15, 40),
+                "jitter_range": (2, 7),
+                "packet_loss": (0.1, 0.3)
+            },
+            "shaw": {
+                "prefixes": ["24.64", "68.144", "70.64", "184.64"],
+                "asn": "AS6327",
+                "as_name": "Shaw Communications Inc.",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Calgary", "Edmonton", "Vancouver", "Winnipeg"],
+                "latency_range": (10, 30),
+                "jitter_range": (1, 5),
+                "packet_loss": (0.1, 0.2)
+            },
+            # UK ISPs - TRUSTED
+            "bt": {
+                "prefixes": ["2.24", "2.96", "86.128", "90.192"],
+                "asn": "AS2856",
+                "as_name": "British Telecommunications PLC",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["London", "Manchester", "Birmingham", "Glasgow"],
+                "latency_range": (8, 25),
+                "jitter_range": (1, 4),
+                "packet_loss": (0.1, 0.2)
+            },
+            "ee": {
+                "prefixes": ["2.120", "2.216", "82.132", "86.0"],
+                "asn": "AS12576",
+                "as_name": "EE Limited",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["London", "Bristol", "Leeds", "Edinburgh"],
+                "latency_range": (10, 30),
+                "jitter_range": (2, 5),
+                "packet_loss": (0.1, 0.3)
+            },
+            "vodafone_uk": {
+                "prefixes": ["31.52", "77.96", "92.40", "176.248"],
+                "asn": "AS25135",
+                "as_name": "Vodafone UK",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["London", "Newbury", "Birmingham", "Manchester"],
+                "latency_range": (12, 35),
+                "jitter_range": (2, 6),
+                "packet_loss": (0.1, 0.3)
+            },
+            "three_uk": {
+                "prefixes": ["2.24", "31.94", "92.233", "176.24"],
+                "asn": "AS206067",
+                "as_name": "Three UK",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["London", "Reading", "Liverpool"],
+                "latency_range": (15, 40),
+                "jitter_range": (3, 8),
+                "packet_loss": (0.2, 0.4)
+            },
+            "sky": {
+                "prefixes": ["2.120", "5.64", "78.144", "90.240"],
+                "asn": "AS5607",
+                "as_name": "Sky UK Limited",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["London", "Livingston", "Leeds"],
+                "latency_range": (10, 28),
+                "jitter_range": (1, 5),
+                "packet_loss": (0.1, 0.2)
+            },
+            # New Zealand ISPs - TRUSTED
+            "spark": {
+                "prefixes": ["49.224", "49.228", "60.234", "122.56"],
+                "asn": "AS4771",
+                "as_name": "Spark New Zealand Trading Ltd",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Auckland", "Wellington", "Christchurch"],
+                "latency_range": (15, 40),
+                "jitter_range": (2, 7),
+                "packet_loss": (0.1, 0.3)
+            },
+            "vodafone_nz": {
+                "prefixes": ["27.252", "101.98", "103.6", "111.68"],
+                "asn": "AS133612",
+                "as_name": "Vodafone New Zealand Limited",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Auckland", "Wellington", "Hamilton"],
+                "latency_range": (18, 45),
+                "jitter_range": (3, 8),
+                "packet_loss": (0.2, 0.4)
+            },
+            "2degrees": {
+                "prefixes": ["49.224", "125.236", "182.160"],
+                "asn": "AS23655",
+                "as_name": "Two Degrees Mobile Ltd",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Auckland", "Wellington", "Christchurch"],
+                "latency_range": (20, 50),
+                "jitter_range": (4, 10),
+                "packet_loss": (0.2, 0.5)
+            },
+            # France ISPs - TRUSTED
+            "orange_fr": {
+                "prefixes": ["2.4", "80.8", "86.192", "90.0"],
+                "asn": "AS3215",
+                "as_name": "Orange S.A.",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Paris", "Lyon", "Marseille", "Toulouse"],
+                "latency_range": (8, 25),
+                "jitter_range": (1, 4),
+                "packet_loss": (0.1, 0.2)
+            },
+            "sfr": {
+                "prefixes": ["37.160", "86.192", "90.76", "92.128"],
+                "asn": "AS15557",
+                "as_name": "SFR SA",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Paris", "Lyon", "Nice", "Bordeaux"],
+                "latency_range": (10, 30),
+                "jitter_range": (2, 5),
+                "packet_loss": (0.1, 0.3)
+            },
+            "bouygues": {
+                "prefixes": ["5.48", "37.168", "78.224", "109.8"],
+                "asn": "AS5410",
+                "as_name": "Bouygues Telecom SA",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Paris", "Nantes", "Strasbourg"],
+                "latency_range": (12, 35),
+                "jitter_range": (2, 6),
+                "packet_loss": (0.1, 0.3)
+            },
+            "free_fr": {
+                "prefixes": ["82.64", "88.160", "90.0", "92.168"],
+                "asn": "AS12322",
+                "as_name": "Free SAS",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Paris", "Bordeaux", "Montpellier"],
+                "latency_range": (8, 25),
+                "jitter_range": (1, 4),
+                "packet_loss": (0.1, 0.2)
+            },
+            # Netherlands ISPs - TRUSTED
+            "kpn": {
+                "prefixes": ["77.164", "80.56", "84.24", "94.208"],
+                "asn": "AS1136",
+                "as_name": "KPN B.V.",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Amsterdam", "Rotterdam", "The Hague", "Utrecht"],
+                "latency_range": (5, 20),
+                "jitter_range": (1, 3),
+                "packet_loss": (0.1, 0.2)
+            },
+            "vodafone_nl": {
+                "prefixes": ["84.82", "86.82", "95.96", "109.36"],
+                "asn": "AS1103",
+                "as_name": "Vodafone Libertel B.V.",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Amsterdam", "Eindhoven", "Maastricht"],
+                "latency_range": (8, 25),
+                "jitter_range": (1, 4),
+                "packet_loss": (0.1, 0.2)
+            },
+            "tmobile_nl": {
+                "prefixes": ["37.200", "77.248", "94.208", "217.62"],
+                "asn": "AS13127",
+                "as_name": "T-Mobile Netherlands B.V.",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Amsterdam", "Rotterdam", "Groningen"],
+                "latency_range": (10, 30),
+                "jitter_range": (2, 5),
+                "packet_loss": (0.1, 0.3)
+            },
+            # Japan ISPs - TRUSTED
+            "ntt_docomo": {
+                "prefixes": ["1.66", "1.72", "49.96", "126.160"],
+                "asn": "AS9605",
+                "as_name": "NTT DOCOMO, INC.",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Tokyo", "Osaka", "Nagoya", "Yokohama"],
+                "latency_range": (5, 20),
+                "jitter_range": (1, 3),
+                "packet_loss": (0.1, 0.2)
+            },
+            "softbank": {
+                "prefixes": ["126.0", "126.72", "220.96", "220.152"],
+                "asn": "AS17676",
+                "as_name": "SoftBank Corp.",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Tokyo", "Osaka", "Fukuoka", "Sapporo"],
+                "latency_range": (8, 25),
+                "jitter_range": (1, 4),
+                "packet_loss": (0.1, 0.2)
+            },
+            "au_kddi": {
+                "prefixes": ["1.66", "106.128", "111.97", "182.164"],
+                "asn": "AS2516",
+                "as_name": "KDDI CORPORATION",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Tokyo", "Nagoya", "Kobe", "Sendai"],
+                "latency_range": (8, 25),
+                "jitter_range": (1, 4),
+                "packet_loss": (0.1, 0.2)
+            },
+            # Singapore ISPs - TRUSTED
+            "singtel": {
+                "prefixes": ["27.104", "42.60", "116.88", "219.74"],
+                "asn": "AS7473",
+                "as_name": "Singapore Telecommunications Ltd",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Singapore"],
+                "latency_range": (5, 15),
+                "jitter_range": (1, 3),
+                "packet_loss": (0.1, 0.2)
+            },
+            "starhub": {
+                "prefixes": ["27.125", "42.60", "101.127", "182.55"],
+                "asn": "AS4657",
+                "as_name": "StarHub Ltd",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Singapore"],
+                "latency_range": (5, 15),
+                "jitter_range": (1, 3),
+                "packet_loss": (0.1, 0.2)
+            },
+            "m1": {
+                "prefixes": ["27.125", "42.60", "116.88", "203.125"],
+                "asn": "AS17547",
+                "as_name": "M1 Limited",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Singapore"],
+                "latency_range": (5, 15),
+                "jitter_range": (1, 3),
+                "packet_loss": (0.1, 0.2)
+            },
+            # Additional US ISPs
+            "cox": {
+                "prefixes": ["68.98", "68.230", "71.212", "76.176"],
+                "asn": "AS22773",
+                "as_name": "Cox Communications Inc.",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Atlanta", "Las Vegas", "Phoenix", "San Diego"],
+                "latency_range": (10, 30),
+                "jitter_range": (2, 6),
+                "packet_loss": (0.1, 0.3)
+            },
+            "charter": {
+                "prefixes": ["24.14", "65.24", "72.68", "97.80"],
+                "asn": "AS20115",
+                "as_name": "Charter Communications",
+                "ttl_range": (64, 128),
+                "window_range": (64240, 65535),
+                "mss_range": (1360, 1460),
+                "cities": ["Stamford", "St Louis", "Denver"],
+                "latency_range": (8, 25),
+                "jitter_range": (1, 5),
+                "packet_loss": (0.1, 0.2)
             }
         }
         return isp_configs.get(isp_name)
@@ -2439,21 +2821,35 @@ class AdvancedIPStealthSystem2025:
         new_ips = []
         
         # Multi-country ISP list with weighted selection
+        # PRIORITIZE TRUSTED COUNTRIES - US, AU, CA, UK, NZ (Five Eyes countries are trusted by Instagram)
+        # EXCLUDE: Indonesia, India, Brazil - HIGH CHECKPOINT RISK
         country_isps = {
-            "ID": ["telkomsel", "indosat", "xl", "tri", "smartfren"],  # Indonesia
-            "US": ["verizon", "att", "tmobile", "comcast", "spectrum"],  # USA
-            "BR": ["claro_br", "vivo_br", "tim_br"],  # Brazil
-            "IN": ["jio", "airtel_in", "vi_in"],  # India
-            "DE": ["telekom_de", "vodafone_de", "o2_de"],  # Germany
+            "US": ["verizon", "att", "tmobile", "comcast", "spectrum", "cox", "charter"],  # USA - TOP PRIORITY
+            "AU": ["telstra", "optus", "vodafone_au", "tpg"],  # Australia - VERY TRUSTED
+            "CA": ["rogers", "bell", "telus", "shaw"],  # Canada - VERY TRUSTED
+            "UK": ["bt", "ee", "vodafone_uk", "three_uk", "sky"],  # UK - TRUSTED
+            "NZ": ["spark", "vodafone_nz", "2degrees"],  # New Zealand - TRUSTED
+            "DE": ["telekom_de", "vodafone_de", "o2_de"],  # Germany - TRUSTED
+            "FR": ["orange_fr", "sfr", "bouygues", "free_fr"],  # France - TRUSTED
+            "NL": ["kpn", "vodafone_nl", "tmobile_nl"],  # Netherlands - TRUSTED
+            "JP": ["ntt_docomo", "softbank", "au_kddi"],  # Japan - TRUSTED
+            "SG": ["singtel", "starhub", "m1"],  # Singapore - TRUSTED
         }
         
-        # Random country selection with weights (more variety)
+        # Random country selection with weights - TRUSTED COUNTRIES ONLY
+        # US & AU highest, then CA/UK/NZ, then EU/Asia trusted
         countries = list(country_isps.keys())
-        country_weights = [30, 25, 20, 15, 10]  # ID gets more weight but others also selected
+        country_weights = [30, 20, 15, 12, 8, 5, 4, 3, 2, 1]  # US=30%, AU=20%, CA=15%, UK=12%, etc.
         
-        # Select 3-4 countries randomly
-        selected_countries = random.choices(countries, weights=country_weights, k=random.randint(3, 4))
+        # Select 3-5 countries randomly with US & AU prioritized
+        selected_countries = random.choices(countries, weights=country_weights, k=random.randint(3, 5))
         selected_countries = list(set(selected_countries))  # Remove duplicates
+        # Ensure US is always included as primary
+        if "US" not in selected_countries:
+            selected_countries.insert(0, "US")
+        # Ensure AU is always included as secondary
+        if "AU" not in selected_countries and len(selected_countries) < 5:
+            selected_countries.insert(1, "AU")
         
         print(f"{cyan}    Selected countries: {selected_countries}{reset}")
         
@@ -10547,8 +10943,8 @@ class InstagramAccountCreator2025:
             print(f"{merah}❌  Initialization failed: {e}{reset}")
             return False
 
-    async def get_jazoest(self, url="https://www.instagram.com/accounts/emailsignup/"):
-        """Enhanced jazoest extraction dengan caching"""
+    async def get_jazoest(self, session_id: str = None, url: str = "https://www.instagram.com/accounts/emailsignup/"):
+        """Get real jazoest from Instagram signup page - NOT generated manually"""
         # Check cache
         cache_key = hashlib.md5(url.encode()).hexdigest()
         current_time = time.time()
@@ -10557,62 +10953,115 @@ class InstagramAccountCreator2025:
             current_time - self.jazoest_cache[cache_key]["timestamp"] < self.jazoest_ttl):
             return self.jazoest_cache[cache_key]["value"]
         
-        # print(f"{cyan}🔍  Fetching fresh jazoest from {url}{reset}")
+        print(f"{cyan}🔍  Fetching real jazoest from signup page...{reset}")
         
         try:
-            # response = await self.request_orchestrator.make_request(
-            #     session_id="temp_session",  # Temporary session for jazoest fetch
-            #     method="GET",
-            #     url=url,
-            #     headers={
-            #         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            #         "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
-            #     }
-            # )
+            # Fetch the actual signup page to get real jazoest
+            if session_id and hasattr(self, 'request_orchestrator'):
+                response = await self.request_orchestrator.make_request(
+                    session_id=session_id,
+                    method="GET",
+                    url=url,
+                    request_type="navigate"
+                )
+                
+                if response.get("status") == 200:
+                    html = response.get("body", b"").decode('utf-8', errors='ignore')
+                    
+                    # Multiple regex patterns to extract jazoest from HTML
+                    patterns = [
+                        r'name="jazoest"\s+value="(\d+)"',  # Form input field
+                        r'value="(\d+)"\s+name="jazoest"',  # Alternative order
+                        r'"jazoest":"(\d+)"',               # JSON in script
+                        r'"jazoest":\s*"(\d+)"',            # JSON with space
+                        r'jazoest=(\d+)',                   # URL parameter
+                        r'jazoest["\']?\s*[:=]\s*["\']?(\d+)',  # Generic pattern
+                        r'input.*?jazoest.*?value="(\d+)"', # Input tag
+                    ]
+                    
+                    for pattern in patterns:
+                        match = re.search(pattern, html, re.IGNORECASE)
+                        if match:
+                            jazoest_value = match.group(1)
+                            
+                            # Validate jazoest (usually 4-5 digits, starts with 2)
+                            if jazoest_value.isdigit() and 1000 <= int(jazoest_value) <= 99999:
+                                self.jazoest_cache[cache_key] = {
+                                    "value": jazoest_value,
+                                    "timestamp": current_time,
+                                    "source": "fetched_real"
+                                }
+                                print(f"{hijau}✅  Got real jazoest: {jazoest_value}{reset}")
+                                return jazoest_value
+                    
+                    # Also try to find in shared_data/config
+                    shared_data_match = re.search(r'window\._sharedData\s*=\s*(\{.+?\});', html)
+                    if shared_data_match:
+                        try:
+                            shared_data = json.loads(shared_data_match.group(1))
+                            if "config" in shared_data and "jazoest" in shared_data.get("config", {}):
+                                jazoest_value = str(shared_data["config"]["jazoest"])
+                                self.jazoest_cache[cache_key] = {
+                                    "value": jazoest_value,
+                                    "timestamp": current_time,
+                                    "source": "shared_data"
+                                }
+                                print(f"{hijau}✅  Got real jazoest from shared_data: {jazoest_value}{reset}")
+                                return jazoest_value
+                        except:
+                            pass
             
-            # if response.get("status") == 200:
-            #     html = response.get("body", b"").decode('utf-8', errors='ignore')
-                
-            #     # Multiple regex patterns
-            #     patterns = [
-            #         r'jazoest=(\d+)',
-            #         r'"jazoest":"(\d+)"',
-            #         r'name="jazoest" value="(\d+)"',
-            #         r'jazoest[=:]\s*(\d+)',
-            #         r'jazoest.*?(\d{4,5})'
-            #     ]
-                
-            #     for pattern in patterns:
-            #         match = re.search(pattern, html)
-            #         if match:
-            #             jazoest_value = match.group(1)
+            # Try direct request if no session
+            import aiohttp
+            async with aiohttp.ClientSession() as temp_session:
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                    "Accept-Language": "en-US,en;q=0.9",
+                }
+                async with temp_session.get(url, headers=headers, ssl=False) as resp:
+                    if resp.status == 200:
+                        html = await resp.text()
                         
-            #             # Validate jazoest (usually 4-5 digits)
-            #             if jazoest_value.isdigit() and 1000 <= int(jazoest_value) <= 99999:
-            #                 self.jazoest_cache[cache_key] = {
-            #                     "value": jazoest_value,
-            #                     "timestamp": current_time,
-            #                     "source": "fetched"
-            #                 }
-            #                 print(f"{hijau}✅  Got jazoest: {jazoest_value}{reset}")
-            #                 return jazoest_value
+                        # Same patterns as above
+                        patterns = [
+                            r'name="jazoest"\s+value="(\d+)"',
+                            r'"jazoest":"(\d+)"',
+                            r'jazoest=(\d+)',
+                        ]
+                        
+                        for pattern in patterns:
+                            match = re.search(pattern, html, re.IGNORECASE)
+                            if match:
+                                jazoest_value = match.group(1)
+                                if jazoest_value.isdigit() and 1000 <= int(jazoest_value) <= 99999:
+                                    self.jazoest_cache[cache_key] = {
+                                        "value": jazoest_value,
+                                        "timestamp": current_time,
+                                        "source": "direct_fetch"
+                                    }
+                                    print(f"{hijau}✅  Got real jazoest (direct): {jazoest_value}{reset}")
+                                    return jazoest_value
             
-            # Fallback generation
-            session_hash = hashlib.sha256(str(time.time()).encode()).hexdigest()
-            fallback = str(sum(ord(c) for c in session_hash) % 10000 + 1000)
+            # If still no jazoest found, use a realistic format based on device_id
+            # Instagram jazoest is typically calculated from device_id/phone_id
+            # Format: 2 + sum of ASCII values of phone_id
+            device_id = str(uuid.uuid4()).replace('-', '')
+            ascii_sum = sum(ord(c) for c in device_id)
+            fallback = f"2{ascii_sum % 10000:04d}"  # Always starts with 2
             
             self.jazoest_cache[cache_key] = {
                 "value": fallback,
                 "timestamp": current_time,
-                "source": "fallback"
+                "source": "calculated"
             }
             
-            print(f"{hijau}✅  Got jazoest: {fallback}{reset}")
+            print(f"{kuning}⚠️  Using calculated jazoest: {fallback}{reset}")
             return fallback
             
         except Exception as e:
             print(f"{merah}❌  Error getting jazoest: {e}{reset}")
-            # Emergency fallback
+            # Emergency fallback - still use proper format
             return "22801"
     
     async def _warm_up_systems(self):
@@ -11282,8 +11731,8 @@ class InstagramAccountCreator2025:
             if not session:
                 return False
             
-            # Get fresh jazoest
-            jazoest = await self.get_jazoest()
+            # Get fresh jazoest from real signup page
+            jazoest = await self.get_jazoest(session_id=session_id)
             
             # Prepare request dengan parameter lengkap
             request_data = {
@@ -11358,8 +11807,8 @@ class InstagramAccountCreator2025:
             if not session:
                 return None
             
-            # Get fresh jazoest
-            jazoest = await self.get_jazoest()
+            # Get fresh jazoest from real signup page
+            jazoest = await self.get_jazoest(session_id=session_id)
             
             # Prepare request dengan parameter lengkap
             request_data = {
@@ -11437,32 +11886,15 @@ class InstagramAccountCreator2025:
     async def _create_instagram_account(self, session_id: str, email: str, 
                                       username: str, password: str, 
                                       signup_code: str) -> bool:
-        """Create Instagram account dengan semua perbaikan"""
+        """Create Instagram account dengan semua perbaikan
         
-        max_ip_retries = 3
+        IMPORTANT: No IP rotation during session - if it fails, return False
+        to signal that a NEW SESSION is needed. Rotating IP mid-process is detectable.
+        """
         
-        for ip_attempt in range(max_ip_retries):
-            print(f"{cyan}    IP Attempt {ip_attempt + 1}/{max_ip_retries}{reset}")
-            
-            # Rotate IP jika bukan attempt pertama
-            if ip_attempt > 0:
-                print(f"{cyan}    Rotating to fresh IP and fingerprints...{reset}")
-                success = await self.rotate_ip_with_fingerprint(session_id)
-                
-                if not success:
-                    print(f"{merah}    Failed to rotate IP, trying fallback...{reset}")
-                    # Fallback: coba get IP config baru saja
-                    new_ip_config = self.ip_system.get_fresh_ip_config(min_health=75)
-                    session = self.session_manager.get_session(session_id)
-                    if session:
-                        session["ip_config"] = new_ip_config
-                        session["headers"] = {**session.get("headers", {}), **new_ip_config.get("headers", {})}
-                
-                # Cooldown sebelum attempt baru
-                if ip_attempt > 0:
-                    cooldown = random.uniform(15, 30)
-                    print(f"{kuning}    Cooldown {cooldown:.1f}s before new IP attempt{reset}")
-                    await asyncio.sleep(cooldown)
+        # NO IP ROTATION - single attempt per session to avoid detection
+        # If this fails, caller should create a completely new session
+        print(f"{cyan}    Attempting account creation (no IP rotation for stealth){reset}")
             
             # Get session dengan headers terkini
             session = self.session_manager.get_session_with_headers(session_id)
@@ -11470,8 +11902,8 @@ class InstagramAccountCreator2025:
                 print(f"{merah}    Session not found after rotation{reset}")
                 return False
             
-            # Get fresh jazoest
-            jazoest = await self.get_jazoest()
+            # Get fresh jazoest from real signup page
+            jazoest = await self.get_jazoest(session_id=session_id)
             
             # Prepare account data dengan FORMAT YANG BENAR
             month, day, year = self._generate_birthdate()
