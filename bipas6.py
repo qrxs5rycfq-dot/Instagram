@@ -66,7 +66,14 @@ try:
     HAVE_AIORPC = True
 except ImportError:
     HAVE_AIORPC = False
-    print(f"{merah}❌  aiohttp not installed. Install with: pip install aiohttp{reset}")
+    # Note: Color variables defined below, using simple print here
+    print("❌  aiohttp not installed. Install with: pip install aiohttp")
+
+try:
+    import brotli
+    _HAS_BROTLI = True
+except ImportError:
+    _HAS_BROTLI = False
 
 logger = logging.getLogger("ultraboostedv13_protocol_spoofing_indonesia")
 logger.setLevel(logging.INFO)
@@ -1022,137 +1029,59 @@ class AdvancedIPStealthSystem2025:
     
     def _generate_enhanced_headers(self, ip_info: Dict[str, Any], user_agent: str, 
                                  connection_type: str = "mobile") -> Dict[str, str]:
-        """Generate enhanced headers dengan connection type aware - FIXED"""
-        location = ip_info.get("location", {})
-        device_fp = ip_info.get("device_fingerprint", {})
-        network_metrics = ip_info.get("network_metrics", {})
-
-        APP_IDS = [
-            "1217981644879628",  # Instagram Lite
-            "124024574287414",   # Instagram
-            "936619743392459",   # Facebook (kadang dipakai)
-            "256357684841271",   # IG App ID alternatif
-            "382690043351011",   # IG Web ID baru
-            "567067343352427",   # IG Business ID
-        ]
-
-        ASBD_IDS = [
-            "700229", "717986", "738585",  # ← ID yang lebih baru
-            "754782", "771975", "789687",
-            "804456", "821594", "839398",
-            "856086", "873496", "890423",
-            "907698", "924485", "941738"
-        ]
-
-        app_id = random.choice(APP_IDS)
-        asbd_id = random.choice(ASBD_IDS)
-        web_session_id = self._generate_web_session_id()
+        """Generate realistic HTTP headers that match common browser behavior.
         
-        # Base headers
+        Headers are kept minimal and standard to avoid detection.
+        Custom X-* headers that are not actually sent by real browsers are removed.
+        """
+        device_fp = ip_info.get("device_fingerprint", {})
+        
+        # Standard Instagram App IDs (the main web app ID is most common)
+        APP_IDS = [
+            "936619743392459",   # Instagram main web app
+            "124024574287414",   # Instagram alternative
+        ]
+        app_id = random.choice(APP_IDS)
+        
+        # Determine Chrome version from device fingerprint or use reasonable default
+        chrome_version = device_fp.get("chrome_version", "120.0.0.0").split('.')[0]
+        
+        # Generate standard browser headers that match real Chrome on Android
         headers = {
-            # Standard headers
-            "User-Agent": user_agent,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+            # Essential headers - order matters for fingerprinting
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
             "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
             "Accept-Encoding": "gzip, deflate, br",
             "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
+            "User-Agent": user_agent,
             
-            # Security headers
+            # Sec-* headers that Chrome actually sends
+            "Sec-Ch-Ua": f'"Chromium";v="{chrome_version}", "Not_A Brand";v="8"',
+            "Sec-Ch-Ua-Mobile": "?1" if connection_type == "mobile" else "?0",
+            "Sec-Ch-Ua-Platform": '"Android"',
             "Sec-Fetch-Dest": "document",
             "Sec-Fetch-Mode": "navigate",
             "Sec-Fetch-Site": "none",
             "Sec-Fetch-User": "?1",
             
-            # Connection type specific headers - FIXED
-            "X-IG-Connection-Type": "CELL" if connection_type == "mobile" else "WIFI",
-            "X-IG-Network-Type": network_metrics.get("network_type", "4G" if connection_type == "mobile" else "WIFI"),
-            "X-IG-Bandwidth-Speed": f"{int(network_metrics.get('bandwidth_mbps', 50) * 1000)}",
-            "X-IG-Signal-Strength": str(network_metrics.get("signal_strength", -65)),
+            # Standard navigation headers
+            "Upgrade-Insecure-Requests": "1",
         }
         
-        # Mobile specific headers
-        if connection_type == "mobile":
-            headers.update({
-                "X-IG-Carrier": location.get("carrier", ""),
-                "X-IG-MCC": location.get("mcc", "510"),
-                "X-IG-MNC": location.get("mnc", "10"),
-                "X-IG-Phone-Number": f"+62{random.randint(811, 899)}{random.randint(1000000, 9999999)}",
-            })
-        
-        # Device headers
-        headers.update({
-            "X-Requested-With": "XMLHttpRequest",
+        # Add Instagram-specific headers only when needed (for API requests)
+        # These are legitimate headers that Instagram's web app sends
+        instagram_api_headers = {
             "X-Ig-App-Id": app_id,
-            "X-IG-Device-ID": device_fp.get("device_id", ""),
-            "X-IG-Android-ID": device_fp.get("android_id", ""),
-            "X-IG-Capabilities": "3brTvw==",
-            "X-IG-Bandwidth-TotalTime": f"{random.randint(1000, 5000)}",
-            "X-IG-Bandwidth-TotalBytes": f"{random.randint(100000, 500000)}",
-            
-            # IP headers
-            "X-Forwarded-For": ip_info["ip"],
-            "X-Real-IP": ip_info["ip"],
-            "X-Client-IP": ip_info["ip"],
-            "CF-Connecting-IP": ip_info["ip"],
-            "True-Client-IP": ip_info["ip"],
-            "X-Originating-IP": ip_info["ip"],
-            "X-Remote-IP": ip_info["ip"],
-            "X-Remote-Addr": ip_info["ip"],
-            
-            # Location headers
-            "X-ASN": location.get("asn", ""),
-            "X-ISP": location.get("isp", ""),
-            "X-Country": location.get("country_code", "ID"),
-            "X-City": location.get("city", "Jakarta"),
-            "X-Region": location.get("province", "DKI Jakarta"),
-            "X-Time-Zone": location.get("timezone", "Asia/Jakarta"),
-            "X-Latitude": str(location.get("latitude", -6.2088)),
-            "X-Longitude": str(location.get("longitude", 106.8456)),
-            "X-Postal-Code": str(random.randint(10000, 17000)),
-            
-            # Network headers
-            "X-Network-Type": network_metrics.get("network_type", "4G"),
-            "X-Connection-Type": connection_type.upper(),
-            
-            # Session headers
-            "X-Session-ID": str(uuid.uuid4())[:12],
-            "X-Request-ID": str(uuid.uuid4()),
-            "X-Correlation-ID": str(uuid.uuid4()),
-            "X-Timestamp": str(int(time.time() * 1000)),
-            
-            # Protocol headers
-            "X-Protocol-Version": "HTTP/2",
-            "X-TLS-Version": "TLSv1.3",
-            "X-HTTP2-Settings": base64.b64encode(
-                json.dumps(self._generate_http2_settings("chrome_mobile_samsung")).encode()
-            ).decode(),
-            
-            # Device capability headers
-            "X-Device-Memory": str(device_fp.get("device_memory", 8)),
-            "X-Viewport-Width": device_fp.get("screen_resolution", "1080x2400").split('x')[0],
-            "X-Viewport-Height": str(int(device_fp.get("screen_resolution", "1080x2400").split('x')[1]) - 100),
-            "X-Device-Pixel-Ratio": str(device_fp.get("dpi", 440) / 160),
-            
-            # Instagram specific
+            "X-Requested-With": "XMLHttpRequest",
             "X-Ig-Www-Claim": "0",
-            "X-Instagram-AJAX": "random_id",
-            "X-CSRFToken": "missing",
-            "X-Asbd-Id": asbd_id,
-            "X-Web-Session-Id": web_session_id,
-            "X-IG-Set-Authorization": "Bearer IGT:2:",
-            
-            # Additional headers
-            "X-Frame-Options": "SAMEORIGIN",
-            "X-Content-Type-Options": "nosniff",
-            "X-XSS-Protection": "1; mode=block",
-            "Referer": "https://www.instagram.com/accounts/emailsignup/",
-            "Origin": "https://www.instagram.com",
-            "DNT": "1",
-            "TE": "Trailers"
-        })
+        }
+        
+        # Only include X-Ig headers for API-style requests
+        headers.update(instagram_api_headers)
+        
+        # Origin and Referer for navigation context
+        headers["Origin"] = "https://www.instagram.com"
+        headers["Referer"] = "https://www.instagram.com/"
         
         return headers
     
@@ -2537,8 +2466,12 @@ class WebRTCWebGL_Spoofing2025:
         }
     
     def get_complete_fingerprint(self, device_type: str = "android", brand: str = "samsung", connection_type: str = "mobile") -> Dict[str, Any]:
-        """Get complete fingerprint untuk semua komponen dengan connection type awareness"""
-        # Pilih config berdasarkan device type, brand, DAN connection_type
+        """Get complete fingerprint that matches real device characteristics.
+        
+        Fingerprints are generated to be consistent with the device profile
+        and avoid unique identifiers that could be used for tracking.
+        """
+        # Select profiles based on device type and brand
         if device_type == "ios":
             webrtc_profile = "ios_safari"
             webgl_profile = "apple_gpu"
@@ -2554,7 +2487,7 @@ class WebRTCWebGL_Spoofing2025:
             font_profile = "android_xiaomi"
             screen_profile = "xiaomi_14_pro"
         else:
-            # Default Samsung
+            # Default Samsung (most common in Indonesia)
             webrtc_profile = "android_chrome_samsung"
             webgl_profile = "adreno_750"
             canvas_profile = "samsung_galaxy_s24"
@@ -2562,7 +2495,7 @@ class WebRTCWebGL_Spoofing2025:
             font_profile = "android_samsung"
             screen_profile = "samsung_galaxy_s24"
         
-        # Generate fingerprint
+        # Generate fingerprint with realistic values
         fingerprint = {
             "webrtc": self.get_webrtc_fingerprint(webrtc_profile),
             "webgl": self.get_webgl_fingerprint(webgl_profile),
@@ -2572,29 +2505,16 @@ class WebRTCWebGL_Spoofing2025:
             "screen": self.screen_configs.get(screen_profile, {}),
             "device_type": device_type,
             "brand": brand,
-            "connection_type": connection_type,  # Tambah ini
-            "timestamp": int(time.time()),
-            "fingerprint_id": f"fp_{int(time.time())}_{random.randint(1000, 9999)}",
-            "composite_hash": hashlib.sha256(
-                f"{device_type}{brand}{connection_type}{time.time()}{random.getrandbits(128)}".encode()
-            ).hexdigest()[:64]
-        }
-        
-        # Tambahkan noise untuk membuat fingerprint unik
-        fingerprint["noise_factors"] = {
-            "canvas_noise": random.uniform(0.001, 0.005),
-            "audio_noise": random.uniform(0.0001, 0.001),
-            "timing_noise": random.uniform(0.1, 0.5),
-            "rendering_noise": random.uniform(0.01, 0.1)
+            "connection_type": connection_type,
         }
         
         return fingerprint
     
     def get_webrtc_fingerprint(self, profile: str = "android_chrome_samsung") -> Dict[str, Any]:
-        """Get enhanced WebRTC fingerprint"""
+        """Get realistic WebRTC fingerprint matching real browser behavior."""
         config = self.webrtc_configs.get(profile, self.webrtc_configs["android_chrome_samsung"])
         
-        # Generate ICE candidates
+        # Generate ICE candidates that match real device behavior
         ice_candidates = self._generate_ice_candidates_enhanced()
         
         # Generate SDP
@@ -2606,39 +2526,33 @@ class WebRTCWebGL_Spoofing2025:
             "local_description": {
                 "type": "offer",
                 "sdp": sdp
-            },
-            "fingerprint_hash": hashlib.sha256(
-                f"{profile}{time.time()}{json.dumps(config)}".encode()
-            ).hexdigest()[:32],
-            "metadata": {
-                "profile": profile,
-                "generated_at": time.time(),
-                "candidate_count": len(ice_candidates)
             }
         }
     
     def _generate_ice_candidates_enhanced(self) -> List[Dict[str, Any]]:
-        """Generate enhanced ICE candidates"""
+        """Generate realistic ICE candidates matching real WebRTC behavior."""
         candidates = []
-        candidate_types = ["host", "srflx", "prflx"]
+        # Host candidates are most common in mobile scenarios
+        candidate_types = ["host", "host", "srflx"]
         
-        for i in range(random.randint(3, 6)):
+        for i in range(random.randint(2, 4)):
             candidate_type = random.choice(candidate_types)
             
             if candidate_type == "host":
-                foundation = random.randint(1, 9999)
+                foundation = random.randint(1000, 9999)
                 component_id = 1
                 transport = "udp"
-                priority = random.randint(2113937151, 2113937151)
-                local_ip = f"192.168.{random.randint(1, 254)}.{random.randint(1, 254)}"
-                port = random.randint(10000, 60000)
+                # Realistic priority range for host candidates
+                priority = random.randint(2113929216, 2113939216)
+                # Common private IP ranges
+                local_ip = f"192.168.{random.randint(0, 255)}.{random.randint(2, 254)}"
+                port = random.randint(49152, 65535)  # Ephemeral port range
                 typ = "host"
                 
                 candidate = {
                     "candidate": f"candidate:{foundation} {component_id} {transport} {priority} {local_ip} {port} typ {typ}",
                     "sdpMid": "0",
                     "sdpMLineIndex": 0,
-                    "usernameFragment": str(uuid.uuid4())[:16],
                     "type": typ,
                     "protocol": transport,
                     "address": local_ip,
@@ -2646,53 +2560,24 @@ class WebRTCWebGL_Spoofing2025:
                     "priority": priority
                 }
                 
-            elif candidate_type == "srflx":
-                foundation = random.randint(10000, 19999)
+            else:  # srflx
+                foundation = random.randint(1000, 9999)
                 component_id = 1
                 transport = "udp"
-                priority = random.randint(1677729535, 1677729535)
-                local_ip = f"192.168.{random.randint(1, 254)}.{random.randint(1, 254)}"
-                port = random.randint(10000, 60000)
-                rel_addr = f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}"
-                rel_port = random.randint(10000, 60000)
+                # Realistic priority for server reflexive candidates
+                priority = random.randint(1677720576, 1677730576)
+                local_ip = f"192.168.{random.randint(0, 255)}.{random.randint(2, 254)}"
+                port = random.randint(49152, 65535)
                 typ = "srflx"
                 
                 candidate = {
-                    "candidate": f"candidate:{foundation} {component_id} {transport} {priority} {local_ip} {port} typ {typ} raddr {rel_addr} rport {rel_port}",
+                    "candidate": f"candidate:{foundation} {component_id} {transport} {priority} {local_ip} {port} typ {typ}",
                     "sdpMid": "0",
                     "sdpMLineIndex": 0,
-                    "usernameFragment": str(uuid.uuid4())[:16],
                     "type": typ,
                     "protocol": transport,
                     "address": local_ip,
                     "port": port,
-                    "relatedAddress": rel_addr,
-                    "relatedPort": rel_port,
-                    "priority": priority
-                }
-                
-            else:  # prflx
-                foundation = random.randint(20000, 29999)
-                component_id = 1
-                transport = "udp"
-                priority = random.randint(1677729535, 1677729535)
-                local_ip = f"192.168.{random.randint(1, 254)}.{random.randint(1, 254)}"
-                port = random.randint(10000, 60000)
-                rel_addr = f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}"
-                rel_port = random.randint(10000, 60000)
-                typ = "prflx"
-                
-                candidate = {
-                    "candidate": f"candidate:{foundation} {component_id} {transport} {priority} {local_ip} {port} typ {typ} raddr {rel_addr} rport {rel_port}",
-                    "sdpMid": "0",
-                    "sdpMLineIndex": 0,
-                    "usernameFragment": str(uuid.uuid4())[:16],
-                    "type": typ,
-                    "protocol": transport,
-                    "address": local_ip,
-                    "port": port,
-                    "relatedAddress": rel_addr,
-                    "relatedPort": rel_port,
                     "priority": priority
                 }
             
@@ -2764,28 +2649,15 @@ class WebRTCWebGL_Spoofing2025:
         return formatted
     
     def get_webgl_fingerprint(self, profile: str = "adreno_750") -> Dict[str, Any]:
-        """Get enhanced WebGL fingerprint"""
-        config = self.webgl_configs.get(profile, self.webgl_configs["adreno_750"])
+        """Get realistic WebGL fingerprint matching real GPU characteristics."""
+        # Create a copy to avoid modifying the original config
+        config = dict(self.webgl_configs.get(profile, self.webgl_configs["adreno_750"]))
         
-        # Tambahkan extensions
+        # Add realistic extensions for the GPU profile
         config["extensions"] = self._get_webgl_extensions_enhanced(profile)
         
-        # Tambahkan parameters
+        # Add WebGL parameters
         config["parameters"] = self._get_webgl_parameters_enhanced(profile)
-        
-        # Generate hash
-        config_hash = hashlib.sha256(
-            json.dumps(config, sort_keys=True).encode()
-        ).hexdigest()[:32]
-        
-        # Tambahkan metadata
-        config["metadata"] = {
-            "profile": profile,
-            "fingerprint_hash": config_hash,
-            "generated_at": time.time(),
-            "noise_factor": random.uniform(0.001, 0.005),
-            "renderer_variation": random.uniform(0.95, 1.05)
-        }
         
         return config
     
@@ -2901,85 +2773,39 @@ class WebRTCWebGL_Spoofing2025:
             }
     
     def get_canvas_fingerprint(self, profile: str = "samsung_galaxy_s24") -> Dict[str, Any]:
-        """Get enhanced canvas fingerprint"""
-        config = self.canvas_configs.get(profile, self.canvas_configs["samsung_galaxy_s24"])
+        """Get realistic canvas fingerprint matching real device rendering.
         
-        # Tambahkan data canvas yang unik
-        canvas_data = {
-            **config,
-            "noise_seed": random.randint(1, 1000000),
-            "gradient_quality": random.choice(["low", "medium", "high"]),
-            "shadow_blur": random.uniform(0.5, 5.0),
-            "line_width": random.uniform(0.5, 3.0),
-            "miter_limit": random.uniform(1.0, 10.0),
-            "global_alpha": random.uniform(0.8, 1.0),
-            "composite_operations": [
-                "source-over", "source-in", "source-out", "source-atop",
-                "destination-over", "destination-in", "destination-out", "destination-atop",
-                "lighter", "copy", "xor", "multiply", "screen", "overlay",
-                "darken", "lighten", "color-dodge", "color-burn", "hard-light",
-                "soft-light", "difference", "exclusion", "hue", "saturation",
-                "color", "luminosity"
-            ],
-            "line_caps": ["butt", "round", "square"],
-            "line_joins": ["bevel", "round", "miter"],
-            "fill_styles": [
-                "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF",
-                "rgba(255,0,0,0.5)", "rgba(0,255,0,0.5)", "rgba(0,0,255,0.5)",
-                "linear-gradient(red, yellow)", "radial-gradient(red, yellow)"
-            ]
-        }
+        Returns standard canvas configuration without unique identifiers.
+        """
+        config = dict(self.canvas_configs.get(profile, self.canvas_configs["samsung_galaxy_s24"]))
         
-        # Generate hash
-        canvas_hash = hashlib.sha256(
-            f"{profile}{canvas_data['noise_seed']}".encode()
-        ).hexdigest()[:32]
+        # Add standard canvas capabilities (these are constant for a device type)
+        config["composite_operations"] = [
+            "source-over", "source-in", "source-out", "source-atop",
+            "destination-over", "destination-in", "destination-out", "destination-atop",
+            "lighter", "copy", "xor", "multiply", "screen", "overlay",
+            "darken", "lighten", "color-dodge", "color-burn", "hard-light",
+            "soft-light", "difference", "exclusion", "hue", "saturation",
+            "color", "luminosity"
+        ]
+        config["line_caps"] = ["butt", "round", "square"]
+        config["line_joins"] = ["bevel", "round", "miter"]
         
-        # Tambahkan metadata
-        canvas_data["metadata"] = {
-            "profile": profile,
-            "fingerprint_hash": canvas_hash,
-            "generated_at": time.time(),
-            "canvas_id": f"canvas_{int(time.time())}_{random.randint(1000, 9999)}"
-        }
-        
-        return canvas_data
+        return config
     
     def get_audio_fingerprint(self, profile: str = "android_samsung") -> Dict[str, Any]:
-        """Get enhanced audio fingerprint"""
-        config = self.audio_configs.get(profile, self.audio_configs["android_samsung"])
+        """Get realistic audio fingerprint matching real device audio context.
         
-        # Generate audio context data
-        audio_data = {
-            **config,
-            "context_id": str(uuid.uuid4()),
-            "base_latency": random.uniform(0.005, 0.03),
-            "output_latency": random.uniform(0.01, 0.05),
-            "sample_rate_variance": random.randint(-100, 100),
-            "channel_count_variance": random.randint(-1, 1),
-            "channel_configuration": random.choice(["stereo", "quad", "5.1", "7.1"]),
-            "channel_interpretation": random.choice(["speakers", "discrete"]),
-            "channel_count_mode": random.choice(["max", "clamped-max", "explicit"]),
-            "fft_size_options": [2048, 4096, 8192, 16384],
-            "smoothing_time_constant_options": [0, 0.5, 0.8, 0.95, 1],
-            "min_decibels_options": [-100, -96, -90, -80],
-            "max_decibels_options": [-30, -24, -20, -10, 0]
-        }
+        Returns standard audio configuration consistent with the device profile.
+        """
+        config = dict(self.audio_configs.get(profile, self.audio_configs["android_samsung"]))
         
-        # Generate hash
-        audio_hash = hashlib.sha256(
-            f"{profile}{audio_data['context_id']}".encode()
-        ).hexdigest()[:32]
+        # Standard audio capabilities for the device
+        config["fft_size_options"] = [2048, 4096, 8192, 16384]
+        config["channel_interpretation"] = "speakers"
+        config["channel_count_mode"] = "max"
         
-        # Tambahkan metadata
-        audio_data["metadata"] = {
-            "profile": profile,
-            "fingerprint_hash": audio_hash,
-            "generated_at": time.time(),
-            "audio_id": f"audio_{int(time.time())}_{random.randint(1000, 9999)}"
-        }
-        
-        return audio_data
+        return config
 
 # ===================== CLOUDFLARE & CDN BYPASS 2025 =====================
 
@@ -6738,18 +6564,10 @@ class AdvancedSessionManager2025:
         extra_session_id = self._generate_extra_session_id()
         guid = str(uuid.uuid4())
         
-        # Build complete headers
+        # Build complete headers - minimal and consistent
         complete_headers = self._build_complete_headers(
             fingerprint, behavior_profile, ip_config, webrtc_fingerprint
         )
-        
-        # **TAMBAHKAN HEADERS IMPORTANT**
-        complete_headers.update({
-            "X-Web-Session-Id": extra_session_id,
-            "Priority": "u=1, i",
-            "Sec-Ch-Prefers-Color-Scheme": "dark",
-            "X-IG-WWW-Claim": "0"  # Default, akan diupdate nanti
-        })
         
         session_data = {
             "session_id": session_id,
@@ -6831,49 +6649,55 @@ class AdvancedSessionManager2025:
                               behavior_profile: Dict[str, Any],
                               ip_config: Dict[str, Any],
                               webrtc_fingerprint: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
-        """Build complete headers dari semua komponen - FIXED"""
-        # Start with IP config headers
-        headers = ip_config.get("headers", {}).copy()
+        """Build complete headers that are consistent and realistic for the session.
         
-        # Add fingerprint headers
-        if fingerprint:
-            # Browser headers
-            browser = fingerprint.get("browser", {})
-            headers.update({
-                "User-Agent": browser.get("user_agent", ""),
-                "Accept-Language": browser.get("accept_language", "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"),
-                "Sec-CH-UA": browser.get("sec_ch_ua", ""),
-                "Sec-CH-UA-Mobile": browser.get("sec_ch_ua_mobile", "?1"),
-                "Sec-CH-UA-Platform": browser.get("sec_ch_ua_platform", '"Android"'),
-            })
+        Headers are kept minimal to avoid detection while maintaining
+        consistency across all requests in the session.
+        """
+        # Extract browser info from fingerprint
+        browser = fingerprint.get("browser", {}) if fingerprint else {}
+        user_agent = browser.get("user_agent", "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+        
+        # Determine if mobile from user agent
+        is_mobile = "Mobile" in user_agent or "Android" in user_agent
+        
+        # Extract Chrome version for Sec-CH-UA
+        chrome_version = "120"
+        if "Chrome/" in user_agent:
+            try:
+                chrome_version = user_agent.split("Chrome/")[1].split(".")[0]
+            except (IndexError, ValueError):
+                chrome_version = "120"
+        
+        # Build realistic browser headers
+        headers = {
+            # Standard browser headers in the order Chrome sends them
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": browser.get("accept_language", "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"),
+            "Connection": "keep-alive",
+            "User-Agent": user_agent,
             
-            # Device headers
-            device = fingerprint.get("device", {})
-            identifiers = device.get("identifiers", {})
-            headers.update({
-                "X-IG-Device-ID": identifiers.get("device_id", ""),
-                "X-IG-Android-ID": identifiers.get("android_id", ""),
-                "X-Device-Memory": str(device.get("device_memory", 8)),
-                "X-Viewport-Width": str(browser.get("viewport", {}).get("width", 1080)),
-                "X-Viewport-Height": str(browser.get("viewport", {}).get("height", 2340)),
-            })
+            # Sec-CH-* headers that Chrome actually sends
+            "Sec-Ch-Ua": f'"Chromium";v="{chrome_version}", "Not_A Brand";v="8"',
+            "Sec-Ch-Ua-Mobile": "?1" if is_mobile else "?0",
+            "Sec-Ch-Ua-Platform": '"Android"' if is_mobile else '"Windows"',
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            
+            "Upgrade-Insecure-Requests": "1",
+        }
         
-        # Add WebRTC fingerprint headers
-        if webrtc_fingerprint:
-            headers.update({
-                "X-WebRTC-Fingerprint": webrtc_fingerprint.get("fingerprint_id", ""),
-                "X-WebGL-Renderer": webrtc_fingerprint.get("webgl", {}).get("renderer", "")[:50],
-            })
+        # Add minimal Instagram-specific headers (only the essential ones)
+        headers["X-Ig-App-Id"] = "936619743392459"  # Instagram web app ID
+        headers["X-Requested-With"] = "XMLHttpRequest"
+        headers["X-Ig-Www-Claim"] = "0"
         
-        # Add behavioral headers
-        if behavior_profile:
-            headers.update({
-                "X-Behavior-Profile": behavior_profile.get("user_type", "casual_indonesian"),
-                "X-Typing-Speed": str(behavior_profile.get("typing_speed_wpm", 70)),
-            })
-        
-        # Add timestamp
-        headers["X-Timestamp"] = str(int(time.time() * 1000))
+        # Origin and Referer for Instagram
+        headers["Origin"] = "https://www.instagram.com"
+        headers["Referer"] = "https://www.instagram.com/"
         
         return headers
 
