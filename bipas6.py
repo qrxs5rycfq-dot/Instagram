@@ -6656,48 +6656,51 @@ class AdvancedSessionManager2025:
         """
         # Extract browser info from fingerprint
         browser = fingerprint.get("browser", {}) if fingerprint else {}
-        user_agent = browser.get("user_agent", "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
         
-        # Determine if mobile from user agent
-        is_mobile = "Mobile" in user_agent or "Android" in user_agent
+        # Generate fresh, realistic Chrome version (131-136 are current as of late 2024)
+        chrome_major = random.choice([131, 132, 133, 134, 135, 136])
+        chrome_minor = 0
+        chrome_build = random.randint(6778, 6998)
+        chrome_patch = random.randint(0, 250)
+        chrome_full = f"{chrome_major}.{chrome_minor}.{chrome_build}.{chrome_patch}"
         
-        # Extract Chrome version for Sec-CH-UA
-        chrome_version = "120"
-        if "Chrome/" in user_agent:
-            try:
-                chrome_version = user_agent.split("Chrome/")[1].split(".")[0]
-            except (IndexError, ValueError):
-                chrome_version = "120"
+        # Generate fresh Android version and device
+        android_versions = ["13", "14", "15"]
+        android_version = random.choice(android_versions)
         
-        # Build realistic browser headers
+        # Popular Samsung devices in Indonesia
+        samsung_models = [
+            "SM-A546E", "SM-A346E", "SM-A256E",  # Galaxy A series
+            "SM-S911B", "SM-S916B", "SM-S918B",  # Galaxy S23 series
+            "SM-S921B", "SM-S926B", "SM-S928B",  # Galaxy S24 series
+            "SM-A155F", "SM-A057F", "SM-A146P",  # Budget A series
+        ]
+        device_model = random.choice(samsung_models)
+        
+        # Build fresh User-Agent
+        user_agent = f"Mozilla/5.0 (Linux; Android {android_version}; {device_model}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_full} Mobile Safari/537.36"
+        
+        # Build realistic browser headers matching exact Chrome order
         headers = {
-            # Standard browser headers in the order Chrome sends them
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": browser.get("accept_language", "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"),
+            "Accept-Encoding": "gzip, deflate, br, zstd",
+            "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Cache-Control": "max-age=0",
             "Connection": "keep-alive",
-            "User-Agent": user_agent,
-            
-            # Sec-CH-* headers that Chrome actually sends
-            "Sec-Ch-Ua": f'"Chromium";v="{chrome_version}", "Not_A Brand";v="8"',
-            "Sec-Ch-Ua-Mobile": "?1" if is_mobile else "?0",
-            "Sec-Ch-Ua-Platform": '"Android"' if is_mobile else '"Windows"',
+            "Host": "www.instagram.com",
+            "Sec-Ch-Ua": f'"Chromium";v="{chrome_major}", "Google Chrome";v="{chrome_major}", "Not-A.Brand";v="24"',
+            "Sec-Ch-Ua-Full-Version-List": f'"Chromium";v="{chrome_full}", "Google Chrome";v="{chrome_full}", "Not-A.Brand";v="24.0.0.0"',
+            "Sec-Ch-Ua-Mobile": "?1",
+            "Sec-Ch-Ua-Model": f'"{device_model}"',
+            "Sec-Ch-Ua-Platform": '"Android"',
+            "Sec-Ch-Ua-Platform-Version": f'"{android_version}.0.0"',
             "Sec-Fetch-Dest": "document",
             "Sec-Fetch-Mode": "navigate",
             "Sec-Fetch-Site": "none",
             "Sec-Fetch-User": "?1",
-            
             "Upgrade-Insecure-Requests": "1",
+            "User-Agent": user_agent,
         }
-        
-        # Add minimal Instagram-specific headers (only the essential ones)
-        headers["X-Ig-App-Id"] = "936619743392459"  # Instagram web app ID
-        headers["X-Requested-With"] = "XMLHttpRequest"
-        headers["X-Ig-Www-Claim"] = "0"
-        
-        # Origin and Referer for Instagram
-        headers["Origin"] = "https://www.instagram.com"
-        headers["Referer"] = "https://www.instagram.com/"
         
         return headers
 
@@ -9009,32 +9012,57 @@ class InstagramAccountCreator2025:
             return None
     
     async def _get_initial_csrf(self, session_id: str) -> Optional[str]:
-        """Dapatkan initial CSRF token"""
+        """Get fresh CSRF token with clean session state"""
         print(f"{cyan}🛡️   Getting initial CSRF token...{reset}")
         
         try:
+            session = self.session_manager.get_session(session_id)
+            if not session:
+                return None
+            
+            # Get fresh headers from session
+            session_headers = session.get("headers", {})
+            
+            # Build request headers for initial page visit
+            headers = {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+                "Cache-Control": "max-age=0",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1",
+            }
+            # Add session's User-Agent and Sec-Ch-* headers
+            for key in ["User-Agent", "Sec-Ch-Ua", "Sec-Ch-Ua-Mobile", "Sec-Ch-Ua-Platform", 
+                       "Sec-Ch-Ua-Model", "Sec-Ch-Ua-Full-Version-List", "Sec-Ch-Ua-Platform-Version"]:
+                if key in session_headers:
+                    headers[key] = session_headers[key]
+            
             # Visit Instagram signup page
             response = await self.request_orchestrator.make_request(
                 session_id=session_id,
                 method="GET",
                 url="https://www.instagram.com/accounts/emailsignup/",
-                headers={
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
-                }
+                headers=headers
             )
             
             if response.get("status") == 200:
-                # Extract CSRF dari cookies atau HTML
+                # Extract CSRF from cookies
                 cookies = response.get("cookies", {})
                 if "csrftoken" in cookies:
                     csrf_token = cookies["csrftoken"]
                     
-                    # Update session
+                    # Store all cookies in session
                     self.session_manager.update_session(session_id, {
                         "tokens": {"csrftoken": csrf_token},
                         "cookies": cookies
                     })
+                    
+                    # Also update cookie jar
+                    self.session_manager.update_session_cookies(session_id, cookies)
                     
                     print(f"{hijau}✅  Got CSRF token: {csrf_token[:10]}...{reset}")
                     return csrf_token
@@ -9508,26 +9536,42 @@ class InstagramAccountCreator2025:
             # Get current cookies
             current_cookies = self.session_manager.get_session_cookies(session_id, "instagram.com")
             
-            # **HEADERS LENGKAP seperti Instagram asli**
+            # Get fresh CSRF token from session
+            csrf_token = session.get("tokens", {}).get("csrftoken", "")
+            if not csrf_token:
+                # Try to get fresh CSRF
+                csrf_token = await self._get_initial_csrf(session_id)
+                if not csrf_token:
+                    print(f"{merah}    No CSRF token available{reset}")
+                    return False
+            
+            # Get session headers for User-Agent consistency
+            session_headers = session.get("headers", {})
+            
+            # Build clean headers for account creation (AJAX request)
             headers = {
+                "Accept": "*/*",
+                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
                 "Content-Type": "application/x-www-form-urlencoded",
-                "X-CSRFToken": session.get("tokens", {}).get("csrftoken", ""),
-                "X-Instagram-AJAX": "1",
-                "X-IG-WWW-Claim": session.get("ig_www_claim", "0"),
-                "X-Web-Session-Id": extra_session_id,
-                "Priority": "u=1, i",
-                "Sec-Ch-Prefers-Color-Scheme": "dark",
-                "X-Requested-With": "XMLHttpRequest",
                 "Origin": "https://www.instagram.com",
                 "Referer": "https://www.instagram.com/accounts/emailsignup/",
-                "Sec-Fetch-Site": "same-origin",
+                "Sec-Fetch-Dest": "empty",
                 "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Dest": "empty"
+                "Sec-Fetch-Site": "same-origin",
+                "X-Asbd-Id": "129477",
+                "X-Csrftoken": csrf_token,
+                "X-Ig-App-Id": "936619743392459",
+                "X-Ig-Www-Claim": session.get("ig_www_claim", "0"),
+                "X-Instagram-Ajax": "1018448258",
+                "X-Requested-With": "XMLHttpRequest",
             }
             
-            # Add session headers
-            session_headers = session.get("headers", {})
-            headers.update({k: v for k, v in session_headers.items() if k not in headers})
+            # Add User-Agent and Sec-Ch-* from session
+            for key in ["User-Agent", "Sec-Ch-Ua", "Sec-Ch-Ua-Mobile", "Sec-Ch-Ua-Platform",
+                       "Sec-Ch-Ua-Model", "Sec-Ch-Ua-Full-Version-List"]:
+                if key in session_headers:
+                    headers[key] = session_headers[key]
             
             # Debug: print request info
             # print(f"{cyan}    Account creation attempt with:{reset}")
