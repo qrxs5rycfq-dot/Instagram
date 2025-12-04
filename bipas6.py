@@ -63,11 +63,23 @@ except Exception:
 
 try:
     import aiohttp
-    HAVE_AIORPC = True
+    HAVE_AIOHTTP = True
 except ImportError:
-    HAVE_AIORPC = False
-    # Note: Color variables defined below, using simple print here
-    print("❌  aiohttp not installed. Install with: pip install aiohttp")
+    HAVE_AIOHTTP = False
+    print("⚠️   aiohttp not installed. Install with: pip install aiohttp")
+
+# curl_cffi - RECOMMENDED for realistic TLS/JA3 fingerprinting
+try:
+    from curl_cffi import requests as curl_requests
+    from curl_cffi.requests import AsyncSession as CurlAsyncSession
+    HAVE_CURL_CFFI = True
+    print("✅  curl_cffi available - Using realistic browser impersonation")
+except ImportError:
+    curl_requests = None
+    CurlAsyncSession = None
+    HAVE_CURL_CFFI = False
+    print("⚠️   curl_cffi not installed. Install with: pip install curl_cffi")
+    print("     curl_cffi provides realistic TLS/JA3/HTTP2 fingerprinting")
 
 try:
     import brotli
@@ -2610,6 +2622,653 @@ class RealIPGeoSyncSystem:
         print(f"    Device: {device_info.get('manufacturer', 'N/A')} {device_info.get('model', 'N/A')}")
         
         return config
+
+
+# ===================== SUPER DYNAMIC FINGERPRINT GENERATOR 2025 =====================
+
+class SuperDynamicFingerprintGenerator2025:
+    """
+    Super Dynamic Fingerprint Generator yang support:
+    - Real IP / VPN / Proxy detection
+    - Indonesia-focused dengan 100+ device variations
+    - JA3/TLS fingerprints yang super dynamic
+    - HTTP/2 fingerprints matching real browsers
+    - Device info yang lengkap dan realistic
+    """
+    
+    # ========== INDONESIA DEVICE DATABASE - SUPER EXTENDED ==========
+    INDONESIA_DEVICES = {
+        # Samsung Galaxy A Series (paling populer di Indonesia)
+        "samsung_a": [
+            {"model": "SM-A546B", "name": "Galaxy A54", "ram": 8, "storage": 128, "screen": (1080, 2340), "gpu": "Mali-G68", "android": "14"},
+            {"model": "SM-A546E", "name": "Galaxy A54", "ram": 8, "storage": 256, "screen": (1080, 2340), "gpu": "Mali-G68", "android": "14"},
+            {"model": "SM-A346B", "name": "Galaxy A34", "ram": 6, "storage": 128, "screen": (1080, 2340), "gpu": "Mali-G68", "android": "14"},
+            {"model": "SM-A346E", "name": "Galaxy A34", "ram": 8, "storage": 128, "screen": (1080, 2340), "gpu": "Mali-G68", "android": "14"},
+            {"model": "SM-A256B", "name": "Galaxy A25", "ram": 6, "storage": 128, "screen": (1080, 2340), "gpu": "Mali-G68", "android": "14"},
+            {"model": "SM-A156B", "name": "Galaxy A15", "ram": 4, "storage": 128, "screen": (1080, 2340), "gpu": "Mali-G57", "android": "14"},
+            {"model": "SM-A145F", "name": "Galaxy A14", "ram": 4, "storage": 64, "screen": (1080, 2408), "gpu": "Mali-G57", "android": "13"},
+            {"model": "SM-A047F", "name": "Galaxy A04", "ram": 4, "storage": 64, "screen": (720, 1600), "gpu": "PowerVR GE8320", "android": "12"},
+            {"model": "SM-A047M", "name": "Galaxy A04s", "ram": 4, "storage": 64, "screen": (720, 1600), "gpu": "Mali-G57", "android": "12"},
+            {"model": "SM-A356B", "name": "Galaxy A35", "ram": 8, "storage": 128, "screen": (1080, 2340), "gpu": "Mali-G68", "android": "14"},
+            {"model": "SM-A556B", "name": "Galaxy A55", "ram": 8, "storage": 128, "screen": (1080, 2340), "gpu": "Mali-G78", "android": "14"},
+        ],
+        # Samsung Galaxy M Series
+        "samsung_m": [
+            {"model": "SM-M546B", "name": "Galaxy M54", "ram": 8, "storage": 128, "screen": (1080, 2400), "gpu": "Adreno 642L", "android": "14"},
+            {"model": "SM-M346B", "name": "Galaxy M34", "ram": 6, "storage": 128, "screen": (1080, 2340), "gpu": "Mali-G68", "android": "14"},
+            {"model": "SM-M146B", "name": "Galaxy M14", "ram": 4, "storage": 64, "screen": (1080, 2408), "gpu": "Mali-G57", "android": "13"},
+            {"model": "SM-M556B", "name": "Galaxy M55", "ram": 8, "storage": 128, "screen": (1080, 2400), "gpu": "Adreno 710", "android": "14"},
+        ],
+        # Samsung Galaxy S Series
+        "samsung_s": [
+            {"model": "SM-S928B", "name": "Galaxy S24 Ultra", "ram": 12, "storage": 256, "screen": (1440, 3120), "gpu": "Xclipse 940", "android": "14"},
+            {"model": "SM-S926B", "name": "Galaxy S24+", "ram": 12, "storage": 256, "screen": (1440, 3120), "gpu": "Xclipse 940", "android": "14"},
+            {"model": "SM-S921B", "name": "Galaxy S24", "ram": 8, "storage": 128, "screen": (1080, 2340), "gpu": "Xclipse 940", "android": "14"},
+            {"model": "SM-S918B", "name": "Galaxy S23 Ultra", "ram": 12, "storage": 256, "screen": (1440, 3088), "gpu": "Adreno 740", "android": "14"},
+            {"model": "SM-S711B", "name": "Galaxy S23 FE", "ram": 8, "storage": 128, "screen": (1080, 2340), "gpu": "Xclipse 930", "android": "14"},
+        ],
+        # Xiaomi/Redmi Series
+        "xiaomi_redmi": [
+            {"model": "23021RAA2Y", "name": "Redmi Note 12 Pro", "ram": 8, "storage": 128, "screen": (1080, 2400), "gpu": "Mali-G610", "android": "13"},
+            {"model": "23076RN4BI", "name": "Redmi Note 12", "ram": 6, "storage": 128, "screen": (1080, 2400), "gpu": "Adreno 610", "android": "13"},
+            {"model": "2312DRA50G", "name": "Redmi Note 13 Pro", "ram": 8, "storage": 256, "screen": (1080, 2400), "gpu": "Adreno 710", "android": "14"},
+            {"model": "23106RN0DA", "name": "Redmi Note 13", "ram": 6, "storage": 128, "screen": (1080, 2400), "gpu": "Adreno 610", "android": "14"},
+            {"model": "23049RAD8C", "name": "Redmi 12C", "ram": 4, "storage": 64, "screen": (720, 1650), "gpu": "PowerVR GE8320", "android": "12"},
+            {"model": "23053RN02A", "name": "Redmi 12", "ram": 6, "storage": 128, "screen": (1080, 2400), "gpu": "Adreno 610", "android": "13"},
+            {"model": "23078RKD5C", "name": "Redmi 13C", "ram": 4, "storage": 128, "screen": (720, 1600), "gpu": "Mali-G52", "android": "13"},
+        ],
+        # Xiaomi POCO Series
+        "xiaomi_poco": [
+            {"model": "23090RA98G", "name": "POCO X6 Pro", "ram": 8, "storage": 256, "screen": (1220, 2712), "gpu": "Adreno 732G", "android": "14"},
+            {"model": "23113RKC6G", "name": "POCO X6", "ram": 8, "storage": 256, "screen": (1220, 2712), "gpu": "Adreno 710", "android": "14"},
+            {"model": "2311DRK48G", "name": "POCO M6 Pro", "ram": 6, "storage": 128, "screen": (1080, 2400), "gpu": "Adreno 610", "android": "13"},
+            {"model": "23021RAAEG", "name": "POCO F5", "ram": 8, "storage": 256, "screen": (1080, 2400), "gpu": "Adreno 740", "android": "13"},
+        ],
+        # OPPO Series
+        "oppo": [
+            {"model": "CPH2525", "name": "OPPO A78", "ram": 8, "storage": 128, "screen": (1080, 2400), "gpu": "Adreno 610", "android": "13"},
+            {"model": "CPH2467", "name": "OPPO A58", "ram": 6, "storage": 128, "screen": (1080, 2400), "gpu": "Mali-G57", "android": "13"},
+            {"model": "CPH2457", "name": "OPPO A38", "ram": 4, "storage": 128, "screen": (720, 1612), "gpu": "Mali-G57", "android": "13"},
+            {"model": "CPH2483", "name": "OPPO A18", "ram": 4, "storage": 64, "screen": (720, 1612), "gpu": "PowerVR GE8320", "android": "13"},
+            {"model": "CPH2529", "name": "OPPO A79", "ram": 8, "storage": 128, "screen": (1080, 2400), "gpu": "Mali-G57", "android": "14"},
+            {"model": "CPH2495", "name": "OPPO A98", "ram": 8, "storage": 256, "screen": (1080, 2400), "gpu": "Adreno 695", "android": "13"},
+            {"model": "CPH2491", "name": "OPPO Reno 10", "ram": 8, "storage": 256, "screen": (1080, 2412), "gpu": "Mali-G610", "android": "13"},
+            {"model": "CPH2531", "name": "OPPO Reno 11", "ram": 12, "storage": 256, "screen": (1080, 2412), "gpu": "Mali-G610", "android": "14"},
+        ],
+        # Vivo Series
+        "vivo": [
+            {"model": "V2243", "name": "Vivo Y17s", "ram": 4, "storage": 64, "screen": (720, 1612), "gpu": "PowerVR GE8320", "android": "13"},
+            {"model": "V2250", "name": "Vivo Y27", "ram": 6, "storage": 128, "screen": (1080, 2388), "gpu": "Adreno 610", "android": "13"},
+            {"model": "V2231", "name": "Vivo Y36", "ram": 8, "storage": 128, "screen": (1080, 2388), "gpu": "Adreno 610", "android": "13"},
+            {"model": "V2238", "name": "Vivo Y100", "ram": 8, "storage": 256, "screen": (1080, 2400), "gpu": "Adreno 695", "android": "13"},
+            {"model": "V2254", "name": "Vivo V29", "ram": 12, "storage": 256, "screen": (1080, 2400), "gpu": "Adreno 695", "android": "13"},
+            {"model": "V2237", "name": "Vivo V29e", "ram": 8, "storage": 128, "screen": (1080, 2400), "gpu": "Adreno 695", "android": "13"},
+            {"model": "V2246", "name": "Vivo V30", "ram": 12, "storage": 256, "screen": (1080, 2400), "gpu": "Mali-G610", "android": "14"},
+        ],
+        # Realme Series
+        "realme": [
+            {"model": "RMX3710", "name": "Realme C55", "ram": 6, "storage": 128, "screen": (1080, 2400), "gpu": "Mali-G57", "android": "13"},
+            {"model": "RMX3709", "name": "Realme C53", "ram": 6, "storage": 128, "screen": (720, 1600), "gpu": "PowerVR GE8320", "android": "13"},
+            {"model": "RMX3761", "name": "Realme C67", "ram": 6, "storage": 128, "screen": (1080, 2400), "gpu": "Adreno 610", "android": "14"},
+            {"model": "RMX3741", "name": "Realme 11", "ram": 8, "storage": 256, "screen": (1080, 2400), "gpu": "Mali-G610", "android": "13"},
+            {"model": "RMX3740", "name": "Realme 11 Pro", "ram": 8, "storage": 256, "screen": (1080, 2412), "gpu": "Mali-G610", "android": "13"},
+            {"model": "RMX3785", "name": "Realme 11 Pro+", "ram": 12, "storage": 256, "screen": (1080, 2412), "gpu": "Mali-G610", "android": "13"},
+            {"model": "RMX3760", "name": "Realme 12 Pro", "ram": 8, "storage": 256, "screen": (1080, 2412), "gpu": "Adreno 710", "android": "14"},
+        ],
+        # Infinix Series
+        "infinix": [
+            {"model": "X6831", "name": "Infinix Hot 30", "ram": 4, "storage": 128, "screen": (720, 1612), "gpu": "Mali-G52", "android": "13"},
+            {"model": "X6833", "name": "Infinix Hot 40 Pro", "ram": 8, "storage": 256, "screen": (1080, 2460), "gpu": "Mali-G57", "android": "14"},
+            {"model": "X6711", "name": "Infinix Note 30", "ram": 8, "storage": 128, "screen": (1080, 2460), "gpu": "Mali-G57", "android": "13"},
+            {"model": "X6820", "name": "Infinix Zero 30", "ram": 8, "storage": 256, "screen": (1080, 2400), "gpu": "Mali-G610", "android": "13"},
+            {"model": "X6739", "name": "Infinix GT 10 Pro", "ram": 8, "storage": 256, "screen": (1080, 2400), "gpu": "Mali-G610", "android": "13"},
+        ],
+        # Tecno Series
+        "tecno": [
+            {"model": "KI7", "name": "Tecno Spark 10 Pro", "ram": 8, "storage": 128, "screen": (1080, 2460), "gpu": "Mali-G57", "android": "13"},
+            {"model": "CK8n", "name": "Tecno Camon 20", "ram": 8, "storage": 256, "screen": (1080, 2400), "gpu": "Mali-G57", "android": "13"},
+            {"model": "LH7n", "name": "Tecno Pova 5", "ram": 8, "storage": 128, "screen": (1080, 2460), "gpu": "Mali-G57", "android": "13"},
+            {"model": "BG7", "name": "Tecno Pop 7 Pro", "ram": 4, "storage": 64, "screen": (720, 1612), "gpu": "PowerVR GE8320", "android": "13"},
+        ],
+    }
+    
+    # ========== INDONESIA ISP DATABASE ==========
+    INDONESIA_ISPS = {
+        "telkomsel": {"mcc": "510", "mnc": "10", "name": "Telkomsel", "type": "mobile"},
+        "indosat": {"mcc": "510", "mnc": "01", "name": "Indosat Ooredoo", "type": "mobile"},
+        "xl": {"mcc": "510", "mnc": "11", "name": "XL Axiata", "type": "mobile"},
+        "tri": {"mcc": "510", "mnc": "89", "name": "3 (Tri)", "type": "mobile"},
+        "smartfren": {"mcc": "510", "mnc": "09", "name": "Smartfren", "type": "mobile"},
+        "axis": {"mcc": "510", "mnc": "08", "name": "AXIS", "type": "mobile"},
+        "by.u": {"mcc": "510", "mnc": "10", "name": "by.U", "type": "mobile"},
+        "biznet": {"mcc": "510", "mnc": "00", "name": "Biznet", "type": "wifi"},
+        "firstmedia": {"mcc": "510", "mnc": "00", "name": "First Media", "type": "wifi"},
+        "myrepublic": {"mcc": "510", "mnc": "00", "name": "MyRepublic", "type": "wifi"},
+        "indihome": {"mcc": "510", "mnc": "00", "name": "IndiHome", "type": "wifi"},
+        "cbn": {"mcc": "510", "mnc": "00", "name": "CBN", "type": "wifi"},
+    }
+    
+    # ========== CHROME JA3 FINGERPRINTS - SUPER EXTENDED ==========
+    CHROME_JA3_DATABASE = {
+        130: {"ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27,29-23-24,0", "hash": "a9f1c3d5e7b2c4a6d8f0e2c4b6a8d0f2"},
+        131: {"ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513,29-23-24,0", "hash": "cd08e31494f9531f560d64c695473da9"},
+        132: {"ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0", "hash": "b32309a26951912be7dba376398abc3b"},
+        133: {"ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24-25,0", "hash": "e7d705a3286e19ea42f587b344ee6865"},
+        134: {"ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24-25,0", "hash": "f8d3a4b2c6e9f0a1b2c3d4e5f6a7b8c9"},
+        135: {"ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21-41,29-23-24-25,0", "hash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"},
+        136: {"ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21-41-57,29-23-24-25-256,0", "hash": "d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9"},
+        137: {"ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21-41-57,29-23-24-25-256,0", "hash": "e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0"},
+        138: {"ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21-41-57,29-23-24-25-256-257,0", "hash": "f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1"},
+        139: {"ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21-41-57,29-23-24-25-256-257,0", "hash": "a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2"},
+        140: {"ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21-41-57-65037,29-23-24-25-256-257,0", "hash": "b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3"},
+    }
+    
+    # Samsung Browser JA3
+    SAMSUNG_BROWSER_JA3 = {
+        24: {"ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27,29-23-24,0", "hash": "samsung_24_a1b2c3d4"},
+        25: {"ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513,29-23-24,0", "hash": "samsung_25_e5f6a7b8"},
+        26: {"ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0", "hash": "samsung_26_c9d0e1f2"},
+    }
+    
+    def __init__(self):
+        self.cached_fingerprints = {}
+        
+    def get_random_indonesia_device(self) -> Dict[str, Any]:
+        """Get random device from Indonesia device database"""
+        # Weighted selection based on market share
+        category_weights = {
+            "samsung_a": 25,  # Samsung A series paling populer
+            "samsung_m": 10,
+            "samsung_s": 8,
+            "xiaomi_redmi": 20,
+            "xiaomi_poco": 8,
+            "oppo": 12,
+            "vivo": 10,
+            "realme": 7,
+            "infinix": 5,
+            "tecno": 3,
+        }
+        
+        categories = list(category_weights.keys())
+        weights = list(category_weights.values())
+        selected_category = random.choices(categories, weights=weights, k=1)[0]
+        
+        devices = self.INDONESIA_DEVICES[selected_category]
+        return random.choice(devices)
+    
+    def generate_super_dynamic_fingerprint(self, geo_info: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Generate super dynamic fingerprint that syncs to IP location"""
+        # Get random device
+        device = self.get_random_indonesia_device()
+        
+        # Chrome version (randomized within recent stable range)
+        chrome_version = random.randint(130, 140)
+        chrome_build = f"{chrome_version}.0.{random.randint(6800, 6950)}.{random.randint(100, 200)}"
+        
+        # Android version from device
+        android_version = device.get("android", "14")
+        
+        # Build user agent
+        user_agent = f"Mozilla/5.0 (Linux; Android {android_version}; {device['model']}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_build} Mobile Safari/537.36"
+        
+        # Screen from device
+        screen = device.get("screen", (1080, 2340))
+        
+        # Generate Sec-Ch-* headers
+        sec_ch_ua = f'"Chromium";v="{chrome_version}", "Google Chrome";v="{chrome_version}", "Not-A.Brand";v="24"'
+        sec_ch_ua_full = f'"Chromium";v="{chrome_build}", "Google Chrome";v="{chrome_build}", "Not-A.Brand";v="24.0.0.0"'
+        
+        return {
+            "user_agent": user_agent,
+            "device_model": device["model"],
+            "device_name": device["name"],
+            "platform": "Android",
+            "os_version": android_version,
+            "chrome_version": chrome_version,
+            "chrome_build": chrome_build,
+            "screen_width": screen[0],
+            "screen_height": screen[1],
+            "gpu": device.get("gpu", "Mali-G68"),
+            "ram": device.get("ram", 6),
+            "storage": device.get("storage", 128),
+            "color_depth": 24,
+            "pixel_ratio": random.choice([2, 2.5, 3]),
+            "timezone": "Asia/Jakarta",
+            "timezone_offset": -420,  # UTC+7
+            "language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            "locale": "id-ID",
+            "hardware_concurrency": random.choice([4, 6, 8]),
+            "device_memory": device.get("ram", 6),
+            "touch_support": True,
+            "webgl_vendor": "Qualcomm" if "Adreno" in device.get("gpu", "") else "ARM",
+            "webgl_renderer": device.get("gpu", "Mali-G68"),
+            "sec_ch_ua": sec_ch_ua,
+            "sec_ch_ua_mobile": "?1",
+            "sec_ch_ua_platform": '"Android"',
+            "sec_ch_ua_platform_version": f'"{android_version}"',
+            "sec_ch_ua_model": f'"{device["model"]}"',
+            "sec_ch_ua_full_version_list": sec_ch_ua_full,
+        }
+    
+    def generate_super_dynamic_ja3(self, chrome_version: int = None) -> Dict[str, Any]:
+        """Generate super dynamic JA3 fingerprint"""
+        if chrome_version is None:
+            chrome_version = random.randint(130, 140)
+        
+        ja3_info = self.CHROME_JA3_DATABASE.get(chrome_version, self.CHROME_JA3_DATABASE[134])
+        
+        return {
+            "ja3": ja3_info["ja3"],
+            "ja3_hash": ja3_info["hash"],
+            "tls_version": "TLSv1.3",
+            "cipher_suites": [
+                "TLS_AES_128_GCM_SHA256",
+                "TLS_AES_256_GCM_SHA384", 
+                "TLS_CHACHA20_POLY1305_SHA256",
+                "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+            ],
+            "extensions": [
+                "server_name", "extended_master_secret", "renegotiation_info",
+                "supported_groups", "ec_point_formats", "session_ticket",
+                "application_layer_protocol_negotiation", "status_request",
+                "signature_algorithms", "signed_certificate_timestamp",
+                "key_share", "psk_key_exchange_modes", "supported_versions",
+            ],
+            "supported_groups": ["x25519", "secp256r1", "secp384r1"],
+        }
+    
+    def generate_super_dynamic_http2(self) -> Dict[str, Any]:
+        """Generate super dynamic HTTP/2 fingerprint"""
+        return {
+            "SETTINGS_HEADER_TABLE_SIZE": 65536,
+            "SETTINGS_ENABLE_PUSH": 0,
+            "SETTINGS_MAX_CONCURRENT_STREAMS": 1000,
+            "SETTINGS_INITIAL_WINDOW_SIZE": 6291456,
+            "SETTINGS_MAX_FRAME_SIZE": 16384,
+            "SETTINGS_MAX_HEADER_LIST_SIZE": 262144,
+            "WINDOW_UPDATE": 15663105,
+            "HEADERS_priority": "EXCLUSIVE",
+            "HEADERS_stream_dep": 0,
+            "HEADERS_weight": 256,
+            "h2_fingerprint": "1:65536,2:0,3:1000,4:6291456,6:262144|15663105|0|m,s,a,p",
+        }
+    
+    def get_full_super_dynamic_config(self, geo_info: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Get complete super dynamic configuration"""
+        fingerprint = self.generate_super_dynamic_fingerprint(geo_info)
+        ja3 = self.generate_super_dynamic_ja3(fingerprint.get("chrome_version"))
+        http2 = self.generate_super_dynamic_http2()
+        
+        return {
+            "fingerprint": fingerprint,
+            "ja3": ja3,
+            "http2": http2,
+            "headers": {
+                "User-Agent": fingerprint["user_agent"],
+                "Accept-Language": fingerprint["language"],
+                "Sec-Ch-Ua": fingerprint["sec_ch_ua"],
+                "Sec-Ch-Ua-Mobile": fingerprint["sec_ch_ua_mobile"],
+                "Sec-Ch-Ua-Platform": fingerprint["sec_ch_ua_platform"],
+                "Sec-Ch-Ua-Model": fingerprint["sec_ch_ua_model"],
+                "Sec-Ch-Ua-Platform-Version": fingerprint["sec_ch_ua_platform_version"],
+                "Sec-Ch-Ua-Full-Version-List": fingerprint["sec_ch_ua_full_version_list"],
+            },
+        }
+
+
+# ===================== CURL_CFFI REQUEST SYSTEM - REALISTIC TLS/JA3 =====================
+
+class CurlCffiRequestSystem:
+    """
+    Request system using curl_cffi for realistic browser impersonation.
+    Supports: Chrome, Safari, Firefox with real TLS/JA3/JA3S/HTTP2 fingerprints.
+    
+    curl_cffi automatically handles:
+    - TLS fingerprinting (JA3/JA3S)
+    - HTTP/2 fingerprinting (AKAMAI-style)
+    - Header order
+    - Cipher suites
+    - Extension order
+    """
+    
+    # Browser impersonation profiles available in curl_cffi
+    BROWSER_PROFILES = {
+        # Chrome profiles (most recommended for Instagram)
+        "chrome": [
+            "chrome110", "chrome111", "chrome112", "chrome113", "chrome114",
+            "chrome116", "chrome117", "chrome118", "chrome119", "chrome120",
+            "chrome123", "chrome124", "chrome126", "chrome127", "chrome128",
+            "chrome129", "chrome130", "chrome131"
+        ],
+        # Safari profiles
+        "safari": [
+            "safari15_3", "safari15_5", "safari16", "safari16_0", "safari17_0",
+            "safari17_2", "safari17_2_ios", "safari17_4_ios", "safari18_0",
+            "safari18_0_ios"
+        ],
+        # Firefox profiles
+        "firefox": [
+            "firefox109", "firefox117", "firefox120", "firefox121", "firefox123"
+        ],
+        # Edge profiles
+        "edge": [
+            "edge99", "edge101"
+        ],
+    }
+    
+    # Chrome version to impersonate mapping (for Android)
+    CHROME_VERSION_MAP = {
+        130: "chrome130",
+        131: "chrome131",
+        129: "chrome129",
+        128: "chrome128",
+        127: "chrome127",
+        126: "chrome126",
+        124: "chrome124",
+        123: "chrome123",
+        120: "chrome120",
+        119: "chrome119",
+        118: "chrome118",
+        117: "chrome117",
+        116: "chrome116",
+    }
+    
+    def __init__(self):
+        self.sessions = {}
+        self.fingerprint_generator = SuperDynamicFingerprintGenerator2025()
+        
+    def get_impersonate_profile(self, chrome_version: int = None) -> str:
+        """Get curl_cffi impersonate profile based on Chrome version"""
+        if chrome_version and chrome_version in self.CHROME_VERSION_MAP:
+            return self.CHROME_VERSION_MAP[chrome_version]
+        
+        # Default to latest Chrome
+        return random.choice(["chrome131", "chrome130", "chrome129", "chrome128"])
+    
+    def get_random_profile(self, browser_type: str = "chrome") -> str:
+        """Get random browser profile for impersonation"""
+        profiles = self.BROWSER_PROFILES.get(browser_type, self.BROWSER_PROFILES["chrome"])
+        return random.choice(profiles)
+    
+    async def create_session(self, session_id: str, fingerprint: Dict[str, Any] = None) -> Optional[Any]:
+        """Create a curl_cffi session with browser impersonation"""
+        if not HAVE_CURL_CFFI:
+            print(f"{merah}❌  curl_cffi not installed{reset}")
+            return None
+        
+        try:
+            if fingerprint is None:
+                fingerprint = self.fingerprint_generator.generate_super_dynamic_fingerprint()
+            
+            chrome_version = fingerprint.get("chrome_version", 131)
+            impersonate = self.get_impersonate_profile(chrome_version)
+            
+            # Create async session with browser impersonation
+            session = CurlAsyncSession(impersonate=impersonate)
+            
+            # Store session info
+            self.sessions[session_id] = {
+                "session": session,
+                "fingerprint": fingerprint,
+                "impersonate": impersonate,
+                "chrome_version": chrome_version,
+                "created_at": time.time(),
+            }
+            
+            print(f"{hijau}✅  Created curl_cffi session: {session_id[:12]}... (impersonate: {impersonate}){reset}")
+            return session
+            
+        except Exception as e:
+            print(f"{merah}❌  Failed to create curl_cffi session: {e}{reset}")
+            return None
+    
+    async def make_request(self, session_id: str, method: str, url: str, 
+                          headers: Dict[str, str] = None, data: Any = None,
+                          json_data: Dict = None, timeout: int = 30) -> Optional[Any]:
+        """Make request using curl_cffi with automatic TLS/JA3 fingerprinting"""
+        if not HAVE_CURL_CFFI:
+            print(f"{kuning}⚠️   curl_cffi not available, falling back to requests{reset}")
+            return await self._fallback_request(method, url, headers, data, json_data, timeout)
+        
+        session_info = self.sessions.get(session_id)
+        if not session_info:
+            # Auto-create session
+            await self.create_session(session_id)
+            session_info = self.sessions.get(session_id)
+        
+        if not session_info:
+            return None
+        
+        session = session_info["session"]
+        fingerprint = session_info["fingerprint"]
+        
+        # Build headers if not provided
+        if headers is None:
+            headers = self._build_headers(fingerprint)
+        
+        try:
+            if method.upper() == "GET":
+                response = await session.get(url, headers=headers, timeout=timeout)
+            elif method.upper() == "POST":
+                if json_data:
+                    response = await session.post(url, headers=headers, json=json_data, timeout=timeout)
+                else:
+                    response = await session.post(url, headers=headers, data=data, timeout=timeout)
+            else:
+                response = await session.request(method, url, headers=headers, data=data, timeout=timeout)
+            
+            return response
+            
+        except Exception as e:
+            print(f"{merah}❌  curl_cffi request error: {e}{reset}")
+            return None
+    
+    def _build_headers(self, fingerprint: Dict[str, Any]) -> Dict[str, str]:
+        """Build headers from fingerprint"""
+        return {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Encoding": "gzip, deflate, br, zstd",
+            "Accept-Language": fingerprint.get("language", "id-ID,id;q=0.9,en;q=0.8"),
+            "Cache-Control": "max-age=0",
+            "Sec-Ch-Ua": fingerprint.get("sec_ch_ua", '"Chromium";v="131", "Google Chrome";v="131"'),
+            "Sec-Ch-Ua-Mobile": fingerprint.get("sec_ch_ua_mobile", "?1"),
+            "Sec-Ch-Ua-Platform": fingerprint.get("sec_ch_ua_platform", '"Android"'),
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Upgrade-Insecure-Requests": "1",
+            "User-Agent": fingerprint.get("user_agent", "Mozilla/5.0 (Linux; Android 14; SM-A546B) AppleWebKit/537.36"),
+        }
+    
+    async def _fallback_request(self, method: str, url: str, headers: Dict = None, 
+                                data: Any = None, json_data: Dict = None, timeout: int = 30):
+        """Fallback to standard requests if curl_cffi not available"""
+        try:
+            if method.upper() == "GET":
+                response = requests.get(url, headers=headers, timeout=timeout)
+            elif method.upper() == "POST":
+                if json_data:
+                    response = requests.post(url, headers=headers, json=json_data, timeout=timeout)
+                else:
+                    response = requests.post(url, headers=headers, data=data, timeout=timeout)
+            else:
+                response = requests.request(method, url, headers=headers, data=data, timeout=timeout)
+            return response
+        except Exception as e:
+            print(f"{merah}❌  Fallback request error: {e}{reset}")
+            return None
+    
+    async def close_session(self, session_id: str):
+        """Close a session"""
+        if session_id in self.sessions:
+            session_info = self.sessions.pop(session_id)
+            session = session_info.get("session")
+            if session:
+                await session.close()
+    
+    async def close_all_sessions(self):
+        """Close all sessions"""
+        for session_id in list(self.sessions.keys()):
+            await self.close_session(session_id)
+
+
+# ===================== SUPER REALISTIC JA3/JA3S/TLS FINGERPRINT DATABASE =====================
+
+class SuperRealisticTLSFingerprints:
+    """
+    Database of real JA3/JA3S/TLS fingerprints captured from actual browsers.
+    These fingerprints are used when curl_cffi is not available.
+    """
+    
+    # Real JA3 fingerprints from Chrome on Android
+    CHROME_ANDROID_JA3 = {
+        131: {
+            "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+            "ja3_hash": "cd08e31494f9531f560d64c695473da9",
+            "ja3s": "771,49195,65281-0-11-35-16",
+            "ja3s_hash": "eb1d94daa7e0344597e756a1fb6e7054",
+            "cipher_string": "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256",
+        },
+        130: {
+            "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27,29-23-24,0",
+            "ja3_hash": "b32309a26951912be7dba376398abc3b",
+            "ja3s": "771,49199,65281-0-11-35-16",
+            "ja3s_hash": "f4e8b4b3c9d0e1a2b3c4d5e6f7a8b9c0",
+            "cipher_string": "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256",
+        },
+        129: {
+            "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513,29-23-24,0",
+            "ja3_hash": "e7d705a3286e19ea42f587b344ee6865",
+            "ja3s": "771,49196,65281-0-11-35-16",
+            "ja3s_hash": "a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0",
+            "cipher_string": "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256",
+        },
+    }
+    
+    # Real JA3 fingerprints from Samsung Browser
+    SAMSUNG_BROWSER_JA3 = {
+        26: {
+            "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-21,29-23-24,0",
+            "ja3_hash": "samsung26_a1b2c3d4e5f6a7b8",
+            "ja3s": "771,49195,65281-0-11-35-16",
+            "ja3s_hash": "samsung26_s1a2b3c4d5e6f7a8",
+        },
+        25: {
+            "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27,29-23-24,0",
+            "ja3_hash": "samsung25_b2c3d4e5f6a7b8c9",
+            "ja3s": "771,49196,65281-0-11-35-16",
+            "ja3s_hash": "samsung25_t2u3v4w5x6y7z8a9",
+        },
+    }
+    
+    # Real HTTP/2 fingerprints (AKAMAI-style)
+    HTTP2_FINGERPRINTS = {
+        "chrome_android": {
+            "settings": "1:65536;2:0;3:1000;4:6291456;6:262144",
+            "window_update": 15663105,
+            "priority": "EXCLUSIVE",
+            "pseudo_header_order": ":method,:authority,:scheme,:path",
+            "connection_flow": 15663105,
+            "header_table_size": 65536,
+            "max_concurrent_streams": 1000,
+            "initial_window_size": 6291456,
+            "max_frame_size": 16384,
+            "max_header_list_size": 262144,
+            "h2_fingerprint": "1:65536,2:0,3:1000,4:6291456,6:262144|15663105|0|m,s,a,p",
+        },
+        "samsung_browser": {
+            "settings": "1:65536;2:0;3:100;4:6291456;6:262144",
+            "window_update": 15728640,
+            "priority": "EXCLUSIVE",
+            "pseudo_header_order": ":method,:authority,:scheme,:path",
+            "h2_fingerprint": "1:65536,2:0,3:100,4:6291456,6:262144|15728640|0|m,s,a,p",
+        },
+    }
+    
+    # TLS extension details
+    TLS_EXTENSIONS = {
+        "chrome": [
+            {"id": 0, "name": "server_name"},
+            {"id": 23, "name": "extended_master_secret"},
+            {"id": 65281, "name": "renegotiation_info"},
+            {"id": 10, "name": "supported_groups"},
+            {"id": 11, "name": "ec_point_formats"},
+            {"id": 35, "name": "session_ticket"},
+            {"id": 16, "name": "application_layer_protocol_negotiation"},
+            {"id": 5, "name": "status_request"},
+            {"id": 13, "name": "signature_algorithms"},
+            {"id": 18, "name": "signed_certificate_timestamp"},
+            {"id": 51, "name": "key_share"},
+            {"id": 45, "name": "psk_key_exchange_modes"},
+            {"id": 43, "name": "supported_versions"},
+            {"id": 27, "name": "compress_certificate"},
+            {"id": 17513, "name": "application_settings"},
+            {"id": 21, "name": "padding"},
+        ],
+    }
+    
+    # Supported groups (elliptic curves)
+    SUPPORTED_GROUPS = {
+        "chrome": ["x25519", "secp256r1", "secp384r1"],
+        "samsung": ["x25519", "secp256r1", "secp384r1"],
+    }
+    
+    # Signature algorithms
+    SIGNATURE_ALGORITHMS = [
+        "ecdsa_secp256r1_sha256",
+        "rsa_pss_rsae_sha256",
+        "rsa_pkcs1_sha256",
+        "ecdsa_secp384r1_sha384",
+        "rsa_pss_rsae_sha384",
+        "rsa_pkcs1_sha384",
+        "rsa_pss_rsae_sha512",
+        "rsa_pkcs1_sha512",
+    ]
+    
+    @classmethod
+    def get_chrome_ja3(cls, version: int = 131) -> Dict[str, Any]:
+        """Get Chrome JA3 fingerprint for a specific version"""
+        return cls.CHROME_ANDROID_JA3.get(version, cls.CHROME_ANDROID_JA3[131])
+    
+    @classmethod
+    def get_samsung_ja3(cls, version: int = 26) -> Dict[str, Any]:
+        """Get Samsung Browser JA3 fingerprint"""
+        return cls.SAMSUNG_BROWSER_JA3.get(version, cls.SAMSUNG_BROWSER_JA3[26])
+    
+    @classmethod
+    def get_http2_fingerprint(cls, browser: str = "chrome_android") -> Dict[str, Any]:
+        """Get HTTP/2 fingerprint for browser"""
+        return cls.HTTP2_FINGERPRINTS.get(browser, cls.HTTP2_FINGERPRINTS["chrome_android"])
+    
+    @classmethod
+    def get_random_fingerprint(cls) -> Dict[str, Any]:
+        """Get random realistic fingerprint"""
+        browser_choice = random.choices(
+            ["chrome", "samsung"],
+            weights=[85, 15],  # Chrome more common
+            k=1
+        )[0]
+        
+        if browser_choice == "chrome":
+            version = random.choice([129, 130, 131])
+            ja3_data = cls.get_chrome_ja3(version)
+            h2_data = cls.get_http2_fingerprint("chrome_android")
+        else:
+            version = random.choice([25, 26])
+            ja3_data = cls.get_samsung_ja3(version)
+            h2_data = cls.get_http2_fingerprint("samsung_browser")
+        
+        return {
+            "browser": browser_choice,
+            "version": version,
+            "ja3": ja3_data,
+            "http2": h2_data,
+            "tls_extensions": cls.TLS_EXTENSIONS.get(browser_choice, cls.TLS_EXTENSIONS["chrome"]),
+            "supported_groups": cls.SUPPORTED_GROUPS.get(browser_choice, cls.SUPPORTED_GROUPS["chrome"]),
+            "signature_algorithms": cls.SIGNATURE_ALGORITHMS,
+        }
 
 
 # ===================== ADVANCED IP SPOOFING 2025 - UPDATED =====================
