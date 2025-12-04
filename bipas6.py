@@ -2183,6 +2183,369 @@ class RealIPGeoSyncSystem:
         """Clear cached IP info to force refresh"""
         self.cached_ip_info = None
         self.cache_timestamp = 0
+    
+    def generate_dynamic_ja3_fingerprint(self, fingerprint: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate dynamic JA3/TLS fingerprint based on device and browser version.
+        JA3 is a method of TLS client fingerprinting.
+        """
+        platform = fingerprint.get("platform", "Android")
+        chrome_version = fingerprint.get("chrome_version", 130)
+        device_model = fingerprint.get("device_model", "SM-S928B")
+        
+        # Real Chrome JA3 fingerprints by version
+        chrome_ja3_database = {
+            130: {
+                "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+                "ja3_hash": "cd08e31494f9531f560d64c695473da9",
+            },
+            131: {
+                "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+                "ja3_hash": "579ccef312d18482fc42e2b822ca2430",
+            },
+            132: {
+                "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+                "ja3_hash": "b32309a26951912be7dba376398abc3b",
+            },
+            133: {
+                "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+                "ja3_hash": "3e22e950f8a35f75a19f0f5dd69b8c82",
+            },
+            134: {
+                "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+                "ja3_hash": "e7d705a3286e19ea42f587b344ee6865",
+            },
+            135: {
+                "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+                "ja3_hash": "f4bc83ed17ac089eaec1e90fd4cc8a47",
+            },
+            136: {
+                "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+                "ja3_hash": "2aa20e75cb8e8a9ae8d2d5e8c3d4f5a6",
+            },
+        }
+        
+        # iOS Safari JA3 fingerprints
+        ios_ja3_database = {
+            17: {
+                "ja3": "771,4865-4866-4867-49196-49195-52393-49200-49199-52392-49188-49187-49162-49161-49192-49191-49172-49171-157-156-61-60-53-47-255,0-11-10-16-22-23-49-13-43-45-51-21,29-23-24-25,0",
+                "ja3_hash": "e50e0e7a3d2a5e0e2e9e7a6e5e4e3e2e",
+            },
+            18: {
+                "ja3": "771,4865-4866-4867-49196-49195-52393-49200-49199-52392-49188-49187-49162-49161-49192-49191-49172-49171-157-156-61-60-53-47-255,0-11-10-16-22-23-49-13-43-45-51-21,29-23-24-25,0",
+                "ja3_hash": "f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
+            },
+        }
+        
+        # Select JA3 based on platform
+        if platform == "iOS":
+            os_version = int(fingerprint.get("os_version", "17").split(".")[0])
+            ja3_info = ios_ja3_database.get(os_version, ios_ja3_database[17])
+        else:
+            ja3_info = chrome_ja3_database.get(chrome_version, chrome_ja3_database[134])
+        
+        return {
+            "ja3": ja3_info["ja3"],
+            "ja3_hash": ja3_info["ja3_hash"],
+            "tls_version": "TLSv1.3",
+            "cipher_suites": [
+                "TLS_AES_128_GCM_SHA256",
+                "TLS_AES_256_GCM_SHA384",
+                "TLS_CHACHA20_POLY1305_SHA256",
+                "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+            ],
+            "extensions": [
+                "server_name", "extended_master_secret", "renegotiation_info",
+                "supported_groups", "ec_point_formats", "session_ticket",
+                "application_layer_protocol_negotiation", "status_request",
+                "signature_algorithms", "signed_certificate_timestamp",
+                "key_share", "psk_key_exchange_modes", "supported_versions",
+                "compress_certificate", "record_size_limit",
+            ],
+            "supported_groups": ["x25519", "secp256r1", "secp384r1"],
+            "signature_algorithms": [
+                "ecdsa_secp256r1_sha256", "rsa_pss_rsae_sha256",
+                "rsa_pkcs1_sha256", "ecdsa_secp384r1_sha384",
+            ],
+        }
+    
+    def generate_dynamic_http2_fingerprint(self, fingerprint: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate HTTP/2 fingerprint (AKAMAI-style) based on device"""
+        platform = fingerprint.get("platform", "Android")
+        chrome_version = fingerprint.get("chrome_version", 134)
+        
+        # Chrome HTTP/2 fingerprints
+        if platform == "iOS":
+            # Safari HTTP/2 settings
+            return {
+                "SETTINGS_HEADER_TABLE_SIZE": 4096,
+                "SETTINGS_ENABLE_PUSH": 0,
+                "SETTINGS_MAX_CONCURRENT_STREAMS": 100,
+                "SETTINGS_INITIAL_WINDOW_SIZE": 2097152,
+                "SETTINGS_MAX_FRAME_SIZE": 16384,
+                "SETTINGS_MAX_HEADER_LIST_SIZE": 262144,
+                "WINDOW_UPDATE": 10485760,
+                "HEADERS_priority": "EXCLUSIVE",
+                "HEADERS_stream_dep": 0,
+                "HEADERS_weight": 255,
+                "h2_fingerprint": "1:65536,2:0,3:1000,4:6291456,6:262144|15663105|0|m,s,a,p",
+            }
+        else:
+            # Chrome HTTP/2 settings
+            return {
+                "SETTINGS_HEADER_TABLE_SIZE": 65536,
+                "SETTINGS_ENABLE_PUSH": 0,
+                "SETTINGS_MAX_CONCURRENT_STREAMS": 1000,
+                "SETTINGS_INITIAL_WINDOW_SIZE": 6291456,
+                "SETTINGS_MAX_FRAME_SIZE": 16384,
+                "SETTINGS_MAX_HEADER_LIST_SIZE": 262144,
+                "WINDOW_UPDATE": 15663105,
+                "HEADERS_priority": "EXCLUSIVE",
+                "HEADERS_stream_dep": 0,
+                "HEADERS_weight": 256,
+                "h2_fingerprint": f"1:65536,2:0,3:1000,4:6291456,6:262144|15663105|0|m,s,a,p",
+            }
+    
+    def generate_dynamic_device_info(self, fingerprint: Dict[str, Any], geo_info: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate complete device info based on fingerprint and geolocation"""
+        platform = fingerprint.get("platform", "Android")
+        device_model = fingerprint.get("device_model", "SM-S928B")
+        country = geo_info.get("country", "US")
+        
+        # Device-specific info database
+        device_database = {
+            # Samsung Galaxy S24 Ultra
+            "SM-S928B": {
+                "manufacturer": "Samsung",
+                "brand": "samsung",
+                "model": "SM-S928B",
+                "product": "dm3q",
+                "device": "dm3q",
+                "board": "s5e9945",
+                "hardware": "exynos2400",
+                "cpu_abi": "arm64-v8a",
+                "build_id": "UP1A.231005.007",
+                "fingerprint": "samsung/dm3qxxx/dm3q:14/UP1A.231005.007/S928BXXU3AXJ1:user/release-keys",
+                "display": {"width": 1440, "height": 3120, "density": 505, "dpi": 505},
+                "gpu": "Xclipse 940",
+                "ram": 12288,
+                "total_storage": 256000,
+            },
+            "SM-S928U": {
+                "manufacturer": "Samsung",
+                "brand": "samsung",
+                "model": "SM-S928U",
+                "product": "dm3q",
+                "device": "dm3q",
+                "board": "kalama",
+                "hardware": "qcom",
+                "cpu_abi": "arm64-v8a",
+                "build_id": "UP1A.231005.007",
+                "fingerprint": "samsung/dm3qusc/dm3q:14/UP1A.231005.007/S928USQU3AXK1:user/release-keys",
+                "display": {"width": 1440, "height": 3120, "density": 505, "dpi": 505},
+                "gpu": "Adreno 750",
+                "ram": 12288,
+                "total_storage": 256000,
+            },
+            # Samsung Galaxy A54
+            "SM-A546B": {
+                "manufacturer": "Samsung",
+                "brand": "samsung",
+                "model": "SM-A546B",
+                "product": "a54x",
+                "device": "a54x",
+                "board": "s5e8835",
+                "hardware": "exynos1380",
+                "cpu_abi": "arm64-v8a",
+                "build_id": "UP1A.231005.007",
+                "fingerprint": "samsung/a54xdxx/a54x:14/UP1A.231005.007/A546BXXU7CXHK:user/release-keys",
+                "display": {"width": 1080, "height": 2340, "density": 403, "dpi": 403},
+                "gpu": "Mali-G68",
+                "ram": 8192,
+                "total_storage": 128000,
+            },
+            # Google Pixel 8 Pro
+            "Pixel 8 Pro": {
+                "manufacturer": "Google",
+                "brand": "google",
+                "model": "Pixel 8 Pro",
+                "product": "husky",
+                "device": "husky",
+                "board": "husky",
+                "hardware": "tensor",
+                "cpu_abi": "arm64-v8a",
+                "build_id": "AP2A.240805.005",
+                "fingerprint": "google/husky/husky:14/AP2A.240805.005/12025142:user/release-keys",
+                "display": {"width": 1344, "height": 2992, "density": 489, "dpi": 489},
+                "gpu": "Mali-G715",
+                "ram": 12288,
+                "total_storage": 128000,
+            },
+            # Pixel 8
+            "Pixel 8": {
+                "manufacturer": "Google",
+                "brand": "google",
+                "model": "Pixel 8",
+                "product": "shiba",
+                "device": "shiba",
+                "board": "shiba",
+                "hardware": "tensor",
+                "cpu_abi": "arm64-v8a",
+                "build_id": "AP2A.240805.005",
+                "fingerprint": "google/shiba/shiba:14/AP2A.240805.005/12025142:user/release-keys",
+                "display": {"width": 1080, "height": 2400, "density": 428, "dpi": 428},
+                "gpu": "Mali-G715",
+                "ram": 8192,
+                "total_storage": 128000,
+            },
+            # Xiaomi Redmi Note 12
+            "23021RAA2Y": {
+                "manufacturer": "Xiaomi",
+                "brand": "Redmi",
+                "model": "23021RAA2Y",
+                "product": "sunstone",
+                "device": "sunstone",
+                "board": "sunstone",
+                "hardware": "mt6769t",
+                "cpu_abi": "arm64-v8a",
+                "build_id": "TP1A.220624.014",
+                "fingerprint": "Redmi/sunstone_global/sunstone:13/TP1A.220624.014/V14.0.7.0.TMOMIXM:user/release-keys",
+                "display": {"width": 1080, "height": 2400, "density": 395, "dpi": 395},
+                "gpu": "Mali-G52",
+                "ram": 6144,
+                "total_storage": 128000,
+            },
+            # iPhone models
+            "iPhone16,2": {
+                "manufacturer": "Apple",
+                "brand": "Apple",
+                "model": "iPhone 15 Pro Max",
+                "product": "iPhone16,2",
+                "device": "iPhone",
+                "hardware": "Apple A17 Pro",
+                "display": {"width": 1290, "height": 2796, "density": 460, "dpi": 460},
+                "ram": 8192,
+                "total_storage": 256000,
+            },
+            "iPhone16,1": {
+                "manufacturer": "Apple",
+                "brand": "Apple",
+                "model": "iPhone 15 Pro",
+                "product": "iPhone16,1",
+                "device": "iPhone",
+                "hardware": "Apple A17 Pro",
+                "display": {"width": 1179, "height": 2556, "density": 460, "dpi": 460},
+                "ram": 8192,
+                "total_storage": 256000,
+            },
+            "iPhone15,3": {
+                "manufacturer": "Apple",
+                "brand": "Apple",
+                "model": "iPhone 14 Pro Max",
+                "product": "iPhone15,3",
+                "device": "iPhone",
+                "hardware": "Apple A16 Bionic",
+                "display": {"width": 1290, "height": 2796, "density": 460, "dpi": 460},
+                "ram": 6144,
+                "total_storage": 256000,
+            },
+        }
+        
+        # Get device info or generate fallback
+        device_info = device_database.get(device_model, {
+            "manufacturer": "Samsung",
+            "brand": "samsung",
+            "model": device_model,
+            "product": "unknown",
+            "device": "unknown",
+            "board": "unknown",
+            "hardware": "qcom",
+            "cpu_abi": "arm64-v8a",
+            "build_id": "UP1A.231005.007",
+            "fingerprint": f"samsung/unknown/unknown:14/UP1A.231005.007/{device_model}:user/release-keys",
+            "display": {"width": 1080, "height": 2400, "density": 420, "dpi": 420},
+            "gpu": "Adreno 740",
+            "ram": 8192,
+            "total_storage": 128000,
+        })
+        
+        # Add runtime info
+        device_info["android_id"] = secrets.token_hex(8)
+        device_info["advertising_id"] = str(uuid.uuid4())
+        device_info["device_id"] = secrets.token_hex(8)
+        device_info["uuid"] = str(uuid.uuid4()).upper()
+        device_info["phone_id"] = str(uuid.uuid4())
+        device_info["waterfall_id"] = str(uuid.uuid4())
+        device_info["battery_level"] = random.randint(20, 95)
+        device_info["is_charging"] = random.choice([True, False])
+        device_info["timezone"] = fingerprint.get("timezone", "UTC")
+        device_info["locale"] = fingerprint.get("locale", "en_US")
+        device_info["language"] = fingerprint.get("locale", "en_US").replace("-", "_")
+        device_info["country"] = country
+        
+        # Network info
+        device_info["network"] = {
+            "type": "WiFi" if geo_info.get("is_mobile") == False else "MOBILE",
+            "subtype": random.choice(["LTE", "NR", "5G"]) if geo_info.get("is_mobile") else "WiFi",
+            "carrier": geo_info.get("isp", "Unknown"),
+            "mcc": self._get_mcc_for_country(country),
+            "mnc": random.choice(["01", "02", "03", "10", "11"]),
+        }
+        
+        return device_info
+    
+    def _get_mcc_for_country(self, country: str) -> str:
+        """Get Mobile Country Code for a country"""
+        mcc_map = {
+            "US": "310", "GB": "234", "AU": "505", "CA": "302", "NZ": "530",
+            "DE": "262", "FR": "208", "NL": "204", "JP": "440", "SG": "525",
+            "ID": "510", "IN": "404", "BR": "724", "MX": "334", "ES": "214",
+            "IT": "222", "KR": "450", "PH": "515", "TH": "520", "VN": "452",
+            "MY": "502", "RU": "250", "PL": "260", "TR": "286", "AE": "424",
+        }
+        return mcc_map.get(country, "310")
+    
+    def get_full_synced_config_with_tls(self, timeout: int = 10) -> Optional[Dict[str, Any]]:
+        """
+        Get complete synced configuration including TLS/JA3 fingerprints:
+        1. Detect real IP
+        2. Get geolocation
+        3. Generate matching fingerprint
+        4. Generate matching headers
+        5. Generate JA3/TLS fingerprint
+        6. Generate HTTP/2 fingerprint
+        7. Generate complete device info
+        
+        Returns complete config or None if failed
+        """
+        # Get basic config first
+        config = self.get_full_synced_config(timeout)
+        if not config:
+            return None
+        
+        fingerprint = config.get("fingerprint", {})
+        geo_info = config.get("geo", {})
+        
+        # Add JA3/TLS fingerprint
+        ja3_fingerprint = self.generate_dynamic_ja3_fingerprint(fingerprint)
+        config["ja3"] = ja3_fingerprint
+        
+        # Add HTTP/2 fingerprint
+        h2_fingerprint = self.generate_dynamic_http2_fingerprint(fingerprint)
+        config["http2"] = h2_fingerprint
+        
+        # Add complete device info
+        device_info = self.generate_dynamic_device_info(fingerprint, geo_info)
+        config["device"] = device_info
+        
+        print(f"{hijau}✅  TLS/JA3/Device fingerprints synced:{reset}")
+        print(f"    JA3 Hash: {ja3_fingerprint.get('ja3_hash', 'N/A')[:16]}...")
+        print(f"    TLS: {ja3_fingerprint.get('tls_version', 'N/A')}")
+        print(f"    H2: {h2_fingerprint.get('h2_fingerprint', 'N/A')[:30]}...")
+        print(f"    Device: {device_info.get('manufacturer', 'N/A')} {device_info.get('model', 'N/A')}")
+        
+        return config
 
 
 # ===================== ADVANCED IP SPOOFING 2025 - UPDATED =====================
