@@ -2239,17 +2239,66 @@ class AdvancedIPStealthSystem2025:
         return province_map.get(city, "DKI Jakarta")
     
     def _get_mnc_for_isp(self, isp: str) -> str:
-        """Get MNC untuk ISP Indonesia"""
+        """Get MNC untuk ISP Indonesia dan internasional"""
         mnc_map = {
+            # Indonesia
             "telkomsel": "10",
             "indosat": "01",
             "xl": "11",
             "tri": "89",
             "smartfren": "28",
             "biznet": "20",
-            "cbn": "21"
+            "cbn": "21",
+            # US
+            "verizon": "480",
+            "att": "410",
+            "tmobile": "260",
+            # Brazil
+            "claro_br": "05",
+            "vivo_br": "06",
+            "tim_br": "02",
+            # India
+            "jio": "862",
+            "airtel_in": "10",
+            "vi_in": "20",
+            # Germany
+            "telekom_de": "01",
+            "vodafone_de": "02",
+            "o2_de": "03"
         }
         return mnc_map.get(isp, "99")
+    
+    def _get_mcc_for_isp(self, isp: str) -> str:
+        """Get MCC untuk ISP Indonesia dan internasional"""
+        mcc_map = {
+            # Indonesia (MCC 510)
+            "telkomsel": "510",
+            "indosat": "510",
+            "xl": "510",
+            "tri": "510",
+            "smartfren": "510",
+            "biznet": "510",
+            "cbn": "510",
+            # US (MCC 310/311)
+            "verizon": "311",
+            "att": "310",
+            "tmobile": "310",
+            "comcast": "310",
+            "spectrum": "310",
+            # Brazil (MCC 724)
+            "claro_br": "724",
+            "vivo_br": "724",
+            "tim_br": "724",
+            # India (MCC 404/405)
+            "jio": "405",
+            "airtel_in": "404",
+            "vi_in": "404",
+            # Germany (MCC 262)
+            "telekom_de": "262",
+            "vodafone_de": "262",
+            "o2_de": "262"
+        }
+        return mcc_map.get(isp, "510")
     
     def _generate_device_fingerprint_for_ip(self, isp: str, connection_type: str) -> Dict[str, Any]:
         """Generate device fingerprint berdasarkan ISP dan connection type - FIXED"""
@@ -2580,18 +2629,31 @@ class AdvancedIPStealthSystem2025:
             connection_type  # FIXED: tambah parameter connection type
         )
         
+        # Build location from flat IP info structure
+        location = ip_info.get("location") if isinstance(ip_info.get("location"), dict) else {
+            "country": ip_info.get("country", "ID"),
+            "country_name": ip_info.get("country_name", "Indonesia"),
+            "city": ip_info.get("city", "Jakarta"),
+            "region": ip_info.get("region", "DKI Jakarta"),
+            "latitude": ip_info.get("latitude", -6.2088),
+            "longitude": ip_info.get("longitude", 106.8456),
+            "timezone": ip_info.get("timezone", "Asia/Jakarta"),
+            "as_name": ip_info.get("as_name", ""),
+            "carrier": ip_info.get("carrier", isp.upper() if connection_type == "mobile" else "")
+        }
+        
         # Build comprehensive config
         config = {
             "ip": ip_info["ip"],
             "session_id": session_id,
             "isp_info": {
                 "isp": isp,
-                "asn": ip_info["asn"],
-                "as_name": ip_info.get("location", {}).get("as_name", ""),
-                "carrier": ip_info.get("location", {}).get("carrier", "")
+                "asn": ip_info.get("asn", ""),
+                "as_name": location.get("as_name", ip_info.get("as_name", "")),
+                "carrier": location.get("carrier", ip_info.get("carrier", ""))
             },
             "connection_type": connection_type,  # FIXED: simpan connection type
-            "location": ip_info["location"],
+            "location": location,
             "network_metrics": ip_info.get("network_metrics", {}),
             "tcp_parameters": ip_info.get("tcp_parameters", {}),
             "device_info": device_fp,
