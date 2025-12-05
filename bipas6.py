@@ -6830,6 +6830,10 @@ class AdvancedFingerprinting2025:
                 "market_name": random.choice(["MacBook Pro 16", "MacBook Pro 14", "MacBook Air M2"]),
                 "screen": {"width": 2560, "height": 1600, "dpi": 227},
                 "sensors": ["accelerometer", "gyro", "ambient_light"],
+                "hardware": {
+                    "ram": random.choice([16, 32, 64]),
+                    "storage": random.choice([512, 1024, 2048])
+                }
             }
             os_profile = {
                 "name": "macOS",
@@ -6849,6 +6853,10 @@ class AdvancedFingerprinting2025:
                 "market_name": random.choice(["Dell XPS 15 9530", "HP Spectre x360", "Lenovo ThinkPad X1 Carbon"]),
                 "screen": {"width": 1920, "height": 1080, "dpi": 141},
                 "sensors": [],
+                "hardware": {
+                    "ram": random.choice([16, 32, 64]),
+                    "storage": random.choice([512, 1024, 2048])
+                }
             }
             os_profile = {
                 "name": "Windows",
