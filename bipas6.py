@@ -411,24 +411,21 @@ class AdvancedBrowserFingerprint2025:
     def __init__(self):
         self.tls_generator = AdvancedTLSFingerprint2025()
         
-    def generate_complete_fingerprint(self, device_type: str = "mobile",
+    def generate_complete_fingerprint(self, device_type: str = "desktop",
                                        browser_type: str = "chrome",
                                        country: str = "ID") -> Dict[str, Any]:
-        """Generate a complete browser fingerprint"""
+        """Generate a complete browser fingerprint for Desktop/Web API"""
         
         # Get TLS fingerprint first
         tls_fp = self.tls_generator.generate_tls_fingerprint(browser_type)
         chrome_version = tls_fp.get("chrome_version", 134)
         chrome_full_version = tls_fp.get("chrome_full_version", "134.0.6923.127")
         
-        # Determine if mobile
-        is_mobile = device_type in ["mobile", "tablet"]
+        # Always use desktop for Web API
+        is_mobile = False
         
-        # Screen resolution
-        if is_mobile:
-            resolution = self._weighted_choice(self.MOBILE_RESOLUTIONS)
-        else:
-            resolution = self._weighted_choice(self.SCREEN_RESOLUTIONS)
+        # Screen resolution - Desktop resolutions
+        resolution = self._weighted_choice(self.SCREEN_RESOLUTIONS)
         
         # Color depth
         color_depth = random.choice([24, 30, 32])
@@ -439,11 +436,11 @@ class AdvancedBrowserFingerprint2025:
         # Language
         language_info = self._get_language_for_country(country)
         
-        # Platform
-        platform_info = self._get_platform_for_device(device_type)
+        # Platform - Always desktop
+        platform_info = self._get_platform_for_device("desktop")
         
-        # WebGL
-        webgl_info = self._generate_webgl_fingerprint(device_type)
+        # WebGL - Desktop
+        webgl_info = self._generate_webgl_fingerprint("desktop")
         
         # Canvas
         canvas_hash = self._generate_canvas_hash()
@@ -459,7 +456,7 @@ class AdvancedBrowserFingerprint2025:
             "browser": browser_type,
             "browser_version": chrome_version,
             "browser_full_version": chrome_full_version,
-            "user_agent": self._generate_user_agent(device_type, browser_type, chrome_full_version, platform_info),
+            "user_agent": self._generate_user_agent("desktop", browser_type, chrome_full_version, platform_info),
             
             # Screen
             "screen_width": resolution[0],
@@ -468,7 +465,7 @@ class AdvancedBrowserFingerprint2025:
             "available_height": resolution[1] - random.randint(40, 80),  # Taskbar
             "color_depth": color_depth,
             "pixel_depth": color_depth,
-            "device_pixel_ratio": random.choice([1, 1.25, 1.5, 2, 2.25, 2.5, 3]) if is_mobile else random.choice([1, 1.25, 1.5, 2]),
+            "device_pixel_ratio": random.choice([1, 1.25, 1.5, 2]),  # Desktop ratios
             
             # Platform
             "platform": platform_info["platform"],
@@ -589,45 +586,39 @@ class AdvancedBrowserFingerprint2025:
         }
         return languages.get(country, languages["ID"])
     
-    def _get_platform_for_device(self, device_type: str) -> Dict[str, Any]:
-        """Get platform info for device type"""
-        if device_type == "mobile":
-            android_version = random.choice([13, 14, 15])
+    def _get_platform_for_device(self, device_type: str = "desktop") -> Dict[str, Any]:
+        """Get platform info for device type - Default to Desktop for Web API"""
+        # Always use desktop platforms for Web API compatibility
+        platform_choice = random.choice(["Windows", "macOS"])
+        
+        if platform_choice == "Windows":
+            windows_version = random.choice(["10.0", "11.0"])
             return {
-                "platform": "Linux armv8l",
-                "version": str(android_version),
-                "os_name": "Android",
-                "architecture": "arm64",
-            }
-        elif device_type == "tablet":
-            return {
-                "platform": "Linux armv8l",
-                "version": str(random.choice([13, 14])),
-                "os_name": "Android",
-                "architecture": "arm64",
+                "platform": "Win32",
+                "version": windows_version,
+                "os_name": "Windows",
+                "architecture": "x86_64",
             }
         else:
+            macos_version = random.choice(["10.15", "13.0", "14.0", "14.5"])
             return {
-                "platform": random.choice(["Win32", "MacIntel"]),
-                "version": "10.0" if "Win" in "Win32" else "10.15",
-                "os_name": random.choice(["Windows", "macOS"]),
+                "platform": "MacIntel",
+                "version": macos_version,
+                "os_name": "macOS",
                 "architecture": "x86_64",
             }
     
-    def _generate_webgl_fingerprint(self, device_type: str) -> Dict[str, Any]:
-        """Generate WebGL fingerprint"""
-        if device_type == "mobile":
-            renderer = random.choice(self.WEBGL_RENDERERS["mobile"])
-            vendor = "Qualcomm" if "Adreno" in renderer else "ARM"
+    def _generate_webgl_fingerprint(self, device_type: str = "desktop") -> Dict[str, Any]:
+        """Generate WebGL fingerprint for Desktop"""
+        # Always use desktop WebGL renderers for Web API
+        category = random.choice(["high_end", "mid_range", "integrated"])
+        renderer = random.choice(self.WEBGL_RENDERERS[category])
+        if "NVIDIA" in renderer:
+            vendor = "NVIDIA Corporation"
+        elif "AMD" in renderer:
+            vendor = "AMD"
         else:
-            category = random.choice(["high_end", "mid_range", "integrated"])
-            renderer = random.choice(self.WEBGL_RENDERERS[category])
-            if "NVIDIA" in renderer:
-                vendor = "NVIDIA Corporation"
-            elif "AMD" in renderer:
-                vendor = "AMD"
-            else:
-                vendor = "Intel Inc."
+            vendor = "Intel Inc."
         
         return {
             "vendor": vendor,
@@ -724,16 +715,12 @@ class AdvancedBrowserFingerprint2025:
             "discharging_time": random.randint(3600, 28800),
         }
     
-    def _generate_connection_info(self, device_type: str) -> Dict[str, Any]:
-        """Generate network connection info"""
-        if device_type == "mobile":
-            ect = random.choice(["4g", "3g"])
-            downlink = random.uniform(1.5, 10.0) if ect == "4g" else random.uniform(0.5, 2.0)
-            rtt = random.randint(50, 150) if ect == "4g" else random.randint(100, 300)
-        else:
-            ect = "4g"
-            downlink = random.uniform(10.0, 100.0)
-            rtt = random.randint(20, 100)
+    def _generate_connection_info(self, device_type: str = "desktop") -> Dict[str, Any]:
+        """Generate network connection info - Desktop/WiFi for Web API"""
+        # Always use high-speed broadband connection for desktop
+        ect = "4g"
+        downlink = random.uniform(50.0, 200.0)  # High-speed broadband
+        rtt = random.randint(10, 50)  # Low latency for desktop
         
         return {
             "effective_type": ect,
@@ -742,24 +729,19 @@ class AdvancedBrowserFingerprint2025:
             "save_data": False,
         }
     
-    def _generate_user_agent(self, device_type: str, browser_type: str,
-                            chrome_version: str, platform_info: Dict) -> str:
-        """Generate realistic User-Agent string"""
-        major_version = chrome_version.split('.')[0]
+    def _generate_user_agent(self, device_type: str = "desktop", browser_type: str = "chrome",
+                            chrome_version: str = "134.0.6923.127", platform_info: Dict = None) -> str:
+        """Generate realistic User-Agent string - Desktop only for Web API"""
+        if platform_info is None:
+            platform_info = {"os_name": random.choice(["Windows", "macOS"])}
         
-        if device_type == "mobile":
-            android_version = platform_info["version"]
-            device_model = random.choice([
-                "SM-S928B", "SM-S918B", "SM-A546B", "SM-A536B",
-                "SM-G998B", "SM-G991B", "SM-A525F", "SM-A725F",
-                "Pixel 8", "Pixel 7", "Pixel 6",
-            ])
-            return f"Mozilla/5.0 (Linux; Android {android_version}; {device_model}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version} Mobile Safari/537.36"
+        # Always generate desktop user agent for Web API
+        if platform_info.get("os_name") == "Windows":
+            windows_version = random.choice(["10.0", "11.0"])
+            return f"Mozilla/5.0 (Windows NT {windows_version}; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version} Safari/537.36"
         else:
-            if platform_info["os_name"] == "Windows":
-                return f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version} Safari/537.36"
-            else:
-                return f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version} Safari/537.36"
+            macos_version = random.choice(["10_15_7", "13_0", "14_0", "14_5"])
+            return f"Mozilla/5.0 (Macintosh; Intel Mac OS X {macos_version}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version} Safari/537.36"
 
 
 # Global instance
@@ -1488,7 +1470,8 @@ class UltraStealthIPGenerator2025:
         lease_duration = random.choice([3600, 7200, 14400, 28800, 86400])  # Common DHCP lease times
         
         ip_type = range_info.get("type", "residential")
-        is_mobile = ip_type == "mobile"
+        # Always use WiFi/broadband for Desktop Web API
+        is_mobile = False
         
         # Generate location within country
         location = self._generate_location(country, isp_data)
@@ -1502,8 +1485,8 @@ class UltraStealthIPGenerator2025:
             "isp_name": isp_data.get("name", isp),
             "asn": isp_data.get("asn", "AS0"),
             "as_name": isp_data.get("as_name", ""),
-            "connection_type": "mobile" if is_mobile else "wifi",
-            "network_type": random.choice(["5G", "LTE", "4G"]) if is_mobile else "WiFi",
+            "connection_type": "wifi",  # Always WiFi for Desktop
+            "network_type": "WiFi",  # Always WiFi for Desktop
             "cgnat": range_info.get("cgnat", False),
             "location": location,
             "language": country_data["language"],
@@ -1790,22 +1773,10 @@ class AdvancedIPStealthSystem2025:
         return isp_network_map.get(isp, {}).get(connection_type, "WiFi")
 
     def _get_connection_type_for_isp(self, isp: str) -> str:
-        """Determine connection type berdasarkan ISP - FIXED"""
-        mobile_isps = [
-            # Indonesia
-            "telkomsel", "indosat", "xl", "tri", "smartfren",
-            # US
-            "verizon", "att", "tmobile",
-            # UK
-            "ee", "vodafone_uk", "three_uk",
-            # Brazil
-            "claro_br", "vivo_br", "tim_br",
-            # India
-            "jio", "airtel_in", "vi_in",
-            # Germany
-            "telekom_de", "vodafone_de", "o2_de"
-        ]
-        return "mobile" if isp in mobile_isps else "wifi"
+        """Determine connection type berdasarkan ISP - Always Desktop/WiFi for Web API"""
+        # For Web API, always use WiFi/broadband connection type (desktop)
+        # This ensures headers and fingerprints match desktop browser behavior
+        return "wifi"
         
     def _initialize_ip_sources(self):
         """Initialize multiple IP generation sources - Multi-Country Support"""
@@ -4367,11 +4338,12 @@ class AdvancedIPStealthSystem2025:
         return f"{self._rand_block()}:{self._rand_block()}:{self._rand_block()}"
     
     def _generate_enhanced_headers(self, ip_info: Dict[str, Any], user_agent: str, 
-                                 connection_type: str = "mobile") -> Dict[str, str]:
+                                 connection_type: str = "desktop") -> Dict[str, str]:
         """Generate realistic HTTP headers that match common browser behavior.
         
         Headers are kept minimal and standard to avoid detection.
         Custom X-* headers that are not actually sent by real browsers are removed.
+        Uses Desktop browser headers for Web API compatibility.
         """
         device_fp = ip_info.get("device_fingerprint", {})
         
@@ -4385,7 +4357,14 @@ class AdvancedIPStealthSystem2025:
         # Determine Chrome version from device fingerprint or use reasonable default
         chrome_version = device_fp.get("chrome_version", "120.0.0.0").split('.')[0]
         
-        # Generate standard browser headers that match real Chrome on Android
+        # Desktop platform for Web API
+        platform_choice = random.choice(["Windows", "macOS"])
+        if platform_choice == "Windows":
+            platform_header = '"Windows"'
+        else:
+            platform_header = '"macOS"'
+        
+        # Generate standard browser headers that match real Chrome on Desktop
         headers = {
             # Essential headers - order matters for fingerprinting
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -4394,10 +4373,10 @@ class AdvancedIPStealthSystem2025:
             "Connection": "keep-alive",
             "User-Agent": user_agent,
             
-            # Sec-* headers that Chrome actually sends
+            # Sec-* headers that Chrome actually sends - Desktop version
             "Sec-Ch-Ua": f'"Chromium";v="{chrome_version}", "Not_A Brand";v="8"',
-            "Sec-Ch-Ua-Mobile": "?1" if connection_type == "mobile" else "?0",
-            "Sec-Ch-Ua-Platform": '"Android"',
+            "Sec-Ch-Ua-Mobile": "?0",  # Desktop = not mobile
+            "Sec-Ch-Ua-Platform": platform_header,
             "Sec-Fetch-Dest": "document",
             "Sec-Fetch-Mode": "navigate",
             "Sec-Fetch-Site": "none",
@@ -5445,8 +5424,46 @@ class WebRTCWebGL_Spoofing2025:
         self.screen_configs = self._generate_screen_configs()
         
     def _generate_enhanced_webrtc_configs(self) -> Dict[str, Any]:
-        """Generate enhanced WebRTC configurations"""
+        """Generate enhanced WebRTC configurations for Desktop browsers"""
         return {
+            "desktop_chrome_windows": {
+                "iceServers": [
+                    {"urls": ["stun:stun.l.google.com:19302"]},
+                    {"urls": ["stun:stun1.l.google.com:19302"]},
+                    {"urls": ["stun:stun2.l.google.com:19302"]},
+                    {"urls": ["stun:stun3.l.google.com:19302"]},
+                    {"urls": ["stun:stun4.l.google.com:19302"]}
+                ],
+                "iceTransportPolicy": "all",
+                "bundlePolicy": "max-bundle",
+                "rtcpMuxPolicy": "require",
+                "iceCandidatePoolSize": 0,
+                "sdpSemantics": "unified-plan",
+                "optional": [
+                    {"googDscp": True},
+                    {"googCpuOveruseDetection": True},
+                    {"googCpuOveruseEncodeUsage": True},
+                    {"googHighStartBitrate": 300},
+                    {"googPayloadPadding": True}
+                ]
+            },
+            "desktop_chrome_macos": {
+                "iceServers": [
+                    {"urls": ["stun:stun.l.google.com:19302"]},
+                    {"urls": ["stun:stun1.l.google.com:19302"]},
+                    {"urls": ["stun:stun2.l.google.com:19302"]},
+                    {"urls": ["stun:stun3.l.google.com:19302"]}
+                ],
+                "iceTransportPolicy": "all",
+                "bundlePolicy": "max-bundle",
+                "rtcpMuxPolicy": "require",
+                "iceCandidatePoolSize": 0,
+                "sdpSemantics": "unified-plan",
+                "optional": [
+                    {"googDscp": True},
+                    {"googCpuOveruseDetection": True}
+                ]
+            },
             "android_chrome_samsung": {
                 "iceServers": [
                     {"urls": ["stun:stun.l.google.com:19302"]},
@@ -5494,8 +5511,61 @@ class WebRTCWebGL_Spoofing2025:
         }
     
     def _generate_enhanced_webgl_configs(self) -> Dict[str, Any]:
-        """Generate enhanced WebGL configurations"""
+        """Generate enhanced WebGL configurations for Desktop"""
         return {
+            "nvidia_desktop": {
+                "vendor": "NVIDIA Corporation",
+                "renderer": random.choice([
+                    "NVIDIA GeForce RTX 4090/PCIe/SSE2",
+                    "NVIDIA GeForce RTX 4080/PCIe/SSE2",
+                    "NVIDIA GeForce RTX 3080/PCIe/SSE2",
+                    "NVIDIA GeForce RTX 3070/PCIe/SSE2",
+                    "NVIDIA GeForce GTX 1660 Ti/PCIe/SSE2"
+                ]),
+                "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+                "shading_language": "WebGL GLSL ES 3.00",
+                "max_texture_size": 16384,
+                "max_viewport_dims": [32767, 32767],
+            },
+            "intel_desktop": {
+                "vendor": "Intel Inc.",
+                "renderer": random.choice([
+                    "Intel(R) UHD Graphics 770",
+                    "Intel(R) Iris(R) Xe Graphics",
+                    "Intel(R) UHD Graphics 630",
+                    "Intel(R) HD Graphics 620"
+                ]),
+                "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+                "shading_language": "WebGL GLSL ES 3.00",
+                "max_texture_size": 16384,
+                "max_viewport_dims": [16384, 16384],
+            },
+            "amd_desktop": {
+                "vendor": "AMD",
+                "renderer": random.choice([
+                    "AMD Radeon RX 7900 XTX",
+                    "AMD Radeon RX 6800 XT",
+                    "AMD Radeon RX 6700 XT",
+                    "AMD Radeon RX 580"
+                ]),
+                "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+                "shading_language": "WebGL GLSL ES 3.00",
+                "max_texture_size": 16384,
+                "max_viewport_dims": [16384, 16384],
+            },
+            "apple_gpu": {
+                "vendor": "Apple Inc.",
+                "renderer": random.choice([
+                    "Apple M3 Pro",
+                    "Apple M3 Max",
+                    "Apple M2 Pro",
+                    "Apple M1 Pro"
+                ]),
+                "version": "WebGL 2.0 (OpenGL ES 3.0 Metal)",
+                "shading_language": "WebGL GLSL ES 3.00",
+                "max_texture_size": 16384,
+                "max_viewport_dims": [16384, 16384],
+            },
             "adreno_750": {
                 "vendor": "Qualcomm",
                 "renderer": "Adreno (TM) 750",
@@ -5804,37 +5874,32 @@ class WebRTCWebGL_Spoofing2025:
             }
         }
     
-    def get_complete_fingerprint(self, device_type: str = "android", brand: str = "samsung", connection_type: str = "mobile") -> Dict[str, Any]:
-        """Get complete fingerprint that matches real device characteristics.
+    def get_complete_fingerprint(self, device_type: str = "desktop", brand: str = "windows", connection_type: str = "wifi") -> Dict[str, Any]:
+        """Get complete fingerprint that matches real desktop device characteristics for Web API.
         
-        Fingerprints are generated to be consistent with the device profile
+        Fingerprints are generated to be consistent with desktop browser profile
         and avoid unique identifiers that could be used for tracking.
         """
-        # Select profiles based on device type and brand
-        if device_type == "ios":
-            webrtc_profile = "ios_safari"
-            webgl_profile = "apple_gpu"
-            canvas_profile = "iphone_16_pro"
-            audio_profile = "ios"
-            font_profile = "ios"
-            screen_profile = "iphone_16_pro"
-        elif brand.lower() == "xiaomi":
-            webrtc_profile = "android_chrome_xiaomi"
-            webgl_profile = "mali_g710"
-            canvas_profile = "xiaomi_14_pro"
-            audio_profile = "android_xiaomi"
-            font_profile = "android_xiaomi"
-            screen_profile = "xiaomi_14_pro"
-        else:
-            # Default Samsung (most common in Indonesia)
-            webrtc_profile = "android_chrome_samsung"
-            webgl_profile = "adreno_750"
-            canvas_profile = "samsung_galaxy_s24"
-            audio_profile = "android_samsung"
-            font_profile = "android_samsung"
-            screen_profile = "samsung_galaxy_s24"
+        # Always use desktop profiles for Web API
+        platform_choice = random.choice(["windows", "macos"])
         
-        # Generate fingerprint with realistic values
+        if platform_choice == "macos":
+            webrtc_profile = "desktop_chrome_macos"
+            webgl_profile = "apple_gpu"
+            canvas_profile = "macbook_pro"
+            audio_profile = "desktop_macos"
+            font_profile = "desktop_macos"
+            screen_profile = "macbook_pro"
+        else:
+            # Default Windows desktop
+            webrtc_profile = "desktop_chrome_windows"
+            webgl_profile = random.choice(["nvidia_desktop", "intel_desktop", "amd_desktop"])
+            canvas_profile = "windows_desktop"
+            audio_profile = "desktop_windows"
+            font_profile = "desktop_windows"
+            screen_profile = "windows_desktop"
+        
+        # Generate fingerprint with realistic desktop values
         fingerprint = {
             "webrtc": self.get_webrtc_fingerprint(webrtc_profile),
             "webgl": self.get_webgl_fingerprint(webgl_profile),
@@ -5842,16 +5907,16 @@ class WebRTCWebGL_Spoofing2025:
             "audio": self.get_audio_fingerprint(audio_profile),
             "fonts": self.font_configs.get(font_profile, {}),
             "screen": self.screen_configs.get(screen_profile, {}),
-            "device_type": device_type,
-            "brand": brand,
-            "connection_type": connection_type,
+            "device_type": "desktop",
+            "brand": platform_choice,
+            "connection_type": "wifi",
         }
         
         return fingerprint
     
-    def get_webrtc_fingerprint(self, profile: str = "android_chrome_samsung") -> Dict[str, Any]:
-        """Get realistic WebRTC fingerprint matching real browser behavior."""
-        config = self.webrtc_configs.get(profile, self.webrtc_configs["android_chrome_samsung"])
+    def get_webrtc_fingerprint(self, profile: str = "desktop_chrome_windows") -> Dict[str, Any]:
+        """Get realistic WebRTC fingerprint matching real desktop browser behavior."""
+        config = self.webrtc_configs.get(profile, self.webrtc_configs["desktop_chrome_windows"])
         
         # Generate ICE candidates that match real device behavior
         ice_candidates = self._generate_ice_candidates_enhanced()
@@ -6746,83 +6811,89 @@ class AdvancedFingerprinting2025:
             }
         }
     
-    def generate_fingerprint(self, device_type: str = "android", location: str = "ID", 
+    def generate_fingerprint(self, device_type: str = "desktop", location: str = "ID", 
                            isp: str = None, city: str = None, 
-                           connection_type: str = "mobile") -> Dict[str, Any]:
-        """Generate comprehensive fingerprint dengan connection type awareness - DIKOREKSI"""
-        fingerprint_id = f"{device_type}_{location}_{connection_type}_{int(time.time())}"
+                           connection_type: str = "wifi") -> Dict[str, Any]:
+        """Generate comprehensive fingerprint for Desktop/Web API - DIKOREKSI untuk Web API"""
+        fingerprint_id = f"desktop_{location}_{connection_type}_{int(time.time())}"
         
         if fingerprint_id in self.fingerprint_cache:
             return self.fingerprint_cache[fingerprint_id]
         
-        # Select device profile berdasarkan connection type
-        if connection_type == "mobile":
-            # Mobile devices
-            if device_type == "ios":
-                device_profile = self.device_profiles["iphone_16_pro_max"]
-                os_profile = self.os_profiles["ios_18"]
-                browser_profile = self.browser_profiles["safari_ios_18"]
-                hardware_profile = self.hardware_profiles["apple_a18_pro"]
-            else:
-                device_options = ["samsung_galaxy_s24_ultra", "xiaomi_14_pro", "google_pixel_9_pro"]
-                selected_device = random.choice(device_options)
-                device_profile = self.device_profiles[selected_device]
-                os_profile = self.os_profiles["android_14"]
-                
-                if selected_device == "samsung_galaxy_s24_ultra":
-                    browser_profile = self.browser_profiles["samsung_browser_24"]
-                    hardware_profile = self.hardware_profiles["snapdragon_8_gen3"]
-                else:
-                    browser_profile = self.browser_profiles["chrome_android_135"]
-                    hardware_profile = random.choice([
-                        self.hardware_profiles["snapdragon_8_gen3"], 
-                        self.hardware_profiles["google_tensor_g4"]
-                    ])
-        else:
-            # WiFi/Tablet devices - FIXED: tambah tablet profile
-            device_options = ["samsung_galaxy_s24_ultra", "google_pixel_9_pro"]
-            selected_device = random.choice(device_options)
-            device_profile = self.device_profiles[selected_device]
-            os_profile = self.os_profiles["android_14"]
-            browser_profile = self.browser_profiles["chrome_android_135"]  # Chrome for tablet
-            hardware_profile = self.hardware_profiles["snapdragon_8_gen3"]
+        # Always use Desktop profile for Web API
+        platform_choice = random.choice(["windows", "macos"])
         
-        # Generate unique identifiers
-        android_id = self._generate_android_id() if device_type == "android" else None
+        if platform_choice == "macos":
+            device_profile = {
+                "brand": "Apple",
+                "model": random.choice(["MacBookPro18,1", "MacBookPro17,1", "MacBookAir10,1"]),
+                "market_name": random.choice(["MacBook Pro 16", "MacBook Pro 14", "MacBook Air M2"]),
+                "screen": {"width": 2560, "height": 1600, "dpi": 227},
+                "sensors": ["accelerometer", "gyro", "ambient_light"],
+            }
+            os_profile = {
+                "name": "macOS",
+                "version": random.choice(["14.0", "13.0", "12.0"]),
+                "build": random.choice(["23A344", "22A380", "21G72"])
+            }
+            browser_profile = self._get_desktop_chrome_profile("macos")
+            hardware_profile = {
+                "processor": random.choice(["Apple M3 Pro", "Apple M2 Pro", "Apple M1 Max"]),
+                "cores": random.choice([10, 12, 14]),
+                "memory": random.choice([16, 32, 64])
+            }
+        else:
+            device_profile = {
+                "brand": random.choice(["Dell", "HP", "Lenovo", "ASUS"]),
+                "model": random.choice(["XPS 15", "Spectre x360", "ThinkPad X1", "ZenBook Pro"]),
+                "market_name": random.choice(["Dell XPS 15 9530", "HP Spectre x360", "Lenovo ThinkPad X1 Carbon"]),
+                "screen": {"width": 1920, "height": 1080, "dpi": 141},
+                "sensors": [],
+            }
+            os_profile = {
+                "name": "Windows",
+                "version": random.choice(["10.0", "11.0"]),
+                "build": random.choice(["19045", "22631", "22000"])
+            }
+            browser_profile = self._get_desktop_chrome_profile("windows")
+            hardware_profile = {
+                "processor": random.choice(["Intel Core i7-13700H", "Intel Core i9-13900H", "AMD Ryzen 9 7945HX"]),
+                "cores": random.choice([8, 12, 16]),
+                "memory": random.choice([16, 32, 64])
+            }
+        
+        # Generate unique identifiers - Desktop doesn't use Android/GSF IDs
         advertising_id = self._generate_advertising_id()
-        gsf_id = self._generate_gsf_id() if device_type == "android" else None
         
         # Generate location data - DIKOREKSI: tambah parameter city
         location_data = self._generate_location_data_enhanced(location, city)
         
-        # Generate network data berdasarkan connection type - DIKOREKSI
-        network_data = self._generate_network_data_enhanced(location, device_type, connection_type, isp)
+        # Generate network data for Desktop/WiFi - DIKOREKSI
+        network_data = self._generate_network_data_enhanced(location, "desktop", "wifi", isp)
         
-        # Generate device fingerprint dengan connection type - DIKOREKSI
-        device_fingerprint = self._generate_device_fingerprint_enhanced(device_profile, connection_type)
+        # Generate device fingerprint for Desktop - DIKOREKSI
+        device_fingerprint = self._generate_device_fingerprint_enhanced(device_profile, "wifi")
         
-        # Generate sensor data - DIKOREKSI: sekarang didefinisikan
-        sensor_data = self._generate_sensor_data_enhanced(device_profile["sensors"], connection_type)
+        # Generate sensor data - Desktop has limited sensors
+        sensor_data = {}
         
-        # Generate installed apps - DIKOREKSI: sekarang didefinisikan
-        installed_apps = self._generate_installed_apps_indonesia_enhanced(device_type, connection_type)
+        # Desktop doesn't have installed apps like mobile
+        installed_apps = []
         
-        # Build fingerprint
+        # Build fingerprint for Desktop
         fingerprint = {
             "fingerprint_id": fingerprint_id,
             "timestamp": int(time.time()),
-            "device_type": device_type,
-            "connection_type": connection_type,  # Simpan connection type
+            "device_type": "desktop",
+            "connection_type": "wifi",
             
             "device": {
                 **device_profile,
                 "identifiers": {
-                    "android_id": android_id,
                     "advertising_id": advertising_id,
-                    "gsf_id": gsf_id,
-                    "serial_number": self._generate_serial_number(device_profile["brand"]),
-                    "imei": self._generate_imei() if device_type == "android" and connection_type == "mobile" else None,
-                    "meid": self._generate_meid() if device_type == "android" and connection_type == "mobile" else None
+                    "serial_number": None,
+                    "imei": None,
+                    "meid": None
                 },
                 "fingerprint": device_fingerprint
             },
@@ -6834,11 +6905,11 @@ class AdvancedFingerprinting2025:
                 "language": location_data["language"],
                 "languages": [location_data["language"], "en-US", "en"],
                 "keyboard_layout": "qwerty",
-                "font_scale": random.uniform(0.85, 1.15),
-                "display_size": random.choice(["default", "small", "large"]),
+                "font_scale": 1.0,
+                "display_size": "default",
                 "dark_mode": random.choice([True, False]),
                 "battery_saver": False,
-                "developer_options": random.choice([True, False])
+                "developer_options": False
             },
             
             "browser": {
@@ -6900,10 +6971,10 @@ class AdvancedFingerprinting2025:
             "system": {
                 "uptime": random.randint(3600, 86400),  # 1-24 hours
                 "boot_time": int(time.time()) - random.randint(3600, 86400),
-                "thermal_state": random.choice(["nominal", "fair", "serious", "critical"]),
-                "power_state": random.choice(["charged", "charging", "discharging", "full"]),
-                "memory_pressure": random.choice(["normal", "warning", "critical"]),
-                "disk_space": random.randint(10, device_profile["hardware"]["storage"] - 10)
+                "thermal_state": "nominal",
+                "power_state": "charged",
+                "memory_pressure": "normal",
+                "disk_space": random.randint(50, 500)  # Desktop has more storage
             },
             
             # Privacy Settings
@@ -6911,7 +6982,7 @@ class AdvancedFingerprinting2025:
                 "location_enabled": random.choice([True, False]),
                 "camera_enabled": random.choice([True, False]),
                 "microphone_enabled": random.choice([True, False]),
-                "contacts_access": random.choice([True, False]),
+                "contacts_access": False,  # Desktop doesn't have contacts
                 "photos_access": random.choice([True, False]),
                 "notifications_enabled": random.choice([True, False]),
                 "ad_tracking": random.choice([True, False]),
@@ -6926,6 +6997,44 @@ class AdvancedFingerprinting2025:
         self.fingerprint_cache[fingerprint_id] = fingerprint
         
         return fingerprint
+    
+    def _get_desktop_chrome_profile(self, platform: str) -> Dict[str, Any]:
+        """Generate desktop Chrome browser profile for Web API"""
+        chrome_version = random.choice([131, 132, 133, 134, 135, 136])
+        chrome_full = f"{chrome_version}.0.{random.randint(6778, 6998)}.{random.randint(0, 250)}"
+        
+        if platform == "macos":
+            macos_version = random.choice(["10_15_7", "13_0", "14_0", "14_5"])
+            user_agent = f"Mozilla/5.0 (Macintosh; Intel Mac OS X {macos_version}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_full} Safari/537.36"
+            platform_header = '"macOS"'
+        else:
+            windows_version = random.choice(["10.0", "11.0"])
+            user_agent = f"Mozilla/5.0 (Windows NT {windows_version}; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_full} Safari/537.36"
+            platform_header = '"Windows"'
+        
+        return {
+            "name": "Google Chrome",
+            "version": chrome_full,
+            "app_version": f"5.0 ({platform.title()})",
+            "user_agent": user_agent,
+            "platform": platform_header,
+            "vendor": "Google Inc.",
+            "product": "Gecko",
+            "product_sub": "20030107",
+            "language": "id-ID",
+            "languages": ["id-ID", "id", "en-US", "en"],
+            "online": True,
+            "java_enabled": False,
+            "cookies_enabled": True,
+            "do_not_track": None,
+            "pdf_viewer_enabled": True,
+            "webdriver": False,
+            "device_memory": random.choice([8, 16, 32]),
+            "hardware_concurrency": random.choice([4, 8, 12, 16]),
+            "max_touch_points": 0,  # Desktop has no touch
+            "webgl": True,
+            "webrtc": True,
+        }
     
     def _generate_android_id(self) -> str:
         """Generate Android ID"""
@@ -10170,10 +10279,10 @@ class AdvancedSessionManager2025:
             "current_headers": complete_headers,
             "metadata": {
                 "user_agent": fingerprint.get("browser", {}).get("user_agent", ""),
-                "device_type": fingerprint.get("device_type", "android"),
+                "device_type": fingerprint.get("device_type", "desktop"),
                 "location": fingerprint.get("location", {}).get("city", "Jakarta"),
                 "isp": ip_config.get("isp_info", {}).get("isp", "telkomsel"),
-                "connection_type": ip_config.get("connection_type", "mobile")
+                "connection_type": ip_config.get("connection_type", "wifi")
             }
         }
         
@@ -10227,6 +10336,7 @@ class AdvancedSessionManager2025:
         
         Headers are kept minimal to avoid detection while maintaining
         consistency across all requests in the session.
+        Uses Desktop/Web browser fingerprint for Web API compatibility.
         """
         # Extract browser info from fingerprint
         browser = fingerprint.get("browser", {}) if fingerprint else {}
@@ -10238,23 +10348,25 @@ class AdvancedSessionManager2025:
         chrome_patch = random.randint(0, 250)
         chrome_full = f"{chrome_major}.{chrome_minor}.{chrome_build}.{chrome_patch}"
         
-        # Generate fresh Android version and device
-        android_versions = ["13", "14", "15"]
-        android_version = random.choice(android_versions)
+        # Desktop platforms for Web API - Windows or macOS
+        platform_choice = random.choice(["Windows", "macOS"])
         
-        # Popular Samsung devices in Indonesia
-        samsung_models = [
-            "SM-A546E", "SM-A346E", "SM-A256E",  # Galaxy A series
-            "SM-S911B", "SM-S916B", "SM-S918B",  # Galaxy S23 series
-            "SM-S921B", "SM-S926B", "SM-S928B",  # Galaxy S24 series
-            "SM-A155F", "SM-A057F", "SM-A146P",  # Budget A series
-        ]
-        device_model = random.choice(samsung_models)
+        if platform_choice == "Windows":
+            # Windows 10/11 User-Agent
+            windows_versions = ["10.0", "11.0"]
+            windows_version = random.choice(windows_versions)
+            user_agent = f"Mozilla/5.0 (Windows NT {windows_version}; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_full} Safari/537.36"
+            platform_header = '"Windows"'
+            platform_version = f'"{windows_version}.0"'
+        else:
+            # macOS User-Agent (MacBook)
+            macos_versions = ["10_15_7", "13_0", "14_0", "14_5"]
+            macos_version = random.choice(macos_versions)
+            user_agent = f"Mozilla/5.0 (Macintosh; Intel Mac OS X {macos_version}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_full} Safari/537.36"
+            platform_header = '"macOS"'
+            platform_version = f'"{macos_version.replace("_", ".")}"'
         
-        # Build fresh User-Agent
-        user_agent = f"Mozilla/5.0 (Linux; Android {android_version}; {device_model}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_full} Mobile Safari/537.36"
-        
-        # Build realistic browser headers matching exact Chrome order
+        # Build realistic browser headers matching exact Chrome order for Desktop
         headers = {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
             "Accept-Encoding": "gzip, deflate, br, zstd",
@@ -10264,10 +10376,9 @@ class AdvancedSessionManager2025:
             "Host": "www.instagram.com",
             "Sec-Ch-Ua": f'"Chromium";v="{chrome_major}", "Google Chrome";v="{chrome_major}", "Not-A.Brand";v="24"',
             "Sec-Ch-Ua-Full-Version-List": f'"Chromium";v="{chrome_full}", "Google Chrome";v="{chrome_full}", "Not-A.Brand";v="24.0.0.0"',
-            "Sec-Ch-Ua-Mobile": "?1",
-            "Sec-Ch-Ua-Model": f'"{device_model}"',
-            "Sec-Ch-Ua-Platform": '"Android"',
-            "Sec-Ch-Ua-Platform-Version": f'"{android_version}.0.0"',
+            "Sec-Ch-Ua-Mobile": "?0",  # Desktop = not mobile
+            "Sec-Ch-Ua-Platform": platform_header,
+            "Sec-Ch-Ua-Platform-Version": platform_version,
             "Sec-Fetch-Dest": "document",
             "Sec-Fetch-Mode": "navigate",
             "Sec-Fetch-Site": "none",
@@ -12285,7 +12396,7 @@ class InstagramAccountCreator2025:
             "request_timeout": 30,
             "email_service": "10minutemail",
             "location": "ID",
-            "device_type": "android",
+            "device_type": "desktop",
             "connection_type": "auto",
             "verbose": True
         }
@@ -13840,7 +13951,7 @@ class UltraBoostedV13_2025:
             "request_timeout": 30,
             "email_service": "auto",
             "location": "ID",
-            "device_type": "android",
+            "device_type": "desktop",
             "verbose": True,
             "save_sessions": True,
             "session_file": "sessions_2025.json",
@@ -14663,7 +14774,7 @@ class CLIInterface:
             
             config_display = {
                 "Location": config.get('location', 'ID'),
-                "Device Type": config.get('device_type', 'android').upper(),
+                "Device Type": config.get('device_type", "desktop').upper(),
                 "Email Service": config.get('email_service', 'auto').upper(),
                 "Max Concurrent": config.get('max_concurrent', 2),
                 "Anti-Detection": "Maximum" if config.get('request_timeout', 30) > 45 
@@ -14812,7 +14923,7 @@ class CLIInterface:
             print(f"\n{cyan}CURRENT SETTINGS:{reset}")
             print(f"{merah}─────────────────{reset}")
             print(f"  Password: {'*' * len(self.current_password) if self.current_password else 'Not set'}")
-            print(f"  Device Type: {config.get('device_type', 'android').upper()}")
+            print(f"  Device Type: {config.get('device_type", "desktop').upper()}")
             print(f"  Email Service: {config.get('email_service', 'auto').upper()}")
             print(f"  Max Concurrent: {config.get('max_concurrent', 2)}")
             print(f"  Anti-Detection: {'Maximum' if config.get('request_timeout', 30) > 45 else 'Advanced' if config.get('request_timeout', 30) > 30 else 'Normal'}")
@@ -15276,7 +15387,7 @@ def setup_environment():
         "max_concurrent": 3,
         "email_service": "auto",
         "location": "ID",
-        "device_type": "android",
+        "device_type": "desktop",
         "save_sessions": True,
         "session_file": "sessions/sessions_2025.json",
         "accounts_file": "accounts/accounts_2025.txt",
