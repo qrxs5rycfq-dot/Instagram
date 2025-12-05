@@ -13,40 +13,19 @@ import time
 import re
 import uuid
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 from faker import Faker
-from time import sleep
 from colorama import init, Fore, Back, Style
-from http.cookies import SimpleCookie
 from typing import Any, Dict, List, Optional, Tuple
-import concurrent.futures
-from functools import wraps
 import urllib3
-import urllib
-import logging
-from hashlib import sha1
-from fake_useragent import UserAgent
-from typing import Optional, Tuple, Dict
 import ipaddress
 import socket
-import struct
-import hashlib
-import hmac
 import secrets
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import padding
-import subprocess
-import platform
-import psutil
 import numpy as np
-from scipy import stats
 import math
-from urllib3.util.retry import Retry
-from requests.adapters import HTTPAdapter
-import functools
 
 if sys.version_info >= (3, 0):
-    from urllib.parse import urlencode, quote_plus
+    from urllib.parse import urlencode
 
 try:
     from dateutil import parser as dateutil_parser  # type: ignore
@@ -3468,30 +3447,6 @@ class AdvancedIPStealthSystem2025:
                 continue
         
         return None
-    
-    def _generate_residential_fourth_octet(self) -> int:
-        """Generate realistic residential fourth octet"""
-        # Residential IPs typically have random-looking fourth octets
-        # Avoid: 0-10, 250-255, multiples of 10/50/100, gateway addresses
-        
-        while True:
-            octet = random.randint(11, 249)
-            
-            # Skip round numbers that look like server allocations
-            if octet % 10 == 0:
-                continue
-            if octet % 50 == 0:
-                continue
-            if octet % 100 == 0:
-                continue
-            
-            # Skip common gateway/router addresses
-            if octet in [1, 254, 100, 200, 128, 64]:
-                continue
-            
-            # Add some natural randomness - residential IPs often cluster
-            # in certain ranges based on ISP allocation patterns
-            return octet
     
     def _create_enhanced_ip_profile(self, ip: str, config: Dict[str, Any], isp_name: str) -> Dict[str, Any]:
         """Create enhanced IP profile dengan network type yang BENAR - FIXED"""
@@ -13087,7 +13042,7 @@ class InstagramAccountCreator2025:
                     method="POST",
                     url="https://www.instagram.com/api/v1/web/accounts/web_create_ajax/attempt/",
                     data=simple_encoded,
-                    request_type="ajax",
+                    request_type="ajax",  # Use request_type instead of headers
                     cookies=session.get("cookies", {})
                 )
                 
