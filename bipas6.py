@@ -13,40 +13,19 @@ import time
 import re
 import uuid
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 from faker import Faker
-from time import sleep
 from colorama import init, Fore, Back, Style
-from http.cookies import SimpleCookie
 from typing import Any, Dict, List, Optional, Tuple
-import concurrent.futures
-from functools import wraps
 import urllib3
-import urllib
-import logging
-from hashlib import sha1
-from fake_useragent import UserAgent
-from typing import Optional, Tuple, Dict
 import ipaddress
 import socket
-import struct
-import hashlib
-import hmac
 import secrets
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import padding
-import subprocess
-import platform
-import psutil
 import numpy as np
-from scipy import stats
 import math
-from urllib3.util.retry import Retry
-from requests.adapters import HTTPAdapter
-import functools
 
 if sys.version_info >= (3, 0):
-    from urllib.parse import urlencode, quote_plus
+    from urllib.parse import urlencode
 
 try:
     from dateutil import parser as dateutil_parser  # type: ignore
@@ -2695,18 +2674,6 @@ class AdvancedIPStealthSystem2025:
                 "jitter_range": (6, 20),
                 "packet_loss": (0.5, 0.9)
             },
-            "tri": {
-                "prefixes": ["116.206", "118.96", "182.253", "203.190", "103.10"],
-                "asn": "AS23947",
-                "as_name": "PT Hutchison 3 Indonesia",
-                "ttl_range": (60, 68),
-                "window_range": (43800, 44200),
-                "mss_range": (1360, 1460),
-                "cities": ["Jakarta", "Surabaya", "Bandung", "Bekasi", "Tangerang"],
-                "latency_range": (30, 60),
-                "jitter_range": (5, 18),
-                "packet_loss": (0.4, 0.8)
-            },
             "biznet": {
                 "prefixes": ["103.28", "103.78", "117.102", "182.253"],
                 "asn": "AS17451",
@@ -3480,30 +3447,6 @@ class AdvancedIPStealthSystem2025:
                 continue
         
         return None
-    
-    def _generate_residential_fourth_octet(self) -> int:
-        """Generate realistic residential fourth octet"""
-        # Residential IPs typically have random-looking fourth octets
-        # Avoid: 0-10, 250-255, multiples of 10/50/100, gateway addresses
-        
-        while True:
-            octet = random.randint(11, 249)
-            
-            # Skip round numbers that look like server allocations
-            if octet % 10 == 0:
-                continue
-            if octet % 50 == 0:
-                continue
-            if octet % 100 == 0:
-                continue
-            
-            # Skip common gateway/router addresses
-            if octet in [1, 254, 100, 200, 128, 64]:
-                continue
-            
-            # Add some natural randomness - residential IPs often cluster
-            # in certain ranges based on ISP allocation patterns
-            return octet
     
     def _create_enhanced_ip_profile(self, ip: str, config: Dict[str, Any], isp_name: str) -> Dict[str, Any]:
         """Create enhanced IP profile dengan network type yang BENAR - FIXED"""
@@ -10027,6 +9970,33 @@ class CmailService2025:
             print(f"{merah}❌  Cmail.ai OTP error: {e}{reset}")
             return None
     
+    def _extract_otp(self, text: str) -> Optional[str]:
+        """Extract OTP from text"""
+        if not text:
+            return None
+        
+        text = text.replace('\n', ' ').replace('\r', ' ')
+        
+        patterns = [
+            r'(\d{6})\s*(?:is|are|adalah)\s*(?:your|kode)?\s*instagram\s*(?:code|kode)',
+            r'instagram\s*(?:code|kode)\s*(?:is|:)?\s*(\d{6})',
+            r'kode\s*instagram\s*(?:anda|you)?\s*(?:is|:)?\s*(\d{6})',
+            r'enter\s*(?:this|the)?\s*code\s*(?:is|:)?\s*(\d{6})',
+            r'masukkan\s*kode\s*(?:is|:)?\s*(\d{6})',
+            r'verification\s*code\s*(?:is|:)?\s*(\d{6})',
+            r'kode\s*verifikasi\s*(?:is|:)?\s*(\d{6})',
+            r'\b(\d{6})\b'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                otp = match.group(1)
+                if otp.isdigit() and len(otp) == 6:
+                    return otp
+        
+        return None
+    
     async def verify_email(self, email_address: str, email_data: Dict[str, Any]) -> bool:
         """Verify Cmail.ai email"""
         try:
@@ -10097,6 +10067,33 @@ class TempMailService2025:
         except Exception as e:
             print(f"{merah}❌  TempMail OTP error: {e}{reset}")
             return None
+    
+    def _extract_otp(self, text: str) -> Optional[str]:
+        """Extract OTP from text"""
+        if not text:
+            return None
+        
+        text = text.replace('\n', ' ').replace('\r', ' ')
+        
+        patterns = [
+            r'(\d{6})\s*(?:is|are|adalah)\s*(?:your|kode)?\s*instagram\s*(?:code|kode)',
+            r'instagram\s*(?:code|kode)\s*(?:is|:)?\s*(\d{6})',
+            r'kode\s*instagram\s*(?:anda|you)?\s*(?:is|:)?\s*(\d{6})',
+            r'enter\s*(?:this|the)?\s*code\s*(?:is|:)?\s*(\d{6})',
+            r'masukkan\s*kode\s*(?:is|:)?\s*(\d{6})',
+            r'verification\s*code\s*(?:is|:)?\s*(\d{6})',
+            r'kode\s*verifikasi\s*(?:is|:)?\s*(\d{6})',
+            r'\b(\d{6})\b'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                otp = match.group(1)
+                if otp.isdigit() and len(otp) == 6:
+                    return otp
+        
+        return None
     
     async def verify_email(self, email_address: str, email_data: Dict[str, Any]) -> bool:
         """Verify TempMail email"""
@@ -13044,8 +13041,8 @@ class InstagramAccountCreator2025:
                     session_id=session_id,
                     method="POST",
                     url="https://www.instagram.com/api/v1/web/accounts/web_create_ajax/attempt/",
-                    headers=headers,
                     data=simple_encoded,
+                    request_type="ajax",  # Use request_type instead of headers
                     cookies=session.get("cookies", {})
                 )
                 
