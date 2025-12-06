@@ -1,11 +1,12 @@
 # Instagram Account Creation Tool
 
-A Python script for Instagram account creation with advanced anti-detection features.
+A Python script for Instagram account creation with advanced anti-detection features, Indonesia-focused IP spoofing, and unified session management.
 
 ## Requirements
 
 - Python 3.8+
 - Internet connection
+- nmap (optional, for advanced IP validation)
 
 ## Installation
 
@@ -26,6 +27,18 @@ A Python script for Instagram account creation with advanced anti-detection feat
    pip install -r requirements.txt
    ```
 
+4. (Optional) Install nmap for advanced IP validation:
+   ```bash
+   # macOS
+   brew install nmap
+   
+   # Ubuntu/Debian
+   sudo apt install nmap
+   
+   # Windows
+   # Download from https://nmap.org/download.html
+   ```
+
 ## Usage
 
 Run the script with:
@@ -42,9 +55,12 @@ The script provides a CLI interface with the following main options:
 
 ## Features
 
+- **Indonesia-Only IP Spoofing** - All IPs from verified Indonesian ISP ranges (Telkomsel, Indosat, XL, Tri, Smartfren, Biznet, etc.)
+- **Unified Session Manager** - All spoofing components synchronized per session (IP, Headers, Cookies, TLS/JA3, Fingerprint)
+- **Valid Instagram Headers** - X-Ig-App-Id, X-Asbd-Id, X-Instagram-Ajax, CSRF tokens
+- **Random Android/Desktop** - Device type randomly selected with matching fingerprints
 - Multiple email service providers for verification
-- Advanced anti-detection fingerprinting
-- Dynamic IP generation and rotation
+- Advanced anti-detection fingerprinting with WebGL/WebRTC
 - Browser behavior simulation
 - Rate limiting and circuit breaker patterns
 
@@ -74,3 +90,7 @@ For aiohttp-related issues:
 ```bash
 pip install aiohttp[speedups]
 ```
+
+If you see "Nmap not available, using socket fallback":
+- This is not an error, the script will still work with socket-based validation
+- Install nmap for more accurate IP validation (see Installation step 4)

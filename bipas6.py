@@ -14401,16 +14401,19 @@ class InstagramAccountCreator2025:
     """Instagram account creator 2025 dengan semua teknik terbaru"""
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
-        self.config = config or {
+        # Default config
+        default_config = {
             "use_proxy": False,
             "max_retries": 3,
             "request_timeout": 30,
             "email_service": "10minutemail",
             "location": "ID",
-            "device_type": "desktop",
-            "connection_type": "auto",
+            "device_type": "random",  # random antara android dan desktop
+            "connection_type": "auto",  # auto = random mobile/wifi based on device
             "verbose": True
         }
+        # Merge user config with defaults
+        self.config = {**default_config, **(config or {})}
 
         print(f"{cyan}📧  ACCOUNT CREATOR EMAIL CONFIG: {self.config.get('email_service')}{reset}")
         print(f"{cyan}📶  CONNECTION TYPE: {self.config.get('connection_type')}{reset}")
