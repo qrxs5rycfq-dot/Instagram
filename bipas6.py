@@ -366,10 +366,13 @@ class UnifiedSessionManager2025:
             
             # Smartfren - PT Smartfren Telecom
             # ASN: AS18004 (SMARTFREN-AS-ID)
+            # NOTE: 112.78.0.0/15 is NOT Indonesian - it's Taiwan/Vietnam/India
             "smartfren": [
-                # inetnum: 112.78.0.0 - 112.79.255.255
-                {"start": "112.78.64.0", "end": "112.78.127.255", "verified": True},
-                {"start": "112.79.0.0", "end": "112.79.63.255", "verified": True},
+                # inetnum: 103.10.64.0 - 103.10.67.255, netname: SMARTFREN-ID (VERIFIED)
+                {"start": "103.10.64.0", "end": "103.10.65.255", "verified": True},
+                {"start": "103.10.66.0", "end": "103.10.67.255", "verified": True},
+                # inetnum: 202.67.32.0 - 202.67.63.255 (VERIFIED)
+                {"start": "202.67.40.0", "end": "202.67.47.255", "verified": True},
             ],
         }
         
@@ -2397,9 +2400,10 @@ class UltraStealthIPGenerator2025:
                 {"start": "114.125.0.0", "end": "114.125.255.255", "type": "mobile", "cgnat": False},  # 114.125.0.0/16
             ],
             # Smartfren - PT Smartfren Telecom (AS18004)
+            # NOTE: 112.78.0.0/15 is NOT Indonesian - removed
             "smartfren": [
-                {"start": "112.78.0.0", "end": "112.79.255.255", "type": "mobile", "cgnat": False},    # 112.78.0.0/15
-                {"start": "103.10.66.0", "end": "103.10.67.255", "type": "mobile", "cgnat": False},    # 103.10.66.0/23
+                {"start": "103.10.64.0", "end": "103.10.67.255", "type": "mobile", "cgnat": False},    # 103.10.64.0/22 (VERIFIED)
+                {"start": "202.67.40.0", "end": "202.67.47.255", "type": "mobile", "cgnat": False},    # 202.67.32.0/19 subset (VERIFIED)
             ],
             # Biznet - PT Biznet Gio Nusantara (AS17451)
             "biznet": [
