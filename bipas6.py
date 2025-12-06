@@ -1860,72 +1860,324 @@ class UltraStealthIPGenerator2025:
             }
 
 
-# ===================== ADVANCED IP SPOOFING 2025 - UPDATED =====================
+# ===================== ADVANCED IP SPOOFING 2025 - INDONESIA ONLY =====================
 
 class AdvancedIPStealthSystem2025:
-    """Sistem IP stealth dinamis 2025 dengan real-time validation dan enhanced spoofing"""
+    """Sistem IP stealth dinamis 2025 - INDONESIA ONLY dengan real-time validation"""
     
     def __init__(self):
         self.ip_pool = []
         self.blacklisted_ips = set()
-        self.ip_sources = self._initialize_ip_sources()
+        self.ip_sources = self._initialize_indonesia_ip_sources()
         self.validator = IPValidator2025()
         self.generation_cache = {}
         self.cache_ttl = 300
         self.session_ip_map = {}
-
-    def _get_network_type_for_isp(self, isp: str, connection_type: str = "mobile") -> str:
-        """Get network type yang benar berdasarkan ISP dan connection type - FIXED"""
-        isp_network_map = {
-            "telkomsel": {"mobile": "5G", "wifi": "WiFi"},
-            "indosat": {"mobile": "LTE", "wifi": "WiFi"},
-            "xl": {"mobile": "4G", "wifi": "WiFi"},
-            "tri": {"mobile": "3G", "wifi": "WiFi"},
-            "smartfren": {"mobile": "4G", "wifi": "WiFi"},
-            "biznet": {"wifi": "Fiber", "mobile": "WiFi"},
-            "firstmedia": {"wifi": "Cable", "mobile": "WiFi"},
-            "myrepublic": {"wifi": "Fiber", "mobile": "WiFi"},
-            "cbn": {"wifi": "Fiber", "mobile": "WiFi"}
-        }
         
-        return isp_network_map.get(isp, {}).get(connection_type, "WiFi")
+        # Complete Indonesia ISP Database
+        self.indonesia_isps = self._load_complete_indonesia_isps()
+        
+        # Complete Indonesia Device Database
+        self.indonesia_devices = self._load_complete_indonesia_devices()
+
+    def _load_complete_indonesia_isps(self) -> Dict[str, Any]:
+        """Load complete Indonesian ISP database"""
+        return {
+            # ===== MOBILE OPERATORS =====
+            "telkomsel": {
+                "name": "Telkomsel",
+                "full_name": "PT Telekomunikasi Selular",
+                "type": "mobile",
+                "asn": "AS7713",
+                "mcc": "510", "mnc": "10",
+                "network_types": ["5G", "4G LTE", "3G"],
+                "ip_ranges": [
+                    "114.120.0.0/13", "114.124.0.0/14", "182.0.0.0/12",
+                    "36.64.0.0/11", "36.80.0.0/12", "110.136.0.0/13",
+                    "118.136.0.0/14", "118.137.0.0/16", "139.192.0.0/11"
+                ],
+                "prefixes": ["0811", "0812", "0813", "0821", "0822", "0823", "0851", "0852", "0853"]
+            },
+            "indosat": {
+                "name": "Indosat Ooredoo Hutchison",
+                "full_name": "PT Indosat Tbk",
+                "type": "mobile",
+                "asn": "AS4761",
+                "mcc": "510", "mnc": "21",
+                "network_types": ["4G LTE", "3G"],
+                "ip_ranges": [
+                    "114.0.0.0/13", "114.4.0.0/14", "180.240.0.0/12",
+                    "202.152.0.0/14", "125.160.0.0/12", "112.215.0.0/16"
+                ],
+                "prefixes": ["0814", "0815", "0816", "0855", "0856", "0857", "0858"]
+            },
+            "xl": {
+                "name": "XL Axiata",
+                "full_name": "PT XL Axiata Tbk",
+                "type": "mobile",
+                "asn": "AS24203",
+                "mcc": "510", "mnc": "11",
+                "network_types": ["4G LTE", "3G"],
+                "ip_ranges": [
+                    "112.215.0.0/16", "114.121.0.0/16", "118.96.0.0/12",
+                    "202.152.240.0/20", "180.241.0.0/16", "110.139.0.0/16"
+                ],
+                "prefixes": ["0817", "0818", "0819", "0859", "0877", "0878"]
+            },
+            "tri": {
+                "name": "Tri Indonesia",
+                "full_name": "PT Hutchison 3 Indonesia",
+                "type": "mobile",
+                "asn": "AS45727",
+                "mcc": "510", "mnc": "89",
+                "network_types": ["4G LTE", "3G"],
+                "ip_ranges": [
+                    "114.79.0.0/16", "182.253.0.0/16", "114.142.0.0/16",
+                    "114.125.0.0/16"
+                ],
+                "prefixes": ["0895", "0896", "0897", "0898", "0899"]
+            },
+            "smartfren": {
+                "name": "Smartfren",
+                "full_name": "PT Smartfren Telecom Tbk",
+                "type": "mobile",
+                "asn": "AS18004",
+                "mcc": "510", "mnc": "28",
+                "network_types": ["4G LTE"],
+                "ip_ranges": [
+                    "202.67.32.0/19", "112.78.0.0/15", "103.10.66.0/23",
+                    "114.4.0.0/16"
+                ],
+                "prefixes": ["0881", "0882", "0883", "0884", "0885", "0886", "0887", "0888", "0889"]
+            },
+            "axis": {
+                "name": "Axis",
+                "full_name": "PT Axis Telekom Indonesia (XL Group)",
+                "type": "mobile",
+                "asn": "AS24203",
+                "mcc": "510", "mnc": "11",
+                "network_types": ["4G LTE", "3G"],
+                "ip_ranges": ["118.96.0.0/13"],
+                "prefixes": ["0831", "0832", "0833", "0838"]
+            },
+            "by.u": {
+                "name": "by.U",
+                "full_name": "PT Telekomunikasi Selular (Digital Brand)",
+                "type": "mobile",
+                "asn": "AS7713",
+                "mcc": "510", "mnc": "10",
+                "network_types": ["4G LTE"],
+                "ip_ranges": ["114.120.0.0/13"],
+                "prefixes": ["0851"]
+            },
+            
+            # ===== BROADBAND/FIBER ISPs =====
+            "biznet": {
+                "name": "Biznet",
+                "full_name": "PT Biznet Gio Nusantara",
+                "type": "fiber",
+                "asn": "AS17451",
+                "network_types": ["Fiber", "WiFi"],
+                "ip_ranges": [
+                    "103.28.52.0/22", "202.169.32.0/19", "118.99.0.0/16",
+                    "103.78.0.0/16", "117.102.0.0/16", "182.253.0.0/17"
+                ]
+            },
+            "firstmedia": {
+                "name": "First Media",
+                "full_name": "PT Link Net Tbk",
+                "type": "cable",
+                "asn": "AS23700",
+                "network_types": ["Cable", "WiFi"],
+                "ip_ranges": [
+                    "202.53.232.0/21", "110.137.0.0/16", "202.158.0.0/17"
+                ]
+            },
+            "myrepublic": {
+                "name": "MyRepublic",
+                "full_name": "PT Eka Mas Republik",
+                "type": "fiber",
+                "asn": "AS63859",
+                "network_types": ["Fiber", "WiFi"],
+                "ip_ranges": [
+                    "103.19.56.0/22", "103.247.8.0/22", "103.56.148.0/22"
+                ]
+            },
+            "indihome": {
+                "name": "IndiHome",
+                "full_name": "PT Telkom Indonesia (IndiHome)",
+                "type": "fiber",
+                "asn": "AS7713",
+                "network_types": ["Fiber", "WiFi"],
+                "ip_ranges": [
+                    "114.120.0.0/13", "180.244.0.0/14", "110.136.0.0/13",
+                    "125.160.0.0/12", "182.0.0.0/12"
+                ]
+            },
+            "cbn": {
+                "name": "CBN",
+                "full_name": "PT Cyberindo Aditama",
+                "type": "fiber",
+                "asn": "AS24218",
+                "network_types": ["Fiber", "WiFi"],
+                "ip_ranges": ["202.158.0.0/17", "203.142.64.0/18"]
+            },
+            "mncplay": {
+                "name": "MNC Play",
+                "full_name": "PT MNC Kabel Mediacom",
+                "type": "cable",
+                "asn": "AS38320",
+                "network_types": ["Cable", "WiFi"],
+                "ip_ranges": ["103.3.60.0/22", "202.62.16.0/20"]
+            },
+            "iconnet": {
+                "name": "Icon+",
+                "full_name": "PT Indonesia Comnets Plus",
+                "type": "fiber",
+                "asn": "AS7597",
+                "network_types": ["Fiber", "WiFi"],
+                "ip_ranges": ["202.169.224.0/19"]
+            },
+            "oxygen": {
+                "name": "Oxygen",
+                "full_name": "PT Mora Telematika Indonesia",
+                "type": "fiber",
+                "asn": "AS23947",
+                "network_types": ["Fiber", "WiFi"],
+                "ip_ranges": ["103.31.232.0/22"]
+            }
+        }
+    
+    def _load_complete_indonesia_devices(self) -> Dict[str, List[Dict]]:
+        """Load complete Indonesian popular devices database"""
+        return {
+            "samsung": [
+                {"model": "SM-S928B", "name": "Galaxy S24 Ultra", "android": "14", "year": 2024},
+                {"model": "SM-S918B", "name": "Galaxy S23 Ultra", "android": "14", "year": 2023},
+                {"model": "SM-S908B", "name": "Galaxy S22 Ultra", "android": "14", "year": 2022},
+                {"model": "SM-A546E", "name": "Galaxy A54 5G", "android": "14", "year": 2023},
+                {"model": "SM-A346E", "name": "Galaxy A34 5G", "android": "14", "year": 2023},
+                {"model": "SM-A145F", "name": "Galaxy A14", "android": "13", "year": 2023},
+                {"model": "SM-A047F", "name": "Galaxy A04s", "android": "12", "year": 2022},
+                {"model": "SM-M146B", "name": "Galaxy M14 5G", "android": "13", "year": 2023},
+                {"model": "SM-M346B", "name": "Galaxy M34 5G", "android": "13", "year": 2023},
+                {"model": "SM-G998B", "name": "Galaxy S21 Ultra", "android": "14", "year": 2021},
+            ],
+            "xiaomi": [
+                {"model": "23113RKC6G", "name": "Xiaomi 14 Pro", "android": "14", "year": 2024},
+                {"model": "23078RKD5C", "name": "Xiaomi 13T Pro", "android": "14", "year": 2023},
+                {"model": "2210132G", "name": "Xiaomi 12T Pro", "android": "13", "year": 2022},
+                {"model": "22071219CG", "name": "Redmi Note 12 Pro", "android": "13", "year": 2023},
+                {"model": "23076RA4BC", "name": "Redmi Note 12", "android": "13", "year": 2023},
+                {"model": "22101316G", "name": "Redmi 12", "android": "13", "year": 2023},
+                {"model": "2201117TG", "name": "Redmi Note 11", "android": "12", "year": 2022},
+                {"model": "23028RA60L", "name": "POCO X5 Pro", "android": "13", "year": 2023},
+                {"model": "22101320G", "name": "POCO M5", "android": "12", "year": 2022},
+            ],
+            "oppo": [
+                {"model": "CPH2573", "name": "OPPO Find X7", "android": "14", "year": 2024},
+                {"model": "CPH2519", "name": "OPPO Reno 10 Pro+", "android": "13", "year": 2023},
+                {"model": "CPH2531", "name": "OPPO Reno 10", "android": "13", "year": 2023},
+                {"model": "CPH2585", "name": "OPPO A78 5G", "android": "13", "year": 2023},
+                {"model": "CPH2565", "name": "OPPO A58", "android": "13", "year": 2023},
+                {"model": "CPH2505", "name": "OPPO A17", "android": "12", "year": 2022},
+                {"model": "CPH2477", "name": "OPPO A57", "android": "12", "year": 2022},
+            ],
+            "vivo": [
+                {"model": "V2303A", "name": "Vivo X100", "android": "14", "year": 2024},
+                {"model": "V2254", "name": "Vivo V29", "android": "13", "year": 2023},
+                {"model": "V2219", "name": "Vivo V27", "android": "13", "year": 2023},
+                {"model": "V2203", "name": "Vivo Y36", "android": "13", "year": 2023},
+                {"model": "V2120", "name": "Vivo Y22", "android": "12", "year": 2022},
+                {"model": "V2111", "name": "Vivo Y21", "android": "11", "year": 2021},
+            ],
+            "realme": [
+                {"model": "RMX3771", "name": "Realme 11 Pro+", "android": "13", "year": 2023},
+                {"model": "RMX3761", "name": "Realme 11", "android": "13", "year": 2023},
+                {"model": "RMX3630", "name": "Realme C55", "android": "13", "year": 2023},
+                {"model": "RMX3624", "name": "Realme C53", "android": "13", "year": 2023},
+                {"model": "RMX3516", "name": "Realme 10", "android": "12", "year": 2022},
+                {"model": "RMX3491", "name": "Realme C35", "android": "11", "year": 2022},
+            ],
+            "infinix": [
+                {"model": "X6831", "name": "Infinix Note 30 Pro", "android": "13", "year": 2023},
+                {"model": "X6711", "name": "Infinix Hot 30", "android": "13", "year": 2023},
+                {"model": "X6525", "name": "Infinix Smart 7", "android": "12", "year": 2023},
+                {"model": "X670", "name": "Infinix Note 12", "android": "12", "year": 2022},
+            ],
+            "asus": [
+                {"model": "AI2302", "name": "ASUS ROG Phone 8", "android": "14", "year": 2024},
+                {"model": "AI2201", "name": "ASUS ROG Phone 7", "android": "13", "year": 2023},
+                {"model": "ASUS_I006D", "name": "ASUS Zenfone 9", "android": "13", "year": 2022},
+            ],
+            "google": [
+                {"model": "Pixel 8 Pro", "name": "Google Pixel 8 Pro", "android": "14", "year": 2023},
+                {"model": "Pixel 8", "name": "Google Pixel 8", "android": "14", "year": 2023},
+                {"model": "Pixel 7 Pro", "name": "Google Pixel 7 Pro", "android": "14", "year": 2022},
+                {"model": "Pixel 7", "name": "Google Pixel 7", "android": "14", "year": 2022},
+            ],
+            # Desktop devices for WiFi/Fiber users
+            "windows_laptop": [
+                {"model": "Dell XPS 15", "brand": "Dell", "os": "Windows 11", "year": 2023},
+                {"model": "HP Spectre x360", "brand": "HP", "os": "Windows 11", "year": 2023},
+                {"model": "Lenovo ThinkPad X1 Carbon", "brand": "Lenovo", "os": "Windows 11", "year": 2023},
+                {"model": "ASUS ZenBook Pro", "brand": "ASUS", "os": "Windows 11", "year": 2023},
+                {"model": "Acer Swift 5", "brand": "Acer", "os": "Windows 11", "year": 2023},
+                {"model": "MSI Prestige 14", "brand": "MSI", "os": "Windows 11", "year": 2023},
+            ],
+            "macbook": [
+                {"model": "MacBookPro18,1", "name": "MacBook Pro 16 M3 Pro", "os": "macOS 14", "year": 2023},
+                {"model": "MacBookPro17,1", "name": "MacBook Pro 14 M3", "os": "macOS 14", "year": 2023},
+                {"model": "MacBookAir10,1", "name": "MacBook Air M2", "os": "macOS 14", "year": 2022},
+                {"model": "Mac14,2", "name": "MacBook Air 15 M2", "os": "macOS 14", "year": 2023},
+            ]
+        }
+
+    def _get_network_type_for_isp(self, isp: str, connection_type: str = "random") -> str:
+        """Get network type berdasarkan ISP Indonesia"""
+        isp_info = self.indonesia_isps.get(isp, {})
+        network_types = isp_info.get("network_types", ["WiFi"])
+        
+        if connection_type == "mobile":
+            mobile_types = [t for t in network_types if t in ["5G", "4G LTE", "4G", "3G", "LTE"]]
+            return random.choice(mobile_types) if mobile_types else "4G LTE"
+        else:
+            return "WiFi"
 
     def _get_connection_type_for_isp(self, isp: str) -> str:
-        """Determine connection type berdasarkan ISP - Always Desktop/WiFi for Web API"""
-        # For Web API, always use WiFi/broadband connection type (desktop)
-        # This ensures headers and fingerprints match desktop browser behavior
-        return "wifi"
+        """Determine connection type berdasarkan ISP Indonesia"""
+        isp_info = self.indonesia_isps.get(isp, {})
+        isp_type = isp_info.get("type", "mobile")
         
-    def _initialize_ip_sources(self):
-        """Initialize multiple IP generation sources - Multi-Country Support"""
+        if isp_type in ["mobile"]:
+            return random.choice(["mobile", "wifi"])  # Mobile users can use WiFi too
+        else:
+            return "wifi"
+        
+    def _initialize_indonesia_ip_sources(self):
+        """Initialize IP sources - INDONESIA ONLY"""
         return {
-            # Indonesia
+            # Mobile Operators
             "telkomsel": self._generate_telkomsel_ips,
             "indosat": self._generate_indosat_ips,
             "xl": self._generate_xl_ips,
             "tri": self._generate_tri_ips,
             "smartfren": self._generate_smartfren_ips,
+            "axis": self._generate_xl_ips,  # Axis uses XL network
+            "by.u": self._generate_telkomsel_ips,  # by.U uses Telkomsel network
+            # Broadband ISPs
             "biznet": self._generate_biznet_ips,
-            "cbn": self._generate_cbn_ips,
             "firstmedia": self._generate_firstmedia_ips,
             "myrepublic": self._generate_myrepublic_ips,
-            # US Mobile
-            "verizon": self._generate_us_mobile_ips,
-            "att": self._generate_us_mobile_ips,
-            "tmobile": self._generate_us_mobile_ips,
-            # US ISP
-            "comcast": self._generate_us_isp_ips,
-            "spectrum": self._generate_us_isp_ips,
-            # Brazil
-            "claro_br": self._generate_brazil_ips,
-            "vivo_br": self._generate_brazil_ips,
-            # India
-            "jio": self._generate_india_ips,
-            "airtel_in": self._generate_india_ips,
+            "indihome": self._generate_indihome_ips,
+            "cbn": self._generate_cbn_ips,
+            "mncplay": self._generate_mncplay_ips,
+            "iconnet": self._generate_iconnet_ips,
+            "oxygen": self._generate_oxygen_ips,
         }
     
     def _get_country_config(self) -> Dict[str, Any]:
-        """Get comprehensive country configurations with synced ISP, device, location"""
+        """Get Indonesia country configuration"""
         return {
             "ID": {
                 "name": "Indonesia",
@@ -4761,7 +5013,16 @@ class AdvancedIPStealthSystem2025:
 # ===================== IP VALIDATOR 2025 =====================
 
 class IPValidator2025:
-    """Enhanced IP validator dengan comprehensive validation dan real-time checking"""
+    """Enhanced IP validator dengan comprehensive validation - INDONESIA ONLY
+    
+    Multiple IP checking methods:
+    1. TCP Port Scan (like nmap) - Check common ports 80, 443, 8080
+    2. ICMP Ping Check - Check if host responds to ping
+    3. IP-API Geolocation - Verify IP is from Indonesia
+    4. DNS Reverse Lookup - Check PTR records
+    5. HTTP/HTTPS Response Check - Verify web connectivity
+    6. Indonesia ISP Validation - Verify IP belongs to Indonesian ISP
+    """
     
     def __init__(self):
         self.validation_cache = {}
@@ -4769,46 +5030,264 @@ class IPValidator2025:
         self.validation_methods = [
             self._validate_format_enhanced,
             self._validate_range_enhanced,
-            self._validate_reputation_enhanced,
             self._validate_geolocation,
             self._validate_network_properties
         ]
         self.vpn_ranges = self._load_vpn_ranges()
         self.datacenter_ranges = self._load_datacenter_ranges()
         
-        # Indonesia ISP IP ranges (valid and active)
+        # Complete Indonesia ISP IP ranges
         self.indonesia_isp_ranges = {
+            # Mobile Operators
             "telkomsel": [
                 "114.120.0.0/13", "114.124.0.0/14", "182.0.0.0/12",
-                "36.64.0.0/11", "36.80.0.0/12"
+                "36.64.0.0/11", "36.80.0.0/12", "110.136.0.0/13",
+                "118.136.0.0/14", "118.137.0.0/16", "139.192.0.0/11"
             ],
             "indosat": [
-                "114.4.0.0/14", "114.0.0.0/13", "180.240.0.0/12",
-                "202.152.0.0/14"
+                "114.0.0.0/13", "114.4.0.0/14", "180.240.0.0/12",
+                "202.152.0.0/14", "125.160.0.0/12", "112.215.0.0/16"
             ],
             "xl": [
                 "112.215.0.0/16", "114.121.0.0/16", "118.96.0.0/12",
-                "202.152.240.0/20"
+                "202.152.240.0/20", "180.241.0.0/16", "110.139.0.0/16"
             ],
             "tri": [
-                "114.79.0.0/16", "182.253.0.0/16", "114.142.0.0/16"
+                "114.79.0.0/16", "182.253.0.0/16", "114.142.0.0/16",
+                "114.125.0.0/16"
             ],
             "smartfren": [
-                "202.67.32.0/19", "112.78.0.0/15", "103.10.66.0/23"
+                "202.67.32.0/19", "112.78.0.0/15", "103.10.66.0/23",
+                "114.4.0.0/16"
             ],
+            # Broadband ISPs
             "biznet": [
-                "103.28.52.0/22", "202.169.32.0/19", "118.99.0.0/16"
+                "103.28.52.0/22", "202.169.32.0/19", "118.99.0.0/16",
+                "103.78.0.0/16", "117.102.0.0/16", "182.253.0.0/17"
             ],
             "firstmedia": [
-                "202.53.232.0/21", "110.137.0.0/16"
+                "202.53.232.0/21", "110.137.0.0/16", "202.158.0.0/17"
             ],
             "myrepublic": [
-                "103.19.56.0/22", "103.247.8.0/22"
+                "103.19.56.0/22", "103.247.8.0/22", "103.56.148.0/22"
+            ],
+            "indihome": [
+                "114.120.0.0/13", "180.244.0.0/14", "110.136.0.0/13",
+                "125.160.0.0/12", "182.0.0.0/12"
+            ],
+            "cbn": [
+                "202.158.0.0/17", "203.142.64.0/18"
+            ],
+            "mncplay": [
+                "103.3.60.0/22", "202.62.16.0/20"
             ]
         }
     
+    def check_ip_comprehensive(self, ip: str) -> Dict[str, Any]:
+        """Comprehensive IP check using multiple methods (synchronous version)"""
+        result = {
+            "ip": ip,
+            "valid": False,
+            "active": False,
+            "indonesia": False,
+            "isp": None,
+            "checks": {
+                "format": False,
+                "indonesia_range": False,
+                "tcp_scan": False,
+                "ping": False,
+                "dns_reverse": False,
+                "geolocation": False
+            },
+            "score": 0,
+            "latency_ms": None,
+            "details": []
+        }
+        
+        # Check 1: Format validation
+        if self._check_ip_format(ip):
+            result["checks"]["format"] = True
+            result["score"] += 10
+            result["details"].append("✓ Valid IP format")
+        else:
+            result["details"].append("✗ Invalid IP format")
+            return result
+        
+        # Check 2: Indonesia ISP range validation
+        isp_check = self._check_indonesia_isp_range(ip)
+        if isp_check["valid"]:
+            result["checks"]["indonesia_range"] = True
+            result["indonesia"] = True
+            result["isp"] = isp_check["isp"]
+            result["score"] += 30
+            result["details"].append(f"✓ IP belongs to {isp_check['isp'].upper()} Indonesia")
+        else:
+            result["details"].append("✗ IP not in Indonesian ISP range")
+        
+        # Check 3: TCP Port Scan (nmap-style)
+        tcp_result = self._tcp_port_scan(ip, [80, 443, 8080])
+        if tcp_result["success"]:
+            result["checks"]["tcp_scan"] = True
+            result["active"] = True
+            result["latency_ms"] = tcp_result.get("latency_ms")
+            result["score"] += 25
+            result["details"].append(f"✓ TCP port {tcp_result['port']} open (latency: {tcp_result.get('latency_ms', 0):.1f}ms)")
+        else:
+            result["details"].append("○ TCP ports closed (may still be valid mobile IP)")
+        
+        # Check 4: Ping check (ICMP)
+        ping_result = self._ping_check(ip)
+        if ping_result["success"]:
+            result["checks"]["ping"] = True
+            result["score"] += 15
+            result["details"].append(f"✓ Ping successful (RTT: {ping_result.get('rtt_ms', 0):.1f}ms)")
+        else:
+            result["details"].append("○ Ping failed (may be blocked by firewall)")
+        
+        # Check 5: DNS Reverse Lookup
+        dns_result = self._dns_reverse_lookup(ip)
+        if dns_result["success"]:
+            result["checks"]["dns_reverse"] = True
+            result["score"] += 10
+            result["details"].append(f"✓ DNS PTR: {dns_result.get('hostname', 'N/A')}")
+        else:
+            result["details"].append("○ No PTR record (common for mobile IPs)")
+        
+        # Check 6: Geolocation API check
+        geo_result = self._check_geolocation_api(ip)
+        if geo_result["success"] and geo_result.get("country") == "ID":
+            result["checks"]["geolocation"] = True
+            result["indonesia"] = True
+            result["score"] += 10
+            result["details"].append(f"✓ Geolocation: Indonesia ({geo_result.get('city', 'Unknown')})")
+            if not result["isp"]:
+                result["isp"] = geo_result.get("isp")
+        else:
+            result["details"].append("○ Geolocation check skipped/failed")
+        
+        # Final validation
+        result["valid"] = result["score"] >= 40 and result["indonesia"]
+        
+        return result
+    
+    def _check_ip_format(self, ip: str) -> bool:
+        """Validate IP format"""
+        try:
+            parts = ip.split(".")
+            if len(parts) != 4:
+                return False
+            for part in parts:
+                num = int(part)
+                if num < 0 or num > 255:
+                    return False
+            return True
+        except:
+            return False
+    
+    def _check_indonesia_isp_range(self, ip: str) -> Dict[str, Any]:
+        """Check if IP belongs to Indonesian ISP"""
+        import ipaddress
+        
+        try:
+            ip_obj = ipaddress.ip_address(ip)
+            
+            for isp, ranges in self.indonesia_isp_ranges.items():
+                for ip_range in ranges:
+                    try:
+                        network = ipaddress.ip_network(ip_range, strict=False)
+                        if ip_obj in network:
+                            return {"valid": True, "isp": isp}
+                    except:
+                        continue
+        except:
+            pass
+        
+        return {"valid": False, "isp": None}
+    
+    def _tcp_port_scan(self, ip: str, ports: List[int] = [80, 443, 8080]) -> Dict[str, Any]:
+        """TCP port scan like nmap - check if ports are open"""
+        import socket
+        
+        for port in ports:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(2.0)
+                
+                start_time = time.time()
+                result = sock.connect_ex((ip, port))
+                latency = (time.time() - start_time) * 1000
+                
+                sock.close()
+                
+                if result == 0:
+                    return {"success": True, "port": port, "latency_ms": latency}
+            except:
+                continue
+        
+        return {"success": False}
+    
+    def _ping_check(self, ip: str) -> Dict[str, Any]:
+        """ICMP ping check"""
+        import subprocess
+        import platform
+        
+        try:
+            # Determine ping command based on OS
+            param = "-n" if platform.system().lower() == "windows" else "-c"
+            timeout_param = "-w" if platform.system().lower() == "windows" else "-W"
+            
+            start_time = time.time()
+            result = subprocess.run(
+                ["ping", param, "1", timeout_param, "2", ip],
+                capture_output=True,
+                timeout=3
+            )
+            rtt = (time.time() - start_time) * 1000
+            
+            if result.returncode == 0:
+                return {"success": True, "rtt_ms": rtt}
+        except:
+            pass
+        
+        return {"success": False}
+    
+    def _dns_reverse_lookup(self, ip: str) -> Dict[str, Any]:
+        """DNS reverse lookup (PTR record)"""
+        import socket
+        
+        try:
+            hostname = socket.gethostbyaddr(ip)
+            return {"success": True, "hostname": hostname[0]}
+        except:
+            return {"success": False}
+    
+    def _check_geolocation_api(self, ip: str) -> Dict[str, Any]:
+        """Check IP geolocation via free API"""
+        try:
+            import requests
+            
+            response = requests.get(
+                f"http://ip-api.com/json/{ip}?fields=status,country,countryCode,city,isp,org",
+                timeout=5
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status") == "success":
+                    return {
+                        "success": True,
+                        "country": data.get("countryCode"),
+                        "city": data.get("city"),
+                        "isp": data.get("isp"),
+                        "org": data.get("org")
+                    }
+        except:
+            pass
+        
+        return {"success": False}
+    
     async def check_ip_active(self, ip: str) -> Dict[str, Any]:
-        """Check if IP is active using multiple methods"""
+        """Check if IP is active using multiple methods (async version)"""
         result = {
             "ip": ip,
             "active": False,
@@ -4820,7 +5299,7 @@ class IPValidator2025:
         }
         
         # Method 1: TCP Connect check (ports 80, 443)
-        tcp_result = await self._check_tcp_connect(ip)
+        tcp_result = await self._check_tcp_connect_async(ip)
         if tcp_result["success"]:
             result["methods_passed"].append("tcp_connect")
             result["latency_ms"] = tcp_result.get("latency_ms")
@@ -4828,7 +5307,7 @@ class IPValidator2025:
             result["methods_failed"].append("tcp_connect")
         
         # Method 2: Check via IP-API (free geolocation API)
-        geo_result = await self._check_ip_api(ip)
+        geo_result = await self._check_ip_api_async(ip)
         if geo_result["success"]:
             result["methods_passed"].append("ip_api")
             result["country"] = geo_result.get("country")
@@ -4837,19 +5316,19 @@ class IPValidator2025:
             result["methods_failed"].append("ip_api")
         
         # Method 3: DNS reverse lookup
-        dns_result = await self._check_dns_reverse(ip)
+        dns_result = await self._check_dns_reverse_async(ip)
         if dns_result["success"]:
             result["methods_passed"].append("dns_reverse")
         else:
             result["methods_failed"].append("dns_reverse")
         
         # Determine if IP is active
-        result["active"] = len(result["methods_passed"]) >= 2
+        result["active"] = len(result["methods_passed"]) >= 1
         
         return result
     
-    async def _check_tcp_connect(self, ip: str, ports: List[int] = [80, 443]) -> Dict[str, Any]:
-        """Check TCP connectivity to common ports"""
+    async def _check_tcp_connect_async(self, ip: str, ports: List[int] = [80, 443]) -> Dict[str, Any]:
+        """Check TCP connectivity to common ports (async)"""
         import asyncio
         
         for port in ports:
