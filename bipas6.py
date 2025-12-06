@@ -947,32 +947,48 @@ class UnifiedSessionManager2025:
         user_agent = session["user_agent"]
         
         # Sec-Ch-Ua based on Chrome version
-        sec_ch_ua = f'"Chromium";v="{chrome_version}", "Google Chrome";v="{chrome_version}", "Not?A_Brand";v="99"'
+        sec_ch_ua = f'"Chromium";v="{chrome_version}", "Google Chrome";v="{chrome_version}", "Not_A Brand";v="99"'
+        sec_ch_ua_full = f'"Chromium";v="{chrome_version}.0.{random.randint(7400, 7500)}.{random.randint(100, 200)}", "Google Chrome";v="{chrome_version}.0.{random.randint(7400, 7500)}.{random.randint(100, 200)}", "Not_A Brand";v="99.0.0.0"'
         
         # Mobile indicator
         is_mobile = platform["os_type"] == "android"
         sec_ch_ua_mobile = "?1" if is_mobile else "?0"
         
-        # Platform header
+        # Platform header and version
         if platform["os_type"] == "android":
             sec_ch_ua_platform = '"Android"'
+            sec_ch_ua_platform_version = f'"{random.choice(["13.0", "14.0"])}"'
         elif platform["os_type"] == "windows":
             sec_ch_ua_platform = '"Windows"'
+            sec_ch_ua_platform_version = f'"{random.choice(["10.0.0", "15.0.0", "19045.0.0"])}"'
         else:
             sec_ch_ua_platform = '"macOS"'
+            sec_ch_ua_platform_version = f'"{random.choice(["14.0.0", "14.5.0", "15.0.0", "26.0.1"])}"'
         
-        # CLEAN HEADERS - Only essential headers that Instagram Web actually sends
-        # Avoid suspicious custom headers that can trigger rate limiting
+        # Generate session-specific IDs
+        web_session_id = f"{secrets.token_hex(3)}:{secrets.token_hex(3)}:{secrets.token_hex(3)}"
+        
+        # Instagram Ajax ID (timestamp-based like real Instagram)
+        ig_ajax_id = str(int(time.time()) - random.randint(1000, 50000))
+        
+        # ASBD ID (valid Instagram values)
+        asbd_id = str(random.choice([129477, 198387, 227315, 227316, 227317, 359341, 198387]))
+        
+        # COMPLETE HEADERS - Matching real Instagram web_create_ajax request
         headers = {
             # Standard browser headers - exactly like real Chrome
             "Accept": "*/*",
             "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
             "Accept-Encoding": "gzip, deflate, br",
             
-            # Client hints - synchronized with platform
+            # Client hints - ALL required for Instagram API
             "Sec-Ch-Ua": sec_ch_ua,
+            "Sec-Ch-Ua-Full-Version-List": sec_ch_ua_full,
             "Sec-Ch-Ua-Mobile": sec_ch_ua_mobile,
+            "Sec-Ch-Ua-Model": '""',
             "Sec-Ch-Ua-Platform": sec_ch_ua_platform,
+            "Sec-Ch-Ua-Platform-Version": sec_ch_ua_platform_version,
+            "Sec-Ch-Prefers-Color-Scheme": random.choice(["dark", "light"]),
             
             # Fetch metadata
             "Sec-Fetch-Dest": "empty",
@@ -982,13 +998,23 @@ class UnifiedSessionManager2025:
             # User agent
             "User-Agent": user_agent,
             
-            # Essential Instagram headers ONLY
+            # Instagram-specific headers - ALL required for web_create_ajax
             "X-Ig-App-Id": app_id,
             "X-Requested-With": "XMLHttpRequest",
+            "X-Instagram-Ajax": ig_ajax_id,
+            "X-Web-Session-Id": web_session_id,
+            "X-Asbd-Id": asbd_id,
+            "X-Ig-Www-Claim": "0",  # Initial value, updated after first request
+            
+            # Content type for POST
+            "Content-Type": "application/x-www-form-urlencoded",
             
             # Origin and referer
             "Origin": "https://www.instagram.com",
-            "Referer": "https://www.instagram.com/",
+            "Referer": "https://www.instagram.com/accounts/emailsignup/",
+            
+            # Priority header
+            "Priority": "u=1, i",
         }
         
         # Add CSRF only if present (don't send empty)
@@ -996,13 +1022,10 @@ class UnifiedSessionManager2025:
         if csrf:
             headers["X-Csrftoken"] = csrf
         
-        # Add request-type specific headers (minimal)
-        if request_type == "graphql":
-            headers["Content-Type"] = "application/x-www-form-urlencoded"
-        elif request_type == "api":
-            headers["Content-Type"] = "application/x-www-form-urlencoded"
-        elif request_type == "ajax":
-            pass  # No extra headers needed
+        # Store web_session_id for later use
+        session["web_session_id"] = web_session_id
+        session["ig_ajax_id"] = ig_ajax_id
+        session["asbd_id"] = asbd_id
         
         return headers
     
