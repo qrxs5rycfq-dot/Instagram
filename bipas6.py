@@ -16825,13 +16825,15 @@ class InstagramAccountCreator2025:
         """Buat beberapa akun sekaligus dengan smart session strategy
         
         STRATEGY:
-        1. If account succeeds → keep using same IP/session
-        2. If checkpoint → continue once more with same session
-        3. If checkpoint again → change session
-        4. If IP block → IMMEDIATELY change session (no retry)
+        1. Akun BERHASIL → terus pakai session sampai 2x checkpoint
+        2. Akun CHECKPOINT → coba sekali lagi, jika masih checkpoint ganti session  
+        3. IP BLOCK → langsung ganti session
         """
         print(f"{cyan}🏭  Starting batch creation of {count} accounts{reset}")
-        print(f"{cyan}    Strategy: Checkpoint=retry once, IP block=immediate rotate{reset}")
+        print(f"{cyan}    Strategy:{reset}")
+        print(f"{cyan}    - Success: keep using until 2 checkpoints{reset}")
+        print(f"{cyan}    - Checkpoint: retry once, if still checkpoint rotate{reset}")
+        print(f"{cyan}    - IP Block: immediate rotate{reset}")
         
         results = {
             "total": count,
@@ -16847,9 +16849,10 @@ class InstagramAccountCreator2025:
         
         # Session tracking
         current_session_id = None
-        session_success_count = 0     # Successes in current session
-        consecutive_checkpoints = 0   # For tracking consecutive checkpoints
-        force_new_session = False     # Flag to force new session on next iteration
+        session_success_count = 0       # Total successes in current session
+        session_checkpoint_count = 0    # Total checkpoints in current session
+        consecutive_checkpoints = 0     # Consecutive checkpoints (reset on success)
+        force_new_session = False       # Flag to force new session
         
         for i in range(count):
             print(f"\n{biru}🔹  Account {i + 1}/{count}{reset}")
@@ -16860,7 +16863,7 @@ class InstagramAccountCreator2025:
             if current_session_id is None or force_new_session:
                 need_new_session = True
                 if force_new_session:
-                    print(f"{kuning}🔄  Forced session rotation (IP block or 2x checkpoint)...{reset}")
+                    print(f"{kuning}🔄  Forced session rotation...{reset}")
                 else:
                     print(f"{cyan}🆕  No active session, creating new one...{reset}")
                 force_new_session = False  # Reset flag
@@ -16868,6 +16871,7 @@ class InstagramAccountCreator2025:
             if need_new_session:
                 current_session_id = await self._create_new_session()
                 session_success_count = 0
+                session_checkpoint_count = 0
                 consecutive_checkpoints = 0
                 results["sessions_used"] += 1
                 
@@ -16881,7 +16885,7 @@ class InstagramAccountCreator2025:
                         results["errors"].append({"error": "Session creation failed", "account": i + 1})
                         continue
             else:
-                print(f"{hijau}♻️   Reusing session (success: {session_success_count}, checkpoints: {consecutive_checkpoints}){reset}")
+                print(f"{hijau}♻️   Reusing session (success: {session_success_count}, checkpoints: {session_checkpoint_count}){reset}")
             
             # Create account with current session
             result = await self.create_account(password, session_id=current_session_id)
@@ -16927,8 +16931,8 @@ class InstagramAccountCreator2025:
                     # IP BLOCK - IMMEDIATELY rotate session, no retry
                     print(f"{merah}🚫  IP BLOCK detected - IMMEDIATE session rotation{reset}")
                     results["ip_blocks"] += 1
-                    force_new_session = True  # Force new session next iteration
-                    current_session_id = None  # Also clear current session
+                    force_new_session = True
+                    current_session_id = None
                     
                     # Extra cooldown for IP block
                     block_cooldown = random.uniform(60, 90)
@@ -16938,18 +16942,33 @@ class InstagramAccountCreator2025:
                 elif is_checkpoint:
                     print(f"{kuning}🚧  Checkpoint detected{reset}")
                     results["checkpointed"] += 1
+                    session_checkpoint_count += 1
                     consecutive_checkpoints += 1
                     
-                    # Strategy: If first checkpoint, try once more
-                    if consecutive_checkpoints == 1:
-                        print(f"{kuning}    First checkpoint, will try once more with same session...{reset}")
-                        checkpoint_cooldown = random.uniform(30, 45)
-                    # If 2nd checkpoint, force rotate
+                    # STRATEGY:
+                    # - Jika sudah ada success sebelumnya: terus sampai 2 total checkpoints
+                    # - Jika belum ada success: 2 consecutive checkpoints = rotate
+                    
+                    if session_success_count > 0:
+                        # Ada success sebelumnya - terus sampai 2 total checkpoint
+                        if session_checkpoint_count >= 2:
+                            print(f"{merah}    Session had {session_success_count} success, now hit 2 checkpoints - rotating...{reset}")
+                            force_new_session = True
+                            current_session_id = None
+                            checkpoint_cooldown = random.uniform(45, 75)
+                        else:
+                            print(f"{kuning}    Session has {session_success_count} success, checkpoint {session_checkpoint_count}/2 - continuing...{reset}")
+                            checkpoint_cooldown = random.uniform(30, 45)
                     else:
-                        print(f"{merah}    2nd checkpoint - rotating session...{reset}")
-                        force_new_session = True
-                        current_session_id = None
-                        checkpoint_cooldown = random.uniform(45, 75)
+                        # Belum ada success - 2 consecutive checkpoint = rotate
+                        if consecutive_checkpoints >= 2:
+                            print(f"{merah}    2 consecutive checkpoints without success - rotating...{reset}")
+                            force_new_session = True
+                            current_session_id = None
+                            checkpoint_cooldown = random.uniform(45, 75)
+                        else:
+                            print(f"{kuning}    First checkpoint, will try once more...{reset}")
+                            checkpoint_cooldown = random.uniform(30, 45)
                     
                     print(f"{kuning}⏳  Checkpoint cooldown: {checkpoint_cooldown:.1f}s{reset}")
                     await asyncio.sleep(checkpoint_cooldown)
