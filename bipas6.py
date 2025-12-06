@@ -16822,9 +16822,15 @@ class InstagramAccountCreator2025:
             print(f"{merah}❌  Failed to save account: {e}{reset}")
     
     async def batch_create_accounts(self, count: int, password: str) -> Dict[str, Any]:
-        """Buat beberapa akun sekaligus dengan 3 akun per session"""
+        """Buat beberapa akun sekaligus dengan smart session strategy
+        
+        STRATEGY:
+        1. If account succeeds → keep using same IP until 2 checkpoints
+        2. If checkpoint at start → try once more, if still checkpoint → change session
+        3. If IP block → immediately change session
+        """
         print(f"{cyan}🏭  Starting batch creation of {count} accounts{reset}")
-        print(f"{cyan}    Strategy: 3 accounts per session, switch on IP block{reset}")
+        print(f"{cyan}    Strategy: Keep working IP until 2 checkpoints, then rotate{reset}")
         
         results = {
             "total": count,
@@ -16838,41 +16844,62 @@ class InstagramAccountCreator2025:
             "ip_blocks": 0
         }
         
-        # Config: 1 account per session (fresh session for each account)
-        ACCOUNTS_PER_SESSION = 1
+        # Session tracking
         current_session_id = None
-        accounts_in_current_session = 0
+        session_checkpoint_count = 0  # Checkpoints in current session
+        session_success_count = 0     # Successes in current session
+        consecutive_checkpoints = 0   # For tracking consecutive checkpoints at start
+        
+        # Constants
+        MAX_CHECKPOINTS_BEFORE_ROTATE = 2  # Rotate after 2 checkpoints
         
         for i in range(count):
             print(f"\n{biru}🔹  Account {i + 1}/{count}{reset}")
             
-            # ALWAYS create new session for each account (1 account = 1 session)
-            print(f"{cyan}🆕  Creating fresh session for account {i + 1}...{reset}")
-            current_session_id = await self._create_new_session()
-            accounts_in_current_session = 0
-            results["sessions_used"] += 1
+            # Decide whether to create new session or reuse
+            need_new_session = False
             
-            if not current_session_id:
-                print(f"{merah}❌  Failed to create session, retrying...{reset}")
-                await asyncio.sleep(5)
+            if current_session_id is None:
+                need_new_session = True
+                print(f"{cyan}🆕  No active session, creating new one...{reset}")
+            elif session_checkpoint_count >= MAX_CHECKPOINTS_BEFORE_ROTATE:
+                need_new_session = True
+                print(f"{kuning}🔄  Session hit {session_checkpoint_count} checkpoints, rotating...{reset}")
+            
+            if need_new_session:
                 current_session_id = await self._create_new_session()
+                session_checkpoint_count = 0
+                session_success_count = 0
+                consecutive_checkpoints = 0
                 results["sessions_used"] += 1
+                
                 if not current_session_id:
-                    results["failed"] += 1
-                    results["errors"].append({"error": "Session creation failed", "account": i + 1})
-                    continue
+                    print(f"{merah}❌  Failed to create session, retrying...{reset}")
+                    await asyncio.sleep(5)
+                    current_session_id = await self._create_new_session()
+                    results["sessions_used"] += 1
+                    if not current_session_id:
+                        results["failed"] += 1
+                        results["errors"].append({"error": "Session creation failed", "account": i + 1})
+                        continue
+            else:
+                print(f"{hijau}♻️   Reusing session (success: {session_success_count}, checkpoints: {session_checkpoint_count}/{MAX_CHECKPOINTS_BEFORE_ROTATE}){reset}")
             
-            # Create account with fresh session
+            # Create account with current session
             result = await self.create_account(password, session_id=current_session_id)
-            
-            # After each account, invalidate session (don't reuse)
-            current_session_id = None
             
             if result["status"] == "success":
                 results["successful"] += 1
                 results["accounts"].append(result["account"])
-                accounts_in_current_session += 1
-                print(f"{hijau}✅  Account {accounts_in_current_session}/{ACCOUNTS_PER_SESSION} in current session{reset}")
+                session_success_count += 1
+                consecutive_checkpoints = 0  # Reset consecutive checkpoints on success
+                print(f"{hijau}✅  Success! Session stats: {session_success_count} success, {session_checkpoint_count} checkpoints{reset}")
+                
+                # Short cooldown after success (same session)
+                if i < count - 1:
+                    cooldown = random.uniform(15, 30)
+                    print(f"{kuning}⏳  Short cooldown (same session): {cooldown:.1f}s{reset}")
+                    await asyncio.sleep(cooldown)
             else:
                 results["failed"] += 1
                 results["errors"].append(result)
@@ -16880,13 +16907,13 @@ class InstagramAccountCreator2025:
                 # Get error message for detection
                 error_msg = str(result.get("reason", result.get("error", ""))).lower()
                 
-                # Check if checkpoint - track for stats
+                # Check if checkpoint
                 is_checkpoint = (
                     "checkpoint" in error_msg or
                     "suspended" in error_msg
                 )
                 
-                # Check if IP block - track for stats
+                # Check if IP block
                 is_ip_block = (
                     "ip" in error_msg or 
                     "block" in error_msg or
@@ -16898,25 +16925,45 @@ class InstagramAccountCreator2025:
                 if is_checkpoint:
                     print(f"{kuning}🚧  Checkpoint detected{reset}")
                     results["checkpointed"] += 1
+                    session_checkpoint_count += 1
+                    consecutive_checkpoints += 1
                     
-                    # Extra cooldown for checkpoint
-                    checkpoint_cooldown = random.uniform(45, 75)
+                    # Strategy: If checkpoint at start (no success yet), try once more
+                    if session_success_count == 0 and consecutive_checkpoints == 1:
+                        print(f"{kuning}    First checkpoint without success, will try once more with same session...{reset}")
+                        checkpoint_cooldown = random.uniform(30, 45)
+                    # If 2 consecutive checkpoints at start, force rotate next iteration
+                    elif session_success_count == 0 and consecutive_checkpoints >= 2:
+                        print(f"{merah}    2 consecutive checkpoints without success, will rotate session...{reset}")
+                        current_session_id = None  # Force new session next iteration
+                        checkpoint_cooldown = random.uniform(45, 75)
+                    # If had success before, check if we hit max checkpoints
+                    elif session_checkpoint_count >= MAX_CHECKPOINTS_BEFORE_ROTATE:
+                        print(f"{kuning}    Hit max checkpoints ({MAX_CHECKPOINTS_BEFORE_ROTATE}), will rotate session...{reset}")
+                        current_session_id = None  # Force new session next iteration
+                        checkpoint_cooldown = random.uniform(45, 75)
+                    else:
+                        print(f"{kuning}    Checkpoint {session_checkpoint_count}/{MAX_CHECKPOINTS_BEFORE_ROTATE}, continuing with same session...{reset}")
+                        checkpoint_cooldown = random.uniform(30, 45)
+                    
                     print(f"{kuning}⏳  Checkpoint cooldown: {checkpoint_cooldown:.1f}s{reset}")
                     await asyncio.sleep(checkpoint_cooldown)
+                    
                 elif is_ip_block:
-                    print(f"{merah}🚫  IP block detected{reset}")
+                    print(f"{merah}🚫  IP block detected - forcing session rotation{reset}")
                     results["ip_blocks"] += 1
+                    current_session_id = None  # Force new session next iteration
                     
                     # Extra cooldown for IP block
                     block_cooldown = random.uniform(60, 90)
                     print(f"{kuning}⏳  IP block cooldown: {block_cooldown:.1f}s{reset}")
                     await asyncio.sleep(block_cooldown)
-            
-            # Cooldown antara akun (fresh session always created next)
-            if i < count - 1:
-                cooldown = random.uniform(30, 60)
-                print(f"{kuning}⏳  Cooldown for {cooldown:.1f}s before next account{reset}")
-                await asyncio.sleep(cooldown)
+                else:
+                    # Other failure - normal cooldown
+                    print(f"{kuning}    Other failure, normal cooldown{reset}")
+                    cooldown = random.uniform(20, 40)
+                    print(f"{kuning}⏳  Cooldown: {cooldown:.1f}s{reset}")
+                    await asyncio.sleep(cooldown)
         
         results["end_time"] = time.time()
         results["duration"] = results["end_time"] - results["start_time"]
