@@ -4915,6 +4915,76 @@ class UltraStealthIPGenerator2025:
         
         return base
     
+    def _generate_device_profile_for_country(self, device_name: str, country: str, ip_type: str) -> Dict[str, Any]:
+        """Generate device profile matching country and device type"""
+        is_mobile = ip_type in ["mobile", "android", "ios"]
+        
+        if is_mobile:
+            if "iPhone" in device_name or "iPad" in device_name:
+                return {
+                    "type": "mobile",
+                    "platform": "iOS",
+                    "model": device_name,
+                    "os": "iOS",
+                    "os_version": random.choice(["17.4", "17.3", "17.2", "17.1", "17.0"]),
+                    "browser": "Safari",
+                    "browser_version": random.choice(["17.4", "17.3", "17.2"]),
+                    "screen": {"width": 1179, "height": 2556, "dpr": 3},
+                    "hardware": {
+                        "ram": random.choice([6, 8]),
+                        "storage": random.choice([128, 256, 512, 1024])
+                    }
+                }
+            else:
+                # Android devices
+                return {
+                    "type": "mobile",
+                    "platform": "Android",
+                    "model": device_name,
+                    "os": "Android",
+                    "os_version": random.choice(["14", "13", "12"]),
+                    "browser": "Chrome",
+                    "browser_version": random.choice(["122.0.6261", "121.0.6167", "120.0.6099", "123.0.6312", "124.0.6367"]),
+                    "screen": {"width": 1080, "height": 2400, "dpr": 2.75},
+                    "hardware": {
+                        "ram": random.choice([8, 12, 16]),
+                        "storage": random.choice([128, 256, 512])
+                    }
+                }
+        else:
+            # Desktop
+            os_choice = random.choice(["Windows", "macOS"])
+            if os_choice == "Windows":
+                return {
+                    "type": "desktop",
+                    "platform": "Win32",
+                    "model": random.choice(["Dell XPS 15", "Lenovo ThinkPad", "HP Spectre", "ASUS ZenBook"]),
+                    "os": "Windows",
+                    "os_version": random.choice(["11", "10"]),
+                    "browser": "Chrome",
+                    "browser_version": random.choice(["122.0.6261.112", "121.0.6167.160", "123.0.6312.58", "124.0.6367.91"]),
+                    "screen": {"width": 1920, "height": 1080, "dpr": 1},
+                    "hardware": {
+                        "ram": random.choice([16, 32, 64]),
+                        "storage": random.choice([512, 1024, 2048])
+                    }
+                }
+            else:
+                return {
+                    "type": "desktop",
+                    "platform": "MacIntel",
+                    "model": random.choice(["MacBook Pro 14", "MacBook Pro 16", "MacBook Air M2", "iMac 24"]),
+                    "os": "macOS",
+                    "os_version": random.choice(["14.4", "14.3", "14.2", "13.6"]),
+                    "browser": "Chrome",
+                    "browser_version": random.choice(["122.0.6261.112", "121.0.6167.160", "123.0.6312.58", "124.0.6367.91"]),
+                    "screen": {"width": 2560, "height": 1600, "dpr": 2},
+                    "hardware": {
+                        "ram": random.choice([16, 32, 64]),
+                        "storage": random.choice([512, 1024, 2048])
+                    }
+                }
+    
     def _generate_device_fingerprint(self, country: str, is_mobile: bool) -> Dict[str, Any]:
         """Generate device fingerprint based on country and connection type"""
         
