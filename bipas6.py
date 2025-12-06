@@ -374,14 +374,10 @@ class UnifiedSessionManager2025:
             
             # XL Axiata - PT XL Axiata Tbk  
             # ASN: AS24203 (PT XL AXIATA)
+            # Note: 120.88.0.0/15 removed - shows as AU/JP/CN/PH/MM, NOT Indonesia
             "xl": [
-                # inetnum: 112.215.0.0 - 112.215.255.255, netname: XLID
+                # inetnum: 112.215.0.0 - 112.215.255.255, netname: XLID (verified via ip-api.com)
                 {"start": "112.215.0.0", "end": "112.215.255.255", "verified": True},
-                # inetnum: 120.88.0.0 - 120.91.255.255
-                {"start": "120.88.0.0", "end": "120.88.255.255", "verified": True},
-                {"start": "120.89.0.0", "end": "120.89.255.255", "verified": True},
-                {"start": "120.90.0.0", "end": "120.90.255.255", "verified": True},
-                {"start": "120.91.0.0", "end": "120.91.255.255", "verified": True},
             ],
             
             # Tri Indonesia - PT Hutchison 3 Indonesia
@@ -2553,10 +2549,9 @@ class UltraStealthIPGenerator2025:
                 {"start": "114.6.0.0", "end": "114.7.255.255", "type": "mobile", "cgnat": False},      # 114.6.0.0/15
             ],
             # XL Axiata - PT XL Axiata Tbk (AS24203)
+            # NOTE: 120.88.0.0/15, 114.121.0.0/16, 114.122.0.0/15 removed - NOT Indonesia per ip-api.com
             "xl": [
-                {"start": "114.121.0.0", "end": "114.121.255.255", "type": "mobile", "cgnat": False},  # 114.121.0.0/16
-                {"start": "114.122.0.0", "end": "114.123.255.255", "type": "mobile", "cgnat": False},  # 114.122.0.0/15
-                {"start": "120.88.0.0", "end": "120.89.255.255", "type": "mobile", "cgnat": False},    # 120.88.0.0/15
+                {"start": "112.215.0.0", "end": "112.215.255.255", "type": "mobile", "cgnat": False},  # 112.215.0.0/16 (VERIFIED)
             ],
             # Tri Indonesia - PT Hutchison 3 Indonesia (AS45727)
             "tri": [
@@ -3046,8 +3041,7 @@ class AdvancedIPStealthSystem2025:
                 "mcc": "510", "mnc": "11",
                 "network_types": ["4G LTE", "3G"],
                 "ip_ranges": [
-                    "112.215.0.0/16", "114.121.0.0/16", "118.96.0.0/12",
-                    "202.152.240.0/20", "180.241.0.0/16", "110.139.0.0/16"
+                    "112.215.0.0/16"
                 ],
                 "prefixes": ["0817", "0818", "0819", "0859", "0877", "0878"]
             },
@@ -3083,7 +3077,7 @@ class AdvancedIPStealthSystem2025:
                 "asn": "AS24203",
                 "mcc": "510", "mnc": "11",
                 "network_types": ["4G LTE", "3G"],
-                "ip_ranges": ["118.96.0.0/13"],
+                "ip_ranges": ["112.215.0.0/16"],
                 "prefixes": ["0831", "0832", "0833", "0838"]
             },
             "by.u": {
@@ -6210,12 +6204,9 @@ class IPValidator2025:
                 "125.160.0.0/11",   # 125.160.0.0 - 125.191.255.255
             ],
             # XL Axiata - AS24203 (VERIFIED)
+            # NOTE: 120.88.0.0/13, 114.121.0.0/16, 114.122.0.0/15, 118.96.0.0/13 removed - NOT Indonesia per ip-api.com
             "xl": [
-                "112.215.0.0/16",   # 112.215.0.0 - 112.215.255.255
-                "114.121.0.0/16",   # 114.121.0.0 - 114.121.255.255
-                "114.122.0.0/15",   # 114.122.0.0 - 114.123.255.255
-                "120.88.0.0/13",    # 120.88.0.0 - 120.95.255.255
-                "118.96.0.0/13",    # 118.96.0.0 - 118.103.255.255
+                "112.215.0.0/16",   # 112.215.0.0 - 112.215.255.255 (VERIFIED)
             ],
             # Tri Indonesia - AS45727 (VERIFIED)
             "tri": [
