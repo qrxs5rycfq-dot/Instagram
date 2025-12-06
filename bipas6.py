@@ -3583,121 +3583,259 @@ class UltraStealthIPGenerator2025:
         """Initialize mobile carrier IP pools with realistic patterns"""
         return {}  # Will be populated dynamically
     
-    def generate_ultra_stealth_ip(self, country: str = "ID", isp: str = None, ip_type: str = "random") -> Dict[str, Any]:
+    def generate_ultra_stealth_ip(self, country: str = "random", isp: str = None, ip_type: str = "random") -> Dict[str, Any]:
         """
-        Generate an ultra-stealth IP - PRIORITIZE MOBILE ISPs
+        Generate an ultra-stealth IP - NOW WITH RANDOM COUNTRY SUPPORT
         
         Strategy:
-        - 80% Mobile ISPs (Telkomsel, Indosat, XL, Tri, Smartfren) - HIGHER SUCCESS RATE
-        - 20% WiFi ISPs (Biznet, IndiHome, etc.)
-        - Asia ISPs as backup (Myanmar 120.88.x.x worked!)
+        - If country="random", select from all 40+ countries in database
+        - 80% Mobile ISPs for better success rate
+        - 20% Broadband/WiFi ISPs
         - Filter out blocked IPs from blacklist
         - MULTI-SOURCE verification (ip-api.com, ipinfo.io, ipwhois.app)
+        - All fingerprints MATCH the selected country
         """
         
-        # Always use Indonesia as primary
-        country = "ID"
+        # Load country database
+        country_db = self._load_country_database_for_ip()
+        all_countries = list(country_db.get("countries", {}).keys())
         
-        # PRIORITIZE MOBILE - 80% mobile, 20% wifi
+        if not all_countries:
+            all_countries = ["US", "AU", "CA", "GB", "DE", "FR", "JP", "KR", "SG", "NL", "NZ", "IT", "ES", 
+                           "MX", "BR", "TH", "MY", "PH", "VN", "IN", "ID", "AE", "SA", "TR", "IL",
+                           "AR", "CL", "CO", "PE", "PT", "BE", "CH", "AT", "PL", "SE", "NO", "DK",
+                           "CN", "TW", "HK", "PK"]
+        
+        # TRULY RANDOM COUNTRY SELECTION
+        if country == "random" or country not in all_countries:
+            country = random.choice(all_countries)
+            print(f"{cyan}    🌍 Random country selected: {country}{reset}")
+        
+        # Get country data
+        country_data = country_db.get("countries", {}).get(country, {})
+        
+        # PRIORITIZE MOBILE - 80% mobile, 20% broadband
         if ip_type == "random":
             ip_type = "mobile" if random.random() < 0.8 else "residential"
         
-        # Always use verified ranges
-        country_ranges = self._get_indonesia_fallback_ranges()
+        # Get ISPs for this country
+        country_isps = country_data.get("isps", {})
+        mobile_isps = country_isps.get("mobile", {})
+        broadband_isps = country_isps.get("broadband", {})
         
-        # IP dapat dari negara mana saja - yang penting:
-        # 1. Fresh (tidak pernah dipakai sebelumnya)
-        # 2. Tidak masuk blacklist (bukan proxy/VPN/datacenter)
-        # 3. Fingerprint dan location MATCH dengan IP country
-        # 4. NOT in blocked_ips.json
-        
-        # PRIORITIZED ISPs - Mobile first!
-        indonesia_mobile_isps = ["telkomsel", "indosat", "tri", "smartfren", "xl"]  # XL added
-        indonesia_wifi_isps = ["biznet", "indihome", "myrepublic", "cbn", "firstmedia"]
-        asia_isps = ["myanmar", "malaysia", "thailand", "vietnam", "philippines", "singapore"]
-        
-        # Combine all ISPs with priority
-        all_isps = indonesia_mobile_isps + indonesia_wifi_isps + asia_isps
-        
-        if not isp:
-            # PRIORITIZE MOBILE ISPs - 80% mobile
-            if ip_type == "mobile":
-                # 90% Indonesia mobile, 10% other Asia mobile
-                if random.random() < 0.9:
-                    isp = random.choice(indonesia_mobile_isps)
-                else:
-                    isp = random.choice(asia_isps)
+        # Select ISP based on type
+        if ip_type == "mobile" and mobile_isps:
+            selected_isp_key = random.choice(list(mobile_isps.keys())) if not isp else isp
+            isp_data = mobile_isps.get(selected_isp_key, {})
+        elif broadband_isps:
+            selected_isp_key = random.choice(list(broadband_isps.keys())) if not isp else isp
+            isp_data = broadband_isps.get(selected_isp_key, {})
+        else:
+            # Fallback to any available ISP
+            all_isps = {**mobile_isps, **broadband_isps}
+            if all_isps:
+                selected_isp_key = random.choice(list(all_isps.keys()))
+                isp_data = all_isps.get(selected_isp_key, {})
             else:
-                isp = random.choice(indonesia_wifi_isps)
+                # Ultimate fallback - use Indonesia ranges
+                return self._generate_indonesia_fallback_ip(ip_type)
         
-        # Validate ISP exists
-        if isp not in all_isps:
-            isp = random.choice(indonesia_mobile_isps)  # Default to mobile
+        # Get IP ranges for selected ISP
+        isp_ranges = isp_data.get("ranges", [])
+        isp_name = isp_data.get("name", selected_isp_key)
+        isp_asn = isp_data.get("asn", "")
         
-        # Get ISP's IP ranges
-        isp_ranges = country_ranges.get(isp, [])
         if not isp_ranges:
-            # Fallback to Telkomsel which has verified ranges
-            isp = "telkomsel"
-            isp_ranges = country_ranges.get("telkomsel", self._get_default_indonesia_ranges())
+            print(f"{kuning}    ⚠ No IP ranges for {isp_name}, using fallback...{reset}")
+            return self._generate_indonesia_fallback_ip(ip_type)
         
-        # Select a range based on type preference
-        suitable_ranges = [r for r in isp_ranges if r.get("type") == ip_type]
-        if not suitable_ranges:
-            suitable_ranges = isp_ranges
-        
-        selected_range = random.choice(suitable_ranges)
-        
-        # Generate IP within the VERIFIED range and verify with real-time API
-        # Increased to 20 attempts for better success rate
-        max_verify_attempts = 20
+        # Generate IP within the range and verify
+        max_verify_attempts = 15
         verified_ip = None
         
         for verify_attempt in range(max_verify_attempts):
-            # Generate fresh IP with timestamp-based uniqueness
-            ip = self._generate_fresh_indonesia_ip(selected_range)
+            # Select random range
+            selected_range = random.choice(isp_ranges)
+            
+            # Generate IP from CIDR range
+            ip = self._generate_ip_from_cidr_range(selected_range)
+            
+            if not ip:
+                continue
             
             # CHECK BLOCKED IPS - Skip if in blacklist
             if is_ip_blocked(ip):
                 print(f"{merah}    ✗ IP {ip} is in blocked list, skipping...{reset}")
                 continue
             
-            # Ensure uniqueness - never reuse IPs
-            attempts = 0
-            while (ip in self.used_ips or is_ip_blocked(ip)) and attempts < 200:
-                ip = self._generate_fresh_indonesia_ip(selected_range)
-                attempts += 1
+            # Ensure uniqueness
+            if ip in self.used_ips:
+                continue
             
-            # REAL-TIME VERIFICATION: Check with multiple APIs
+            # REAL-TIME VERIFICATION
             verification = self._verify_ip_realtime(ip)
             
-            # Accept IP from ANY country if:
-            # 1. Verified (API responded)
-            # 2. Not proxy/datacenter
-            # 3. Usable for Instagram
+            # Accept IP if verified and usable
             if verification["verified"] and verification["is_usable"]:
-                country_code = verification.get("country", "ID")
-                print(f"{hijau}    ✓ IP verified: {ip} ({verification['isp']}) [{country_code}] [via {verification.get('source', 'unknown')}]{reset}")
+                verified_country = verification.get("country", country)
+                print(f"{hijau}    ✓ IP verified: {ip} ({verification.get('isp', isp_name)}) [{verified_country}] [via {verification.get('source', 'unknown')}]{reset}")
                 verified_ip = ip
                 self.used_ips.add(ip)
                 self._ip_timestamps[ip] = time.time()
+                self._ip_countries[ip] = verified_country
+                
+                # Use verified ISP name if available
                 if verification.get("isp"):
-                    isp = self._normalize_isp_name(verification["isp"])
-                # Store country for fingerprint matching
-                self._ip_countries[ip] = country_code
+                    isp_name = verification["isp"]
                 break
             elif verification["is_proxy"] or verification["is_datacenter"]:
                 print(f"{merah}    ✗ IP {ip} is proxy/datacenter, skipping...{reset}")
             elif not verification["verified"]:
-                # API unavailable - try different ISP
-                print(f"{kuning}    ○ API unavailable for {ip}, trying different ISP...{reset}")
-                available_isps = [i for i in all_indonesia_isps if i != isp]
-                if available_isps:
-                    isp = random.choice(available_isps)
-                    isp_ranges = country_ranges.get(isp, [])
-                    if isp_ranges:
-                        suitable_ranges = isp_ranges
-                        selected_range = random.choice(suitable_ranges)
+                # API unavailable - accept without verification
+                print(f"{kuning}    ○ API unavailable for {ip}, accepting without verification...{reset}")
+                verified_ip = ip
+                self.used_ips.add(ip)
+                self._ip_timestamps[ip] = time.time()
+                self._ip_countries[ip] = country
+                break
+        
+        if not verified_ip:
+            print(f"{kuning}    ⚠ Could not generate verified IP, using fallback...{reset}")
+            return self._generate_indonesia_fallback_ip(ip_type)
+        
+        # Build complete IP profile with matching fingerprint for the COUNTRY
+        return self._build_ultra_stealth_profile_for_country(
+            verified_ip, 
+            self._ip_countries.get(verified_ip, country), 
+            isp_name, 
+            isp_asn,
+            country_data,
+            ip_type
+        )
+    
+    def _load_country_database_for_ip(self) -> Dict[str, Any]:
+        """Load country database from JSON file"""
+        try:
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "country_database.json")
+            if os.path.exists(db_path):
+                with open(db_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"{kuning}    Warning: Could not load country_database.json: {e}{reset}")
+        return {"countries": {}}
+    
+    def _generate_ip_from_cidr_range(self, cidr: str) -> Optional[str]:
+        """Generate random IP from CIDR range"""
+        try:
+            network = ipaddress.ip_network(cidr, strict=False)
+            # Get all hosts in the network
+            hosts = list(network.hosts())
+            if not hosts:
+                return None
+            
+            # Exclude common server IPs
+            excluded_octets = {0, 1, 2, 100, 128, 200, 254, 255}
+            valid_hosts = [h for h in hosts if int(str(h).split('.')[-1]) not in excluded_octets]
+            
+            if not valid_hosts:
+                valid_hosts = hosts
+            
+            # Add timestamp-based entropy
+            timestamp_entropy = int(time.time() * 1000) % len(valid_hosts)
+            random_index = (random.randint(0, len(valid_hosts) - 1) + timestamp_entropy) % len(valid_hosts)
+            
+            return str(valid_hosts[random_index])
+        except Exception as e:
+            print(f"{kuning}    Warning: Could not parse CIDR {cidr}: {e}{reset}")
+            return None
+    
+    def _generate_indonesia_fallback_ip(self, ip_type: str) -> Dict[str, Any]:
+        """Fallback to Indonesia IP if country database fails"""
+        # Use existing Indonesia ranges
+        country_ranges = self._get_indonesia_fallback_ranges()
+        
+        indonesia_mobile_isps = ["telkomsel", "indosat", "tri", "smartfren"]
+        indonesia_wifi_isps = ["biznet", "indihome", "myrepublic"]
+        
+        if ip_type == "mobile":
+            isp = random.choice(indonesia_mobile_isps)
+        else:
+            isp = random.choice(indonesia_wifi_isps)
+        
+        isp_ranges = country_ranges.get(isp, [])
+        if not isp_ranges:
+            isp = "telkomsel"
+            isp_ranges = country_ranges.get("telkomsel", self._get_default_indonesia_ranges())
+        
+        selected_range = random.choice(isp_ranges)
+        ip = self._generate_fresh_indonesia_ip(selected_range)
+        
+        self.used_ips.add(ip)
+        self._ip_timestamps[ip] = time.time()
+        self._ip_countries[ip] = "ID"
+        
+        return self._build_ultra_stealth_profile(ip, "ID", isp, selected_range)
+    
+    def _build_ultra_stealth_profile_for_country(self, ip: str, country: str, isp_name: str, 
+                                                   isp_asn: str, country_data: Dict, ip_type: str) -> Dict[str, Any]:
+        """Build complete IP profile with all fingerprints matching the country"""
+        
+        # Get country-specific data
+        timezone = country_data.get("timezone", "America/New_York")
+        language = country_data.get("language", "en-US")
+        locale = country_data.get("locale", "en_US")
+        country_name = country_data.get("name", country)
+        
+        # Get city
+        cities = country_data.get("cities", [{"name": "Unknown", "lat": 0, "lon": 0}])
+        city = random.choice(cities) if cities else {"name": "Unknown", "lat": 0, "lon": 0}
+        
+        # Get device based on type and country
+        devices = country_data.get("devices", {"mobile": ["iPhone 15 Pro"], "desktop": ["MacBook Pro"]})
+        if ip_type == "mobile":
+            device_list = devices.get("mobile", ["iPhone 15 Pro"])
+            device_type = "mobile"
+        else:
+            device_list = devices.get("desktop", ["MacBook Pro"])
+            device_type = "desktop"
+        
+        selected_device = random.choice(device_list) if device_list else "iPhone 15 Pro"
+        
+        # Generate TCP fingerprint
+        tcp_fingerprint = self._generate_tcp_fingerprint_enhanced(device_type)
+        
+        # Generate network metrics
+        network_metrics = self._generate_network_metrics()
+        
+        # Build device profile
+        device_profile = self._generate_device_profile_for_country(selected_device, country, ip_type)
+        
+        return {
+            "ip": ip,
+            "country": country,
+            "country_name": country_name,
+            "isp": self._normalize_isp_name(isp_name),
+            "isp_name": isp_name,
+            "asn": isp_asn,
+            "type": ip_type,
+            "connection_type": "mobile" if ip_type == "mobile" else "wifi",
+            "network_type": "4G" if ip_type == "mobile" else "WiFi",
+            "health_score": random.randint(85, 99),
+            "freshness_score": 100,
+            "location": {
+                "city": city.get("name", "Unknown"),
+                "lat": city.get("lat", 0),
+                "lon": city.get("lon", 0),
+                "timezone": timezone
+            },
+            "locale": {
+                "language": language,
+                "locale": locale
+            },
+            "device": device_profile,
+            "tcp_fingerprint": tcp_fingerprint,
+            "network_metrics": network_metrics
+        }
             else:
                 print(f"{kuning}    ✗ IP {ip} not usable, trying again...{reset}")
                 # Try different range
@@ -6666,18 +6804,17 @@ class AdvancedIPStealthSystem2025:
             "android_id": f"{random.getrandbits(64):016x}"
         }
     
-    def get_fresh_ip_config(self, session_id: str = None, min_health: int = 80, connection_type: str = "mobile") -> Dict[str, Any]:
-        """Get ultra-fresh IP configuration using next-gen stealth system"""
-        print(f"{cyan}🌐  Getting fresh IP config for session {session_id[:8] if session_id else 'new'} (connection: {connection_type})...{reset}")
+    def get_fresh_ip_config(self, session_id: str = None, min_health: int = 80, connection_type: str = "mobile", country: str = "random") -> Dict[str, Any]:
+        """Get ultra-fresh IP configuration using next-gen stealth system with RANDOM COUNTRY support"""
+        print(f"{cyan}🌐  Getting fresh IP config for session {session_id[:8] if session_id else 'new'} (connection: {connection_type}, country: {country})...{reset}")
         
-        # ===== USE ULTRA STEALTH IP GENERATOR =====
-        # This new system generates IPs from real ISP allocations
+        # ===== USE ULTRA STEALTH IP GENERATOR WITH COUNTRY =====
         try:
             ultra_generator = UltraStealthIPGenerator2025()
             ip_type = "mobile" if connection_type == "mobile" else "residential"
             
-            # Generate ultra-stealth IP
-            ultra_ip_config = ultra_generator.generate_ultra_stealth_ip(ip_type=ip_type)
+            # Generate ultra-stealth IP for specific country
+            ultra_ip_config = ultra_generator.generate_ultra_stealth_ip(ip_type=ip_type, country=country)
             
             if ultra_ip_config and ultra_ip_config.get("ip"):
                 # Convert to standard format
@@ -11718,15 +11855,23 @@ class BehavioralMimicry2025:
 # ===================== EMAIL SERVICE MANAGER 2025 =====================
 
 class EmailServiceManager2025:
-    """Manager untuk berbagai layanan email - FIXED dengan priority system yang benar"""
+    """Manager untuk berbagai layanan email - UPDATED with more free temp mail services"""
     
     def __init__(self, preferred_service: str = "auto"):
         self.services = {
+            # PRIMARY SERVICES (Working as of late 2024/2025)
             "10minutemail": TenMinuteMailService2025(),
             "guerrillamail": GuerrillaMailService2025(),
-            "1secmail": OneSecMailService2025(),
             "mailtm": MailTMService2025(),
+            
+            # SECONDARY SERVICES (Alternative)
             "tempmail_plus": TempMailPlusService2025(),
+            "dropmail": DropmailService2025(),       # NEW: Dropmail.me
+            "tempmail_lol": TempMailLolService2025(), # NEW: TempMail.lol
+            "internal_mail": InternalMailService2025(), # NEW: Internal Mail
+            
+            # LEGACY (may not work well)
+            "1secmail": OneSecMailService2025(),     # NOTE: Often blocked/rate limited
             "cmail": CmailService2025(),
             "gmail_alias": SimpleGmailAlias2025(),
         }
@@ -11735,7 +11880,7 @@ class EmailServiceManager2025:
         self.active_services = {}
         
     def _get_service_priority(self, is_manual: bool = False) -> List[str]:
-        """Get service priority list - Auto mode: RANDOM dari working services"""
+        """Get service priority list - Auto mode: TRULY RANDOM dari working services"""
         if is_manual:
             return [
                 "10minutemail",    # ⭐ Paling reliable untuk manual
@@ -11747,16 +11892,22 @@ class EmailServiceManager2025:
                 # NOTE: 1secmail removed - no longer working (blocked/rate limited)
             ]
         else:
-            # AUTO MODE: RANDOM dari 3 service utama yang working
-            # Tidak pakai urutan priority, tapi random untuk distribusi lebih baik
+            # AUTO MODE: TRULY RANDOM - pilih SATU service utama secara random
+            # Ini lebih baik dari priority list karena distribusi beban lebih merata
             primary_services = ["10minutemail", "guerrillamail", "mailtm"]
-            random.shuffle(primary_services)  # Random order setiap kali
+            
+            # Pilih 1 service random sebagai primary
+            chosen_primary = random.choice(primary_services)
+            
+            # Sisa primary services sebagai fallback
+            other_primary = [s for s in primary_services if s != chosen_primary]
+            random.shuffle(other_primary)
             
             # Fallback services jika primary gagal
             fallback_services = ["tempmail_plus", "cmail", "gmail_alias"]
             
-            return primary_services + fallback_services
-            # NOTE: 1secmail removed from auto mode - not working anymore
+            return [chosen_primary] + other_primary + fallback_services
+            # NOTE: 1secmail removed from auto mode - not working anymore (API blocked)
     
     async def get_email(self, service_name: str = None, retries: int = 3) -> Optional[Dict[str, Any]]:
         """Dapatkan email dengan priority system yang benar"""
@@ -11872,14 +12023,14 @@ class EmailServiceManager2025:
 
     async def _select_best_service(self) -> str:
         """Pilih service terbaik berdasarkan reliability"""
-        # Priority list berdasarkan reliability
+        # Priority list berdasarkan reliability (1secmail REMOVED - no longer working)
         priority_list = [
-            "1secmail",      # Paling reliable
-            "10minutemail",  # Cepat dan mudah
+            "10minutemail",  # Cepat dan mudah  
+            "guerrillamail", # Good fallback
             "mailtm",        # API support
             "tempmail_plus", # Alternatif
             "cmail",         # Backup
-            "guerrillamail"  # Last resort
+            # "1secmail" - REMOVED: API blocked/rate limited as of late 2024
         ]
         
         for service in priority_list:
@@ -12137,6 +12288,306 @@ class EmailServiceManager2025:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit - auto cleanup"""
         await self.cleanup_all_sessions()
+
+
+# ============= NEW EMAIL SERVICES 2025 =============
+
+class DropmailService2025:
+    """Dropmail.me service - Free temp email with API"""
+    
+    def __init__(self):
+        self.graphql_endpoint = "https://dropmail.me/api/graphql/web-test-wgp"
+        self.session = requests.Session()
+        self.session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        })
+        self.session_id = None
+        self.address = None
+    
+    async def get_email(self) -> Optional[Dict[str, Any]]:
+        """Get email from Dropmail.me using GraphQL API"""
+        try:
+            # Create new session via GraphQL
+            query = """
+            mutation {
+                introduceSession {
+                    id
+                    expiresAt
+                    addresses {
+                        address
+                    }
+                }
+            }
+            """
+            
+            response = self.session.post(
+                self.graphql_endpoint,
+                json={"query": query},
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                session_data = data.get("data", {}).get("introduceSession", {})
+                
+                if session_data and session_data.get("addresses"):
+                    self.session_id = session_data.get("id")
+                    self.address = session_data["addresses"][0]["address"]
+                    
+                    # Parse username and domain
+                    parts = self.address.split("@")
+                    username = parts[0] if len(parts) > 0 else ""
+                    domain = parts[1] if len(parts) > 1 else ""
+                    
+                    return {
+                        "email": self.address,
+                        "username": username,
+                        "domain": domain,
+                        "service": "dropmail",
+                        "session_id": self.session_id,
+                        "created_at": time.time()
+                    }
+            
+            return None
+            
+        except Exception as e:
+            print(f"{merah}❌  Dropmail.me error: {e}{reset}")
+            return None
+    
+    async def get_otp(self, email_address: str) -> Optional[str]:
+        """Get OTP from Dropmail inbox"""
+        try:
+            if not self.session_id:
+                return None
+            
+            query = """
+            query($id: ID!) {
+                session(id: $id) {
+                    mails {
+                        rawSize
+                        fromAddr
+                        toAddr
+                        downloadUrl
+                        text
+                        headerSubject
+                    }
+                }
+            }
+            """
+            
+            for attempt in range(5):
+                response = self.session.post(
+                    self.graphql_endpoint,
+                    json={
+                        "query": query,
+                        "variables": {"id": self.session_id}
+                    },
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    mails = data.get("data", {}).get("session", {}).get("mails", [])
+                    
+                    for mail in mails:
+                        text = mail.get("text", "") or mail.get("headerSubject", "")
+                        # Extract 6-digit OTP
+                        import re
+                        otp_match = re.search(r'\b(\d{6})\b', text)
+                        if otp_match:
+                            return otp_match.group(1)
+                
+                await asyncio.sleep(3)
+            
+            return None
+            
+        except Exception as e:
+            print(f"{merah}❌  Dropmail OTP error: {e}{reset}")
+            return None
+
+
+class TempMailLolService2025:
+    """TempMail.lol - Another free temp email service"""
+    
+    def __init__(self):
+        self.api_base = "https://api.tempmail.lol"
+        self.session = requests.Session()
+        self.session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json"
+        })
+        self.token = None
+        self.address = None
+    
+    async def get_email(self) -> Optional[Dict[str, Any]]:
+        """Get email from TempMail.lol"""
+        try:
+            # Generate new inbox
+            response = self.session.post(
+                f"{self.api_base}/generate",
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if data.get("address"):
+                    self.address = data["address"]
+                    self.token = data.get("token")
+                    
+                    # Parse username and domain
+                    parts = self.address.split("@")
+                    username = parts[0] if len(parts) > 0 else ""
+                    domain = parts[1] if len(parts) > 1 else ""
+                    
+                    return {
+                        "email": self.address,
+                        "username": username,
+                        "domain": domain,
+                        "service": "tempmail_lol",
+                        "token": self.token,
+                        "created_at": time.time()
+                    }
+            
+            return None
+            
+        except Exception as e:
+            print(f"{merah}❌  TempMail.lol error: {e}{reset}")
+            return None
+    
+    async def get_otp(self, email_address: str) -> Optional[str]:
+        """Get OTP from TempMail.lol inbox"""
+        try:
+            if not self.token:
+                return None
+            
+            for attempt in range(5):
+                response = self.session.get(
+                    f"{self.api_base}/auth/{self.token}",
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    emails = data.get("email", [])
+                    
+                    for email in emails:
+                        body = email.get("body", "") or email.get("subject", "")
+                        # Extract 6-digit OTP
+                        import re
+                        otp_match = re.search(r'\b(\d{6})\b', body)
+                        if otp_match:
+                            return otp_match.group(1)
+                
+                await asyncio.sleep(3)
+            
+            return None
+            
+        except Exception as e:
+            print(f"{merah}❌  TempMail.lol OTP error: {e}{reset}")
+            return None
+
+
+class InternalMailService2025:
+    """Internxt/Inboxes.com - Disposable email service"""
+    
+    def __init__(self):
+        self.api_base = "https://api.internal.temp-mail.io/api/v3"
+        self.session = requests.Session()
+        self.session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json"
+        })
+        self.email_data = None
+    
+    async def get_email(self) -> Optional[Dict[str, Any]]:
+        """Get email from Internal Mail"""
+        try:
+            # Create new address
+            response = self.session.post(
+                f"{self.api_base}/email/new",
+                json={
+                    "min_name_length": 10,
+                    "max_name_length": 15
+                },
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if data.get("email"):
+                    self.email_data = data
+                    email = data["email"]
+                    
+                    # Parse username and domain
+                    parts = email.split("@")
+                    username = parts[0] if len(parts) > 0 else ""
+                    domain = parts[1] if len(parts) > 1 else ""
+                    
+                    return {
+                        "email": email,
+                        "username": username,
+                        "domain": domain,
+                        "service": "internal_mail",
+                        "token": data.get("token"),
+                        "created_at": time.time()
+                    }
+            
+            # Fallback: generate manually
+            domains = ["fthcapital.com", "decabg.eu", "1secmail.org", "getairmail.com"]
+            username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))
+            domain = random.choice(domains)
+            email = f"{username}@{domain}"
+            
+            return {
+                "email": email,
+                "username": username,
+                "domain": domain,
+                "service": "internal_mail",
+                "created_at": time.time()
+            }
+            
+        except Exception as e:
+            print(f"{merah}❌  Internal Mail error: {e}{reset}")
+            return None
+    
+    async def get_otp(self, email_address: str) -> Optional[str]:
+        """Get OTP from Internal Mail inbox"""
+        try:
+            if not self.email_data or not self.email_data.get("token"):
+                return None
+            
+            token = self.email_data["token"]
+            
+            for attempt in range(5):
+                response = self.session.get(
+                    f"{self.api_base}/email/{email_address}/messages",
+                    headers={"Authorization": f"Bearer {token}"},
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    for msg in data:
+                        body = msg.get("body_text", "") or msg.get("subject", "")
+                        # Extract 6-digit OTP
+                        import re
+                        otp_match = re.search(r'\b(\d{6})\b', body)
+                        if otp_match:
+                            return otp_match.group(1)
+                
+                await asyncio.sleep(3)
+            
+            return None
+            
+        except Exception as e:
+            print(f"{merah}❌  Internal Mail OTP error: {e}{reset}")
+            return None
+
 
 class TempMailPlusService2025:
     """TempMail.plus service - alternatif yang bagus"""
@@ -15426,7 +15877,7 @@ class InstagramAccountCreator2025:
             "max_retries": 3,
             "request_timeout": 30,
             "email_service": "10minutemail",
-            "location": "ID",
+            "location": "random",  # CHANGED: random country instead of just ID
             "device_type": "random",  # random antara android dan desktop
             "connection_type": "auto",  # auto = random mobile/wifi based on device
             "verbose": True
@@ -15757,7 +16208,7 @@ class InstagramAccountCreator2025:
             return self._record_failure(attempt_id, f"Unexpected error: {str(e)}")
     
     async def _create_new_session(self) -> Optional[str]:
-        """Buat session baru dengan semua komponen terintegrasi"""
+        """Buat session baru dengan semua komponen terintegrasi - RANDOM COUNTRY"""
         try:
             # Determine connection type
             connection_type = self.config.get("connection_type", "auto")
@@ -15765,50 +16216,68 @@ class InstagramAccountCreator2025:
                 # Auto detect: 70% mobile, 30% wifi
                 connection_type = "mobile" if random.random() < 0.7 else "wifi"
             
-            print(f"{cyan}    Creating {connection_type.upper()} session...{reset}")
+            # RANDOM COUNTRY - select from all available countries
+            location = self.config.get("location", "random")
+            if location == "random":
+                # Load country database and pick random
+                all_countries = ["US", "CA", "GB", "DE", "FR", "NL", "IT", "ES", "PT", "BE", "CH", "AT", 
+                               "PL", "SE", "NO", "DK", "JP", "KR", "CN", "TW", "HK", "SG", "TH", "MY", 
+                               "PH", "VN", "ID", "IN", "PK", "AU", "NZ", "AE", "SA", "TR", "IL", 
+                               "MX", "BR", "AR", "CL", "CO", "PE"]
+                location = random.choice(all_countries)
             
-            # Generate fingerprint berdasarkan connection type
+            print(f"{cyan}    Creating {connection_type.upper()} session for {location}...{reset}")
+            
+            # Generate fingerprint berdasarkan connection type AND country
             fingerprint = self.fingerprint_system.generate_fingerprint(
                 device_type=self.config["device_type"],
-                location=self.config["location"],
+                location=location,  # Use random country
                 connection_type=connection_type
             )
             
-            # Generate behavior profile
+            # Generate behavior profile - country-agnostic
             if connection_type == "mobile":
-                user_type = random.choice(["casual_indonesian", "tech_savvy_indonesian", "young_adult_indonesian"])
+                user_type = random.choice(["casual_user", "tech_savvy_user", "young_adult_user"])
             else:
-                user_type = random.choice(["professional_indonesian", "casual_indonesian"])
+                user_type = random.choice(["professional_user", "casual_user"])
             
             behavior_profile = self.behavior_system.generate_behavior_profile(user_type)
             
-            # Get IP config dengan parameter yang BENAR
+            # Get IP config - pass country for matching IP
             ip_config = self.ip_system.get_fresh_ip_config(
                 session_id=None,
                 min_health=80,
-                connection_type=connection_type  # HAPUS parameter ini atau update method
+                connection_type=connection_type,
+                country=location  # Pass country for IP selection
             )
             
             # Generate WebRTC/WebGL fingerprint
             webrtc_fingerprint = self.web_system.get_complete_fingerprint(
                 device_type=self.config["device_type"],
                 brand=fingerprint.get("device", {}).get("brand", "Samsung"),
-                connection_type=connection_type  # FIXED
+                connection_type=connection_type
             )
             
-            # Create session dengan semua fingerprints - FIXED
+            # Create session dengan semua fingerprints
             session_id = self.session_manager.create_session(
                 fingerprint=fingerprint,
                 behavior_profile=behavior_profile,
                 ip_config=ip_config,
-                webrtc_fingerprint=webrtc_fingerprint  # FIXED: include WebRTC
+                webrtc_fingerprint=webrtc_fingerprint,
+                country=location  # Store country in session
             )
             
+            # Print country info
+            ip_address = ip_config.get("ip", "unknown")
+            isp_name = ip_config.get("isp_info", {}).get("isp", "unknown")
             print(f"{hijau}✅  Created new {connection_type.upper()} session: {session_id}{reset}")
+            print(f"{cyan}    Country: {location}, IP: {ip_address} ({isp_name}){reset}")
             return session_id
             
         except Exception as e:
             print(f"{merah}❌  Failed to create session: {e}{reset}")
+            import traceback
+            traceback.print_exc()
             return None
 
     async def rotate_ip_with_fingerprint(self, session_id: str) -> bool:
