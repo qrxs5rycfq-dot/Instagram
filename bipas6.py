@@ -83,6 +83,231 @@ RESET = "\033[0m"
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+# ===================== IP TRACKING SYSTEM =====================
+# Manages IPs based on their status: working, checkpoint, blocked
+# Strategy:
+# - Working IPs: Successfully created account → save for future use
+# - Checkpoint IPs: Created but got checkpoint → save for reference
+# - Blocked IPs: Got IP block/rate limit → blacklist, never use again
+
+WORKING_IPS_FILE = "working_ips.json"      # IPs that successfully created accounts
+CHECKPOINT_IPS_FILE = "checkpoint_ips.json" # IPs that got checkpoint
+BLOCKED_IPS_FILE = "blocked_ips.json"       # IPs that got blocked - DO NOT USE
+
+# In-memory blacklist cache for fast lookup
+_blocked_ips_cache: set = set()
+
+def _load_blocked_ips_cache():
+    """Load blocked IPs into memory for fast lookup"""
+    global _blocked_ips_cache
+    try:
+        if os.path.exists(BLOCKED_IPS_FILE):
+            with open(BLOCKED_IPS_FILE, 'r') as f:
+                blocked = json.load(f)
+                _blocked_ips_cache = {entry.get("ip") for entry in blocked if entry.get("ip")}
+    except:
+        _blocked_ips_cache = set()
+
+def is_ip_blocked(ip: str) -> bool:
+    """Check if IP is in the blocked list (fast in-memory check)"""
+    global _blocked_ips_cache
+    if not _blocked_ips_cache:
+        _load_blocked_ips_cache()
+    return ip in _blocked_ips_cache
+
+def save_working_ip(ip: str, isp: str, country: str, username: str = None) -> bool:
+    """Save working IP to file for future use (no duplicates)
+    
+    Args:
+        ip: The IP address that successfully created an account
+        isp: The ISP name
+        country: The country code (ID, MM, MY, etc.)
+        username: Optional username of the created account
+        
+    Returns:
+        True if saved successfully, False if already exists
+    """
+    try:
+        # Load existing IPs
+        working_ips = []
+        if os.path.exists(WORKING_IPS_FILE):
+            try:
+                with open(WORKING_IPS_FILE, 'r') as f:
+                    working_ips = json.load(f)
+            except:
+                working_ips = []
+        
+        # Check for duplicates
+        existing_ips = {entry.get("ip") for entry in working_ips}
+        if ip in existing_ips:
+            return False  # Already exists
+        
+        # Add new entry
+        new_entry = {
+            "ip": ip,
+            "isp": isp,
+            "country": country,
+            "username": username,
+            "status": "working",
+            "success_date": datetime.now().isoformat(),
+            "timestamp": time.time()
+        }
+        working_ips.append(new_entry)
+        
+        # Save to file
+        with open(WORKING_IPS_FILE, 'w') as f:
+            json.dump(working_ips, f, indent=2)
+        
+        print(f"{Fore.GREEN}    💾 Saved WORKING IP: {ip} ({isp}) [{country}] → {WORKING_IPS_FILE}{Style.RESET_ALL}")
+        return True
+        
+    except Exception as e:
+        print(f"{Fore.RED}    ⚠ Failed to save working IP: {e}{Style.RESET_ALL}")
+        return False
+
+def save_checkpoint_ip(ip: str, isp: str, country: str, username: str = None, reason: str = None) -> bool:
+    """Save checkpoint IP to file for reference
+    
+    Args:
+        ip: The IP address that got checkpoint
+        isp: The ISP name
+        country: The country code
+        username: Optional username that got checkpoint
+        reason: Optional reason for checkpoint
+        
+    Returns:
+        True if saved successfully
+    """
+    try:
+        checkpoint_ips = []
+        if os.path.exists(CHECKPOINT_IPS_FILE):
+            try:
+                with open(CHECKPOINT_IPS_FILE, 'r') as f:
+                    checkpoint_ips = json.load(f)
+            except:
+                checkpoint_ips = []
+        
+        # Check for duplicates
+        existing_ips = {entry.get("ip") for entry in checkpoint_ips}
+        if ip in existing_ips:
+            return False
+        
+        new_entry = {
+            "ip": ip,
+            "isp": isp,
+            "country": country,
+            "username": username,
+            "status": "checkpoint",
+            "reason": reason,
+            "checkpoint_date": datetime.now().isoformat(),
+            "timestamp": time.time()
+        }
+        checkpoint_ips.append(new_entry)
+        
+        with open(CHECKPOINT_IPS_FILE, 'w') as f:
+            json.dump(checkpoint_ips, f, indent=2)
+        
+        print(f"{Fore.YELLOW}    📋 Saved CHECKPOINT IP: {ip} ({isp}) [{country}] → {CHECKPOINT_IPS_FILE}{Style.RESET_ALL}")
+        return True
+        
+    except Exception as e:
+        print(f"{Fore.RED}    ⚠ Failed to save checkpoint IP: {e}{Style.RESET_ALL}")
+        return False
+
+def save_blocked_ip(ip: str, isp: str, country: str, reason: str = None) -> bool:
+    """Save blocked IP to blacklist - NEVER use this IP again
+    
+    Args:
+        ip: The IP address that got blocked
+        isp: The ISP name
+        country: The country code
+        reason: Reason for block (rate_limit, ip_block, proxy_detected, etc.)
+        
+    Returns:
+        True if saved successfully
+    """
+    global _blocked_ips_cache
+    try:
+        blocked_ips = []
+        if os.path.exists(BLOCKED_IPS_FILE):
+            try:
+                with open(BLOCKED_IPS_FILE, 'r') as f:
+                    blocked_ips = json.load(f)
+            except:
+                blocked_ips = []
+        
+        # Check for duplicates
+        existing_ips = {entry.get("ip") for entry in blocked_ips}
+        if ip in existing_ips:
+            return False
+        
+        new_entry = {
+            "ip": ip,
+            "isp": isp,
+            "country": country,
+            "status": "blocked",
+            "reason": reason,
+            "blocked_date": datetime.now().isoformat(),
+            "timestamp": time.time()
+        }
+        blocked_ips.append(new_entry)
+        
+        with open(BLOCKED_IPS_FILE, 'w') as f:
+            json.dump(blocked_ips, f, indent=2)
+        
+        # Update in-memory cache
+        _blocked_ips_cache.add(ip)
+        
+        print(f"{Fore.RED}    🚫 Saved BLOCKED IP: {ip} ({isp}) [{country}] - Reason: {reason} → {BLOCKED_IPS_FILE}{Style.RESET_ALL}")
+        return True
+        
+    except Exception as e:
+        print(f"{Fore.RED}    ⚠ Failed to save blocked IP: {e}{Style.RESET_ALL}")
+        return False
+
+def get_working_ips() -> List[Dict[str, Any]]:
+    """Load all saved working IPs"""
+    try:
+        if os.path.exists(WORKING_IPS_FILE):
+            with open(WORKING_IPS_FILE, 'r') as f:
+                return json.load(f)
+    except:
+        pass
+    return []
+
+def get_checkpoint_ips() -> List[Dict[str, Any]]:
+    """Load all saved checkpoint IPs"""
+    try:
+        if os.path.exists(CHECKPOINT_IPS_FILE):
+            with open(CHECKPOINT_IPS_FILE, 'r') as f:
+                return json.load(f)
+    except:
+        pass
+    return []
+
+def get_blocked_ips() -> List[Dict[str, Any]]:
+    """Load all blocked IPs"""
+    try:
+        if os.path.exists(BLOCKED_IPS_FILE):
+            with open(BLOCKED_IPS_FILE, 'r') as f:
+                return json.load(f)
+    except:
+        pass
+    return []
+
+def get_ip_stats() -> Dict[str, int]:
+    """Get statistics of all IP categories"""
+    return {
+        "working": len(get_working_ips()),
+        "checkpoint": len(get_checkpoint_ips()),
+        "blocked": len(get_blocked_ips())
+    }
+
+def get_working_ip_count() -> int:
+    """Get count of saved working IPs"""
+    return len(get_working_ips())
+
+
 # ===================== UNIFIED SESSION MANAGER 2025 =====================
 # Manages all spoofing components in a consistent, synchronized manner
 
@@ -2378,44 +2603,45 @@ class UltraStealthIPGenerator2025:
     
     def generate_ultra_stealth_ip(self, country: str = "ID", isp: str = None, ip_type: str = "random") -> Dict[str, Any]:
         """
-        Generate an ultra-stealth IP - INDONESIA ONLY with VERIFIED ranges
+        Generate an ultra-stealth IP - PRIORITIZE MOBILE ISPs
         
-        Features:
-        - Uses VERIFIED Indonesian ISP IP ranges from APNIC
-        - All ranges are confirmed to be Indonesia via WHOIS
-        - Random between mobile and residential
-        - Simulates DHCP lease patterns
+        Strategy:
+        - 80% Mobile ISPs (Telkomsel, Indosat, XL, Tri, Smartfren) - HIGHER SUCCESS RATE
+        - 20% WiFi ISPs (Biznet, IndiHome, etc.)
+        - Asia ISPs as backup (Myanmar 120.88.x.x worked!)
+        - Filter out blocked IPs from blacklist
         - MULTI-SOURCE verification (ip-api.com, ipinfo.io, ipwhois.app)
         """
         
-        # Always use Indonesia
+        # Always use Indonesia as primary
         country = "ID"
         
-        # Random IP type if not specified
+        # PRIORITIZE MOBILE - 80% mobile, 20% wifi
         if ip_type == "random":
-            ip_type = random.choice(["mobile", "residential"])
+            ip_type = "mobile" if random.random() < 0.8 else "residential"
         
-        # Always use verified Indonesian ranges
+        # Always use verified ranges
         country_ranges = self._get_indonesia_fallback_ranges()
         
         # IP dapat dari negara mana saja - yang penting:
         # 1. Fresh (tidak pernah dipakai sebelumnya)
         # 2. Tidak masuk blacklist (bukan proxy/VPN/datacenter)
         # 3. Fingerprint dan location MATCH dengan IP country
+        # 4. NOT in blocked_ips.json
         
-        # All available ISPs from Asia (Indonesia prioritized, but others work too!)
-        indonesia_mobile_isps = ["telkomsel", "indosat", "tri", "smartfren"]
-        indonesia_wifi_isps = ["biznet", "indihome", "myrepublic", "cbn"]
+        # PRIORITIZED ISPs - Mobile first!
+        indonesia_mobile_isps = ["telkomsel", "indosat", "tri", "smartfren", "xl"]  # XL added
+        indonesia_wifi_isps = ["biznet", "indihome", "myrepublic", "cbn", "firstmedia"]
         asia_isps = ["myanmar", "malaysia", "thailand", "vietnam", "philippines", "singapore"]
         
-        # Combine all ISPs
+        # Combine all ISPs with priority
         all_isps = indonesia_mobile_isps + indonesia_wifi_isps + asia_isps
         
         if not isp:
-            # Random from all ISPs (Asia included)
+            # PRIORITIZE MOBILE ISPs - 80% mobile
             if ip_type == "mobile":
-                # 70% Indonesia, 30% other Asia
-                if random.random() < 0.7:
+                # 90% Indonesia mobile, 10% other Asia mobile
+                if random.random() < 0.9:
                     isp = random.choice(indonesia_mobile_isps)
                 else:
                     isp = random.choice(asia_isps)
@@ -2424,7 +2650,7 @@ class UltraStealthIPGenerator2025:
         
         # Validate ISP exists
         if isp not in all_isps:
-            isp = random.choice(all_isps)
+            isp = random.choice(indonesia_mobile_isps)  # Default to mobile
         
         # Get ISP's IP ranges
         isp_ranges = country_ranges.get(isp, [])
@@ -2449,9 +2675,14 @@ class UltraStealthIPGenerator2025:
             # Generate fresh IP with timestamp-based uniqueness
             ip = self._generate_fresh_indonesia_ip(selected_range)
             
+            # CHECK BLOCKED IPS - Skip if in blacklist
+            if is_ip_blocked(ip):
+                print(f"{merah}    ✗ IP {ip} is in blocked list, skipping...{reset}")
+                continue
+            
             # Ensure uniqueness - never reuse IPs
             attempts = 0
-            while ip in self.used_ips and attempts < 200:
+            while (ip in self.used_ips or is_ip_blocked(ip)) and attempts < 200:
                 ip = self._generate_fresh_indonesia_ip(selected_range)
                 attempts += 1
             
@@ -15324,6 +15555,17 @@ class InstagramAccountCreator2025:
                                     print(f"{cyan}    User ID: {data.get('user_id', 'N/A')}{reset}")
                                     print(f"{cyan}    Username: {username}{reset}")
                                     
+                                    # Save working IP
+                                    try:
+                                        ip_config = session.get("ip_config", session.get("ip", {}))
+                                        current_ip = ip_config.get("ip", "")
+                                        current_isp = ip_config.get("isp_info", {}).get("isp", ip_config.get("isp", "unknown"))
+                                        current_country = ip_config.get("country", "ID")
+                                        if current_ip:
+                                            save_working_ip(current_ip, current_isp, current_country, username)
+                                    except Exception as e:
+                                        print(f"{merah}    ⚠ Could not save working IP: {e}{reset}")
+                                    
                                     # Update session
                                     self.session_manager.update_session(session_id, {
                                         "account_created": True,
@@ -15347,6 +15589,18 @@ class InstagramAccountCreator2025:
                                     print(f"\n{bg_kuning}{putih}✅  ACCOUNT CREATED CHECKPOINT!{reset}")
                                     print(f"{cyan}    User ID: {data.get('user_id', 'N/A')}{reset}")
                                     print(f"{cyan}    Username: {username}{reset}")
+                                    
+                                    # Save checkpoint IP
+                                    try:
+                                        ip_config = session.get("ip_config", session.get("ip", {}))
+                                        current_ip = ip_config.get("ip", "")
+                                        current_isp = ip_config.get("isp_info", {}).get("isp", ip_config.get("isp", "unknown"))
+                                        current_country = ip_config.get("country", "ID")
+                                        if current_ip:
+                                            save_checkpoint_ip(current_ip, current_isp, current_country, username, "profile_edit_failed")
+                                    except Exception as e:
+                                        pass
+                                    
                                     return False
 
                             except Exception as e:
@@ -15354,6 +15608,18 @@ class InstagramAccountCreator2025:
                                 print(f"\n{bg_kuning}{putih}✅  ACCOUNT CREATED CHECKPOINT!{reset}")
                                 print(f"{cyan}    User ID: {data.get('user_id', 'N/A')}{reset}")
                                 print(f"{cyan}    Username: {username}{reset}")
+                                
+                                # Save checkpoint IP
+                                try:
+                                    ip_config = session.get("ip_config", session.get("ip", {}))
+                                    current_ip = ip_config.get("ip", "")
+                                    current_isp = ip_config.get("isp_info", {}).get("isp", ip_config.get("isp", "unknown"))
+                                    current_country = ip_config.get("country", "ID")
+                                    if current_ip:
+                                        save_checkpoint_ip(current_ip, current_isp, current_country, username, "parse_error")
+                                except:
+                                    pass
+                                
                                 return False
 
                         else:
@@ -15364,6 +15630,18 @@ class InstagramAccountCreator2025:
                             print(f"\n{bg_kuning}{putih}✅  ACCOUNT CREATED CHECKPOINT!{reset}")
                             print(f"{cyan}    User ID: {data.get('user_id', 'N/A')}{reset}")
                             print(f"{cyan}    Username: {username}{reset}")
+                            
+                            # Save checkpoint IP
+                            try:
+                                ip_config = session.get("ip_config", session.get("ip", {}))
+                                current_ip = ip_config.get("ip", "")
+                                current_isp = ip_config.get("isp_info", {}).get("isp", ip_config.get("isp", "unknown"))
+                                current_country = ip_config.get("country", "ID")
+                                if current_ip:
+                                    save_checkpoint_ip(current_ip, current_isp, current_country, username, "edit_status_not_200")
+                            except:
+                                pass
+                            
                             return False
                     else:
                         error_type = self._analyze_error_type(data)
@@ -15372,6 +15650,18 @@ class InstagramAccountCreator2025:
                         # If IP block, don't try other endpoint - need new session
                         if error_type == "ip_block":
                             print(f"{merah}❌  IP blocked - need new session{reset}")
+                            
+                            # Save blocked IP
+                            try:
+                                ip_config = session.get("ip_config", session.get("ip", {}))
+                                current_ip = ip_config.get("ip", "")
+                                current_isp = ip_config.get("isp_info", {}).get("isp", ip_config.get("isp", "unknown"))
+                                current_country = ip_config.get("country", "ID")
+                                if current_ip:
+                                    save_blocked_ip(current_ip, current_isp, current_country, "ip_block")
+                            except:
+                                pass
+                            
                             return False
                         # For other errors, try next endpoint
                         continue
@@ -15389,11 +15679,35 @@ class InstagramAccountCreator2025:
             
             elif status == 403:
                 print(f"{merah}    403 Forbidden - IP likely blocked{reset}")
+                
+                # Save blocked IP
+                try:
+                    ip_config = session.get("ip_config", session.get("ip", {}))
+                    current_ip = ip_config.get("ip", "")
+                    current_isp = ip_config.get("isp_info", {}).get("isp", ip_config.get("isp", "unknown"))
+                    current_country = ip_config.get("country", "ID")
+                    if current_ip:
+                        save_blocked_ip(current_ip, current_isp, current_country, "403_forbidden")
+                except:
+                    pass
+                
                 return False  # Need new session
             
             elif status == 429:
                 print(f"{kuning}    429 Rate Limited - need new session{reset}")
                 self.stats["rate_limited"] = self.stats.get("rate_limited", 0) + 1
+                
+                # Save blocked IP (rate limited)
+                try:
+                    ip_config = session.get("ip_config", session.get("ip", {}))
+                    current_ip = ip_config.get("ip", "")
+                    current_isp = ip_config.get("isp_info", {}).get("isp", ip_config.get("isp", "unknown"))
+                    current_country = ip_config.get("country", "ID")
+                    if current_ip:
+                        save_blocked_ip(current_ip, current_isp, current_country, "429_rate_limited")
+                except:
+                    pass
+                
                 return False  # Need new session
             
             else:
