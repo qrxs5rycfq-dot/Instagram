@@ -411,21 +411,27 @@ class AdvancedBrowserFingerprint2025:
     def __init__(self):
         self.tls_generator = AdvancedTLSFingerprint2025()
         
-    def generate_complete_fingerprint(self, device_type: str = "desktop",
+    def generate_complete_fingerprint(self, device_type: str = "random",
                                        browser_type: str = "chrome",
                                        country: str = "ID") -> Dict[str, Any]:
-        """Generate a complete browser fingerprint for Desktop/Web API"""
+        """Generate a complete browser fingerprint - Random between Android and Desktop"""
         
         # Get TLS fingerprint first
         tls_fp = self.tls_generator.generate_tls_fingerprint(browser_type)
         chrome_version = tls_fp.get("chrome_version", 134)
         chrome_full_version = tls_fp.get("chrome_full_version", "134.0.6923.127")
         
-        # Always use desktop for Web API
-        is_mobile = False
+        # Random device type: Android or Desktop
+        if device_type == "random":
+            device_type = random.choice(["android", "desktop"])
         
-        # Screen resolution - Desktop resolutions
-        resolution = self._weighted_choice(self.SCREEN_RESOLUTIONS)
+        is_mobile = device_type in ["android", "mobile"]
+        
+        # Screen resolution based on device type
+        if is_mobile:
+            resolution = self._weighted_choice(self.MOBILE_RESOLUTIONS)
+        else:
+            resolution = self._weighted_choice(self.SCREEN_RESOLUTIONS)
         
         # Color depth
         color_depth = random.choice([24, 30, 32])
@@ -436,11 +442,11 @@ class AdvancedBrowserFingerprint2025:
         # Language
         language_info = self._get_language_for_country(country)
         
-        # Platform - Always desktop
-        platform_info = self._get_platform_for_device("desktop")
+        # Platform based on device type
+        platform_info = self._get_platform_for_device(device_type)
         
-        # WebGL - Desktop
-        webgl_info = self._generate_webgl_fingerprint("desktop")
+        # WebGL based on device type
+        webgl_info = self._generate_webgl_fingerprint(device_type)
         
         # Canvas
         canvas_hash = self._generate_canvas_hash()
@@ -586,39 +592,62 @@ class AdvancedBrowserFingerprint2025:
         }
         return languages.get(country, languages["ID"])
     
-    def _get_platform_for_device(self, device_type: str = "desktop") -> Dict[str, Any]:
-        """Get platform info for device type - Default to Desktop for Web API"""
-        # Always use desktop platforms for Web API compatibility
-        platform_choice = random.choice(["Windows", "macOS"])
+    def _get_platform_for_device(self, device_type: str = "random") -> Dict[str, Any]:
+        """Get platform info for device type - Random between Android and Desktop"""
+        if device_type == "random":
+            device_type = random.choice(["android", "desktop"])
         
-        if platform_choice == "Windows":
-            windows_version = random.choice(["10.0", "11.0"])
+        if device_type in ["android", "mobile"]:
+            android_version = random.choice([12, 13, 14, 15])
             return {
-                "platform": "Win32",
-                "version": windows_version,
-                "os_name": "Windows",
-                "architecture": "x86_64",
+                "platform": "Linux armv8l",
+                "version": str(android_version),
+                "os_name": "Android",
+                "architecture": "arm64",
             }
         else:
-            macos_version = random.choice(["10.15", "13.0", "14.0", "14.5"])
-            return {
-                "platform": "MacIntel",
-                "version": macos_version,
-                "os_name": "macOS",
-                "architecture": "x86_64",
-            }
+            platform_choice = random.choice(["Windows", "macOS"])
+            
+            if platform_choice == "Windows":
+                windows_version = random.choice(["10.0", "11.0"])
+                return {
+                    "platform": "Win32",
+                    "version": windows_version,
+                    "os_name": "Windows",
+                    "architecture": "x86_64",
+                }
+            else:
+                macos_version = random.choice(["10.15", "13.0", "14.0", "14.5"])
+                return {
+                    "platform": "MacIntel",
+                    "version": macos_version,
+                    "os_name": "macOS",
+                    "architecture": "x86_64",
+                }
     
-    def _generate_webgl_fingerprint(self, device_type: str = "desktop") -> Dict[str, Any]:
-        """Generate WebGL fingerprint for Desktop"""
-        # Always use desktop WebGL renderers for Web API
-        category = random.choice(["high_end", "mid_range", "integrated"])
-        renderer = random.choice(self.WEBGL_RENDERERS[category])
-        if "NVIDIA" in renderer:
-            vendor = "NVIDIA Corporation"
-        elif "AMD" in renderer:
-            vendor = "AMD"
+    def _generate_webgl_fingerprint(self, device_type: str = "random") -> Dict[str, Any]:
+        """Generate WebGL fingerprint - Random between Android and Desktop"""
+        if device_type == "random":
+            device_type = random.choice(["android", "desktop"])
+        
+        if device_type in ["android", "mobile"]:
+            # Mobile GPU renderers
+            renderer = random.choice(self.WEBGL_RENDERERS.get("mobile", [
+                "Adreno (TM) 750",
+                "Adreno (TM) 740",
+                "Mali-G720 MP12",
+                "Mali-G715 MC11",
+            ]))
+            vendor = "Qualcomm" if "Adreno" in renderer else "ARM"
         else:
-            vendor = "Intel Inc."
+            category = random.choice(["high_end", "mid_range", "integrated"])
+            renderer = random.choice(self.WEBGL_RENDERERS[category])
+            if "NVIDIA" in renderer:
+                vendor = "NVIDIA Corporation"
+            elif "AMD" in renderer:
+                vendor = "AMD"
+            else:
+                vendor = "Intel Inc."
         
         return {
             "vendor": vendor,
@@ -716,11 +745,20 @@ class AdvancedBrowserFingerprint2025:
         }
     
     def _generate_connection_info(self, device_type: str = "desktop") -> Dict[str, Any]:
-        """Generate network connection info - Desktop/WiFi for Web API"""
-        # Always use high-speed broadband connection for desktop
-        ect = "4g"
-        downlink = random.uniform(50.0, 200.0)  # High-speed broadband
-        rtt = random.randint(10, 50)  # Low latency for desktop
+        """Generate network connection info - Random based on device type"""
+        if device_type == "random":
+            device_type = random.choice(["android", "desktop"])
+        
+        if device_type in ["android", "mobile"]:
+            # Mobile connection
+            ect = random.choice(["4g", "3g"])
+            downlink = random.uniform(5.0, 50.0)
+            rtt = random.randint(30, 150)
+        else:
+            # Desktop broadband
+            ect = "4g"
+            downlink = random.uniform(50.0, 200.0)
+            rtt = random.randint(10, 50)
         
         return {
             "effective_type": ect,
@@ -729,14 +767,27 @@ class AdvancedBrowserFingerprint2025:
             "save_data": False,
         }
     
-    def _generate_user_agent(self, device_type: str = "desktop", browser_type: str = "chrome",
+    def _generate_user_agent(self, device_type: str = "random", browser_type: str = "chrome",
                             chrome_version: str = "134.0.6923.127", platform_info: Dict = None) -> str:
-        """Generate realistic User-Agent string - Desktop only for Web API"""
-        if platform_info is None:
-            platform_info = {"os_name": random.choice(["Windows", "macOS"])}
+        """Generate realistic User-Agent string - Random between Android and Desktop"""
+        if device_type == "random":
+            device_type = random.choice(["android", "desktop"])
         
-        # Always generate desktop user agent for Web API
-        if platform_info.get("os_name") == "Windows":
+        if platform_info is None:
+            if device_type in ["android", "mobile"]:
+                platform_info = {"os_name": "Android", "version": random.choice(["12", "13", "14", "15"])}
+            else:
+                platform_info = {"os_name": random.choice(["Windows", "macOS"])}
+        
+        if platform_info.get("os_name") == "Android":
+            android_version = platform_info.get("version", "14")
+            device_model = random.choice([
+                "SM-S928B", "SM-S918B", "SM-A546B", "SM-A536B",
+                "SM-G998B", "SM-G991B", "SM-A525F", "SM-A725F",
+                "Pixel 8", "Pixel 7", "Pixel 6",
+            ])
+            return f"Mozilla/5.0 (Linux; Android {android_version}; {device_model}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version} Mobile Safari/537.36"
+        elif platform_info.get("os_name") == "Windows":
             windows_version = random.choice(["10.0", "11.0"])
             return f"Mozilla/5.0 (Windows NT {windows_version}; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version} Safari/537.36"
         else:
@@ -1364,38 +1415,46 @@ class UltraStealthIPGenerator2025:
         """Initialize mobile carrier IP pools with realistic patterns"""
         return {}  # Will be populated dynamically
     
-    def generate_ultra_stealth_ip(self, country: str = None, isp: str = None, ip_type: str = "residential") -> Dict[str, Any]:
+    def generate_ultra_stealth_ip(self, country: str = "ID", isp: str = None, ip_type: str = "random") -> Dict[str, Any]:
         """
-        Generate an ultra-stealth IP that mimics real residential/mobile users
+        Generate an ultra-stealth IP - INDONESIA ONLY with validation
         
         Features:
-        - Uses real ISP IP ranges from registry allocations
+        - Uses real Indonesian ISP IP ranges
+        - Validates IP is active before use
+        - Random between mobile and residential
         - Simulates DHCP lease patterns
-        - Generates IPs that cluster geographically
-        - Avoids patterns that trigger anti-bot systems
         """
         
-        # Select country with weighted distribution favoring trusted countries
-        if not country:
-            countries = ["US", "AU", "CA", "UK", "DE", "FR", "JP", "SG", "NL"]
-            weights = [35, 20, 15, 10, 8, 5, 3, 2, 2]  # US highest priority
-            country = random.choices(countries, weights=weights, k=1)[0]
+        # Always use Indonesia
+        country = "ID"
         
-        # Get ISP ranges for selected country
+        # Random IP type if not specified
+        if ip_type == "random":
+            ip_type = random.choice(["mobile", "residential"])
+        
+        # Get Indonesian ISP ranges
         country_ranges = self.real_isp_ranges.get(country, {})
         if not country_ranges:
-            country = "US"
-            country_ranges = self.real_isp_ranges["US"]
+            # Fallback to hardcoded Indonesian ranges
+            country_ranges = self._get_indonesia_fallback_ranges()
         
-        # Select ISP if not specified
-        if not isp:
-            available_isps = list(country_ranges.keys())
-            isp = random.choice(available_isps)
+        # Select Indonesian ISP if not specified
+        indonesia_isps = ["telkomsel", "indosat", "xl", "tri", "smartfren", "biznet", "firstmedia", "myrepublic"]
+        if not isp or isp not in indonesia_isps:
+            # Weight mobile ISPs higher
+            mobile_isps = ["telkomsel", "indosat", "xl", "tri", "smartfren"]
+            wifi_isps = ["biznet", "firstmedia", "myrepublic"]
+            
+            if ip_type == "mobile":
+                isp = random.choice(mobile_isps)
+            else:
+                isp = random.choice(wifi_isps + mobile_isps)
         
         # Get ISP's IP ranges
         isp_ranges = country_ranges.get(isp, [])
         if not isp_ranges:
-            isp_ranges = list(country_ranges.values())[0]
+            isp_ranges = list(country_ranges.values())[0] if country_ranges else self._get_default_indonesia_ranges()
         
         # Select a range based on type preference
         suitable_ranges = [r for r in isp_ranges if r.get("type") == ip_type]
@@ -1404,19 +1463,78 @@ class UltraStealthIPGenerator2025:
         
         selected_range = random.choice(suitable_ranges)
         
-        # Generate IP within the range
-        ip = self._generate_ip_from_range(selected_range)
+        # Generate IP within the range with validation
+        ip = self._generate_validated_indonesia_ip(selected_range)
         
         # Ensure uniqueness
         attempts = 0
         while ip in self.used_ips and attempts < 100:
-            ip = self._generate_ip_from_range(selected_range)
+            ip = self._generate_validated_indonesia_ip(selected_range)
             attempts += 1
         
         self.used_ips.add(ip)
         
         # Generate complete IP profile
         return self._build_ultra_stealth_profile(ip, country, isp, selected_range)
+    
+    def _get_indonesia_fallback_ranges(self) -> Dict[str, List[Dict]]:
+        """Get fallback Indonesian IP ranges"""
+        return {
+            "telkomsel": [
+                {"start": "114.120.0.0", "end": "114.127.255.255", "type": "mobile", "cgnat": False},
+                {"start": "182.0.0.0", "end": "182.15.255.255", "type": "mobile", "cgnat": False},
+                {"start": "36.64.0.0", "end": "36.95.255.255", "type": "mobile", "cgnat": False},
+            ],
+            "indosat": [
+                {"start": "114.0.0.0", "end": "114.7.255.255", "type": "mobile", "cgnat": False},
+                {"start": "180.240.0.0", "end": "180.255.255.255", "type": "mobile", "cgnat": False},
+            ],
+            "xl": [
+                {"start": "112.215.0.0", "end": "112.215.255.255", "type": "mobile", "cgnat": False},
+                {"start": "118.96.0.0", "end": "118.111.255.255", "type": "mobile", "cgnat": False},
+            ],
+            "tri": [
+                {"start": "114.79.0.0", "end": "114.79.255.255", "type": "mobile", "cgnat": False},
+                {"start": "182.253.0.0", "end": "182.253.255.255", "type": "mobile", "cgnat": False},
+            ],
+            "smartfren": [
+                {"start": "112.78.0.0", "end": "112.79.255.255", "type": "mobile", "cgnat": False},
+            ],
+            "biznet": [
+                {"start": "103.28.52.0", "end": "103.28.55.255", "type": "residential", "cgnat": False},
+                {"start": "118.99.0.0", "end": "118.99.255.255", "type": "residential", "cgnat": False},
+            ],
+            "firstmedia": [
+                {"start": "110.137.0.0", "end": "110.137.255.255", "type": "residential", "cgnat": False},
+            ],
+            "myrepublic": [
+                {"start": "103.19.56.0", "end": "103.19.59.255", "type": "residential", "cgnat": False},
+            ]
+        }
+    
+    def _get_default_indonesia_ranges(self) -> List[Dict]:
+        """Get default Indonesia IP ranges"""
+        return [
+            {"start": "114.120.0.0", "end": "114.127.255.255", "type": "mobile", "cgnat": False},
+            {"start": "182.0.0.0", "end": "182.15.255.255", "type": "mobile", "cgnat": False},
+        ]
+    
+    def _generate_validated_indonesia_ip(self, range_info: Dict) -> str:
+        """Generate and validate Indonesian IP"""
+        ip = self._generate_ip_from_range(range_info)
+        
+        # Basic validation - ensure it's not a reserved IP
+        parts = [int(x) for x in ip.split(".")]
+        
+        # Avoid broadcast and network addresses
+        if parts[3] == 0 or parts[3] == 255:
+            parts[3] = random.randint(10, 245)
+        
+        # Avoid common server IPs
+        if parts[3] in [1, 2, 254]:
+            parts[3] = random.randint(10, 245)
+        
+        return ".".join(str(p) for p in parts)
     
     def _generate_ip_from_range(self, range_info: Dict) -> str:
         """Generate IP from a specific range with residential-like patterns"""
@@ -4643,7 +4761,7 @@ class AdvancedIPStealthSystem2025:
 # ===================== IP VALIDATOR 2025 =====================
 
 class IPValidator2025:
-    """Enhanced IP validator dengan comprehensive validation"""
+    """Enhanced IP validator dengan comprehensive validation dan real-time checking"""
     
     def __init__(self):
         self.validation_cache = {}
@@ -4657,6 +4775,157 @@ class IPValidator2025:
         ]
         self.vpn_ranges = self._load_vpn_ranges()
         self.datacenter_ranges = self._load_datacenter_ranges()
+        
+        # Indonesia ISP IP ranges (valid and active)
+        self.indonesia_isp_ranges = {
+            "telkomsel": [
+                "114.120.0.0/13", "114.124.0.0/14", "182.0.0.0/12",
+                "36.64.0.0/11", "36.80.0.0/12"
+            ],
+            "indosat": [
+                "114.4.0.0/14", "114.0.0.0/13", "180.240.0.0/12",
+                "202.152.0.0/14"
+            ],
+            "xl": [
+                "112.215.0.0/16", "114.121.0.0/16", "118.96.0.0/12",
+                "202.152.240.0/20"
+            ],
+            "tri": [
+                "114.79.0.0/16", "182.253.0.0/16", "114.142.0.0/16"
+            ],
+            "smartfren": [
+                "202.67.32.0/19", "112.78.0.0/15", "103.10.66.0/23"
+            ],
+            "biznet": [
+                "103.28.52.0/22", "202.169.32.0/19", "118.99.0.0/16"
+            ],
+            "firstmedia": [
+                "202.53.232.0/21", "110.137.0.0/16"
+            ],
+            "myrepublic": [
+                "103.19.56.0/22", "103.247.8.0/22"
+            ]
+        }
+    
+    async def check_ip_active(self, ip: str) -> Dict[str, Any]:
+        """Check if IP is active using multiple methods"""
+        result = {
+            "ip": ip,
+            "active": False,
+            "methods_passed": [],
+            "methods_failed": [],
+            "latency_ms": None,
+            "country": None,
+            "isp": None
+        }
+        
+        # Method 1: TCP Connect check (ports 80, 443)
+        tcp_result = await self._check_tcp_connect(ip)
+        if tcp_result["success"]:
+            result["methods_passed"].append("tcp_connect")
+            result["latency_ms"] = tcp_result.get("latency_ms")
+        else:
+            result["methods_failed"].append("tcp_connect")
+        
+        # Method 2: Check via IP-API (free geolocation API)
+        geo_result = await self._check_ip_api(ip)
+        if geo_result["success"]:
+            result["methods_passed"].append("ip_api")
+            result["country"] = geo_result.get("country")
+            result["isp"] = geo_result.get("isp")
+        else:
+            result["methods_failed"].append("ip_api")
+        
+        # Method 3: DNS reverse lookup
+        dns_result = await self._check_dns_reverse(ip)
+        if dns_result["success"]:
+            result["methods_passed"].append("dns_reverse")
+        else:
+            result["methods_failed"].append("dns_reverse")
+        
+        # Determine if IP is active
+        result["active"] = len(result["methods_passed"]) >= 2
+        
+        return result
+    
+    async def _check_tcp_connect(self, ip: str, ports: List[int] = [80, 443]) -> Dict[str, Any]:
+        """Check TCP connectivity to common ports"""
+        import asyncio
+        
+        for port in ports:
+            try:
+                start_time = time.time()
+                reader, writer = await asyncio.wait_for(
+                    asyncio.open_connection(ip, port),
+                    timeout=3.0
+                )
+                latency = (time.time() - start_time) * 1000
+                writer.close()
+                await writer.wait_closed()
+                return {"success": True, "port": port, "latency_ms": latency}
+            except:
+                continue
+        
+        return {"success": False}
+    
+    async def _check_ip_api(self, ip: str) -> Dict[str, Any]:
+        """Check IP via ip-api.com"""
+        try:
+            url = f"http://ip-api.com/json/{ip}?fields=status,country,countryCode,isp,org,as,query"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if data.get("status") == "success":
+                            return {
+                                "success": True,
+                                "country": data.get("countryCode"),
+                                "isp": data.get("isp"),
+                                "org": data.get("org"),
+                                "as": data.get("as")
+                            }
+        except:
+            pass
+        
+        return {"success": False}
+    
+    async def _check_dns_reverse(self, ip: str) -> Dict[str, Any]:
+        """Check DNS reverse lookup"""
+        try:
+            import socket
+            hostname = socket.gethostbyaddr(ip)
+            return {"success": True, "hostname": hostname[0]}
+        except:
+            return {"success": False}
+    
+    def validate_indonesia_ip(self, ip: str) -> Dict[str, Any]:
+        """Validate that IP belongs to Indonesian ISP"""
+        import ipaddress
+        
+        result = {
+            "valid": False,
+            "isp": None,
+            "reason": "Not an Indonesian IP"
+        }
+        
+        try:
+            ip_obj = ipaddress.ip_address(ip)
+            
+            for isp, ranges in self.indonesia_isp_ranges.items():
+                for ip_range in ranges:
+                    try:
+                        network = ipaddress.ip_network(ip_range, strict=False)
+                        if ip_obj in network:
+                            result["valid"] = True
+                            result["isp"] = isp
+                            result["reason"] = f"IP belongs to {isp.upper()} Indonesia"
+                            return result
+                    except:
+                        continue
+        except:
+            result["reason"] = "Invalid IP format"
+        
+        return result
     
     def _load_vpn_ranges(self) -> List[str]:
         """Load known VPN ranges"""
@@ -6811,76 +7080,116 @@ class AdvancedFingerprinting2025:
             }
         }
     
-    def generate_fingerprint(self, device_type: str = "desktop", location: str = "ID", 
+    def generate_fingerprint(self, device_type: str = "random", location: str = "ID", 
                            isp: str = None, city: str = None, 
-                           connection_type: str = "wifi") -> Dict[str, Any]:
-        """Generate comprehensive fingerprint for Desktop/Web API - DIKOREKSI untuk Web API"""
-        fingerprint_id = f"desktop_{location}_{connection_type}_{int(time.time())}"
+                           connection_type: str = "random") -> Dict[str, Any]:
+        """Generate comprehensive fingerprint - Random between Android and Desktop, Indonesia only"""
+        
+        # Random device type
+        if device_type == "random":
+            device_type = random.choice(["android", "desktop"])
+        
+        # Random connection type based on device
+        if connection_type == "random":
+            connection_type = "mobile" if device_type == "android" else "wifi"
+        
+        fingerprint_id = f"{device_type}_{location}_{connection_type}_{int(time.time())}"
         
         if fingerprint_id in self.fingerprint_cache:
             return self.fingerprint_cache[fingerprint_id]
         
-        # Always use Desktop profile for Web API
-        platform_choice = random.choice(["windows", "macos"])
-        
-        if platform_choice == "macos":
+        # Device profile based on type
+        if device_type == "android":
+            # Android device profiles
+            android_device = random.choice([
+                {"brand": "Samsung", "model": "SM-S928B", "market_name": "Galaxy S24 Ultra"},
+                {"brand": "Samsung", "model": "SM-S918B", "market_name": "Galaxy S23 Ultra"},
+                {"brand": "Samsung", "model": "SM-A546B", "market_name": "Galaxy A54"},
+                {"brand": "Xiaomi", "model": "23113RKC6G", "market_name": "Xiaomi 14 Pro"},
+                {"brand": "OPPO", "model": "CPH2573", "market_name": "OPPO Find X7"},
+                {"brand": "Vivo", "model": "V2303A", "market_name": "Vivo X100"},
+            ])
             device_profile = {
-                "brand": "Apple",
-                "model": random.choice(["MacBookPro18,1", "MacBookPro17,1", "MacBookAir10,1"]),
-                "market_name": random.choice(["MacBook Pro 16", "MacBook Pro 14", "MacBook Air M2"]),
-                "screen": {"width": 2560, "height": 1600, "dpi": 227},
-                "sensors": ["accelerometer", "gyro", "ambient_light"],
+                **android_device,
+                "screen": {"width": random.choice([1080, 1440]), "height": random.choice([2340, 3088]), "dpi": random.choice([420, 560])},
+                "sensors": ["accelerometer", "gyro", "proximity", "compass", "barometer"],
                 "hardware": {
-                    "ram": random.choice([16, 32, 64]),
-                    "storage": random.choice([512, 1024, 2048])
+                    "ram": random.choice([8, 12, 16]),
+                    "storage": random.choice([128, 256, 512])
                 }
             }
             os_profile = {
-                "name": "macOS",
-                "version": random.choice(["14.0", "13.0", "12.0"]),
-                "build": random.choice(["23A344", "22A380", "21G72"])
+                "name": "Android",
+                "version": random.choice(["13", "14", "15"]),
+                "build": f"TP1A.{random.randint(220000, 240000)}.{random.randint(1, 50)}"
             }
-            browser_profile = self._get_desktop_chrome_profile("macos")
-            hardware_profile = {
-                "processor": random.choice(["Apple M3 Pro", "Apple M2 Pro", "Apple M1 Max"]),
-                "cores": random.choice([10, 12, 14]),
-                "memory": random.choice([16, 32, 64])
-            }
+            browser_profile = self._get_android_chrome_profile()
+            hardware_profile = random.choice([
+                self.hardware_profiles.get("snapdragon_8_gen3", {"cores": 8, "memory": 12}),
+                self.hardware_profiles.get("google_tensor_g4", {"cores": 9, "memory": 12}),
+            ])
         else:
-            device_profile = {
-                "brand": random.choice(["Dell", "HP", "Lenovo", "ASUS"]),
-                "model": random.choice(["XPS 15", "Spectre x360", "ThinkPad X1", "ZenBook Pro"]),
-                "market_name": random.choice(["Dell XPS 15 9530", "HP Spectre x360", "Lenovo ThinkPad X1 Carbon"]),
-                "screen": {"width": 1920, "height": 1080, "dpi": 141},
-                "sensors": [],
-                "hardware": {
-                    "ram": random.choice([16, 32, 64]),
-                    "storage": random.choice([512, 1024, 2048])
+            # Desktop profiles (Windows/macOS)
+            platform_choice = random.choice(["windows", "macos"])
+            
+            if platform_choice == "macos":
+                device_profile = {
+                    "brand": "Apple",
+                    "model": random.choice(["MacBookPro18,1", "MacBookPro17,1", "MacBookAir10,1"]),
+                    "market_name": random.choice(["MacBook Pro 16", "MacBook Pro 14", "MacBook Air M2"]),
+                    "screen": {"width": 2560, "height": 1600, "dpi": 227},
+                    "sensors": ["accelerometer", "gyro", "ambient_light"],
+                    "hardware": {
+                        "ram": random.choice([16, 32, 64]),
+                        "storage": random.choice([512, 1024, 2048])
+                    }
                 }
-            }
-            os_profile = {
-                "name": "Windows",
-                "version": random.choice(["10.0", "11.0"]),
-                "build": random.choice(["19045", "22631", "22000"])
-            }
-            browser_profile = self._get_desktop_chrome_profile("windows")
-            hardware_profile = {
-                "processor": random.choice(["Intel Core i7-13700H", "Intel Core i9-13900H", "AMD Ryzen 9 7945HX"]),
-                "cores": random.choice([8, 12, 16]),
-                "memory": random.choice([16, 32, 64])
-            }
+                os_profile = {
+                    "name": "macOS",
+                    "version": random.choice(["14.0", "13.0", "12.0"]),
+                    "build": random.choice(["23A344", "22A380", "21G72"])
+                }
+                browser_profile = self._get_desktop_chrome_profile("macos")
+                hardware_profile = {
+                    "processor": random.choice(["Apple M3 Pro", "Apple M2 Pro", "Apple M1 Max"]),
+                    "cores": random.choice([10, 12, 14]),
+                    "memory": random.choice([16, 32, 64])
+                }
+            else:
+                device_profile = {
+                    "brand": random.choice(["Dell", "HP", "Lenovo", "ASUS"]),
+                    "model": random.choice(["XPS 15", "Spectre x360", "ThinkPad X1", "ZenBook Pro"]),
+                    "market_name": random.choice(["Dell XPS 15 9530", "HP Spectre x360", "Lenovo ThinkPad X1 Carbon"]),
+                    "screen": {"width": 1920, "height": 1080, "dpi": 141},
+                    "sensors": [],
+                    "hardware": {
+                        "ram": random.choice([16, 32, 64]),
+                        "storage": random.choice([512, 1024, 2048])
+                    }
+                }
+                os_profile = {
+                    "name": "Windows",
+                    "version": random.choice(["10.0", "11.0"]),
+                    "build": random.choice(["19045", "22631", "22000"])
+                }
+                browser_profile = self._get_desktop_chrome_profile("windows")
+                hardware_profile = {
+                    "processor": random.choice(["Intel Core i7-13700H", "Intel Core i9-13900H", "AMD Ryzen 9 7945HX"]),
+                    "cores": random.choice([8, 12, 16]),
+                    "memory": random.choice([16, 32, 64])
+                }
         
-        # Generate unique identifiers - Desktop doesn't use Android/GSF IDs
+        # Generate unique identifiers
         advertising_id = self._generate_advertising_id()
         
-        # Generate location data - DIKOREKSI: tambah parameter city
-        location_data = self._generate_location_data_enhanced(location, city)
+        # Generate location data - Indonesia only
+        location_data = self._generate_location_data_enhanced("ID", city)
         
-        # Generate network data for Desktop/WiFi - DIKOREKSI
-        network_data = self._generate_network_data_enhanced(location, "desktop", "wifi", isp)
+        # Generate network data based on device type
+        network_data = self._generate_network_data_enhanced("ID", device_type, connection_type, isp)
         
-        # Generate device fingerprint for Desktop - DIKOREKSI
-        device_fingerprint = self._generate_device_fingerprint_enhanced(device_profile, "wifi")
+        # Generate device fingerprint
+        device_fingerprint = self._generate_device_fingerprint_enhanced(device_profile, connection_type)
         
         # Generate sensor data - Desktop has limited sensors
         sensor_data = {}
@@ -7005,6 +7314,43 @@ class AdvancedFingerprinting2025:
         self.fingerprint_cache[fingerprint_id] = fingerprint
         
         return fingerprint
+    
+    def _get_android_chrome_profile(self) -> Dict[str, Any]:
+        """Generate Android Chrome browser profile"""
+        chrome_version = random.choice([131, 132, 133, 134, 135, 136])
+        chrome_full = f"{chrome_version}.0.{random.randint(6778, 6998)}.{random.randint(0, 250)}"
+        android_version = random.choice(["13", "14", "15"])
+        device_model = random.choice([
+            "SM-S928B", "SM-S918B", "SM-A546B", 
+            "Pixel 8", "Pixel 7 Pro",
+            "23113RKC6G", "V2303A"
+        ])
+        
+        user_agent = f"Mozilla/5.0 (Linux; Android {android_version}; {device_model}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_full} Mobile Safari/537.36"
+        
+        return {
+            "name": "Chrome Mobile",
+            "version": chrome_full,
+            "app_version": f"5.0 (Linux; Android {android_version}; {device_model})",
+            "user_agent": user_agent,
+            "platform": '"Android"',
+            "vendor": "Google Inc.",
+            "product": "Gecko",
+            "product_sub": "20030107",
+            "language": "id-ID",
+            "languages": ["id-ID", "id", "en-US", "en"],
+            "online": True,
+            "java_enabled": False,
+            "cookies_enabled": True,
+            "do_not_track": None,
+            "pdf_viewer_enabled": False,
+            "webdriver": False,
+            "device_memory": random.choice([4, 6, 8, 12]),
+            "hardware_concurrency": random.choice([4, 8]),
+            "max_touch_points": random.choice([5, 10]),
+            "webgl": True,
+            "webrtc": True,
+        }
     
     def _get_desktop_chrome_profile(self, platform: str) -> Dict[str, Any]:
         """Generate desktop Chrome browser profile for Web API"""
