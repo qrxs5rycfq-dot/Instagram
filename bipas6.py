@@ -3700,8 +3700,17 @@ class UltraStealthIPGenerator2025:
                 break
         
         if not verified_ip:
-            print(f"{kuning}    ⚠ Could not generate verified IP, using fallback...{reset}")
-            return self._generate_indonesia_fallback_ip(ip_type)
+            print(f"{kuning}    ⚠ Could not generate verified IP for {country}, trying different country...{reset}")
+            # Try other countries instead of just Indonesia fallback
+            fallback_countries = ["US", "AU", "GB", "DE", "JP", "CA", "FR", "NL"]
+            random.shuffle(fallback_countries)
+            for fallback_country in fallback_countries:
+                if fallback_country != country:
+                    fallback_result = self._try_country_fallback(fallback_country, ip_type)
+                    if fallback_result:
+                        return fallback_result
+            # Ultimate fallback - use any working IP
+            return self._generate_any_country_fallback_ip(ip_type)
         
         # Build complete IP profile with matching fingerprint for the COUNTRY
         return self._build_ultra_stealth_profile_for_country(
@@ -3749,6 +3758,69 @@ class UltraStealthIPGenerator2025:
             print(f"{kuning}    Warning: Could not parse CIDR {cidr}: {e}{reset}")
             return None
     
+    def _try_country_fallback(self, country: str, ip_type: str) -> Optional[Dict[str, Any]]:
+        """Try to generate IP from a specific country as fallback"""
+        try:
+            country_db = self._load_country_database_for_ip()
+            country_data = country_db.get("countries", {}).get(country, {})
+            
+            if not country_data:
+                return None
+            
+            country_isps = country_data.get("isps", {})
+            mobile_isps = country_isps.get("mobile", {})
+            broadband_isps = country_isps.get("broadband", {})
+            
+            # Select ISP based on type
+            if ip_type == "mobile" and mobile_isps:
+                isp_key = random.choice(list(mobile_isps.keys()))
+                isp_data = mobile_isps.get(isp_key, {})
+            elif broadband_isps:
+                isp_key = random.choice(list(broadband_isps.keys()))
+                isp_data = broadband_isps.get(isp_key, {})
+            else:
+                return None
+            
+            isp_ranges = isp_data.get("ranges", [])
+            if not isp_ranges:
+                return None
+            
+            # Try to generate IP
+            for _ in range(5):
+                selected_range = random.choice(isp_ranges)
+                ip = self._generate_ip_from_cidr_range(selected_range)
+                
+                if ip and not is_ip_blocked(ip) and ip not in self.used_ips:
+                    self.used_ips.add(ip)
+                    self._ip_timestamps[ip] = time.time()
+                    self._ip_countries[ip] = country
+                    
+                    print(f"{hijau}    ✓ Fallback IP generated: {ip} ({isp_data.get('name', isp_key)}) [{country}]{reset}")
+                    return self._build_ultra_stealth_profile_for_country(
+                        ip, country, isp_data.get("name", isp_key), 
+                        isp_data.get("asn", ""), country_data, ip_type
+                    )
+            
+            return None
+        except Exception as e:
+            print(f"{kuning}    Fallback error for {country}: {e}{reset}")
+            return None
+    
+    def _generate_any_country_fallback_ip(self, ip_type: str) -> Dict[str, Any]:
+        """Ultimate fallback - generate IP from any available country"""
+        # Try multiple random countries
+        all_countries = ["US", "AU", "CA", "GB", "DE", "FR", "JP", "KR", "SG", "NL", 
+                        "IT", "ES", "MX", "BR", "TH", "MY", "IN", "ID"]
+        random.shuffle(all_countries)
+        
+        for country in all_countries:
+            result = self._try_country_fallback(country, ip_type)
+            if result:
+                return result
+        
+        # If all fail, use Indonesia as last resort
+        return self._generate_indonesia_fallback_ip(ip_type)
+
     def _generate_indonesia_fallback_ip(self, ip_type: str) -> Dict[str, Any]:
         """Fallback to Indonesia IP if country database fails"""
         # Use existing Indonesia ranges
@@ -3836,51 +3908,6 @@ class UltraStealthIPGenerator2025:
             "tcp_fingerprint": tcp_fingerprint,
             "network_metrics": network_metrics
         }
-            else:
-                print(f"{kuning}    ✗ IP {ip} not usable, trying again...{reset}")
-                # Try different range
-                if len(suitable_ranges) > 1:
-                    other_ranges = [r for r in suitable_ranges if r != selected_range]
-                    if other_ranges:
-                        selected_range = random.choice(other_ranges)
-        
-        if not verified_ip:
-            # Fallback - try any available range
-            print(f"{kuning}    ⚠ Trying fallback with any available IP...{reset}")
-            
-            for _ in range(10):
-                # Try random ISP
-                fallback_isp = random.choice(list(country_ranges.keys()))
-                fallback_ranges = country_ranges.get(fallback_isp, [])
-                
-                if fallback_ranges:
-                    selected_range = random.choice(fallback_ranges)
-                    ip = self._generate_fresh_indonesia_ip(selected_range)
-                    
-                    while ip in self.used_ips:
-                        ip = self._generate_fresh_indonesia_ip(selected_range)
-                    
-                    verification = self._verify_ip_realtime(ip)
-                    if verification["verified"] and verification["is_usable"]:
-                        country_code = verification.get("country", "ID")
-                        print(f"{hijau}    ✓ IP verified: {ip} ({verification['isp']}) [{country_code}]{reset}")
-                        verified_ip = ip
-                        self.used_ips.add(ip)
-                        self._ip_timestamps[ip] = time.time()
-                        self._ip_countries[ip] = country_code
-                        if verification.get("isp"):
-                            isp = self._normalize_isp_name(verification["isp"])
-                        break
-            
-            if not verified_ip:
-                print(f"{kuning}    ⚠ Could not verify IP after attempts, using: {ip}{reset}")
-                verified_ip = ip
-                self.used_ips.add(ip)
-                self._ip_timestamps[ip] = time.time()
-                self._ip_countries[ip] = "ID"  # Default
-        
-        # Generate complete IP profile with matching fingerprint
-        return self._build_ultra_stealth_profile(verified_ip, self._ip_countries.get(verified_ip, "ID"), isp, selected_range)
     
     def _verify_ip_realtime(self, ip: str) -> Dict[str, Any]:
         """Verify IP location and check if it's usable for Instagram
@@ -16183,12 +16210,28 @@ class InstagramAccountCreator2025:
                 if not signup_code:
                     return self._record_failure(attempt_id, "Failed to verify OTP from new email")
             
-            # Create account
-            account_created = await self._create_instagram_account(
+            # Create account - now returns dict with detailed info
+            creation_result = await self._create_instagram_account(
                 session_id, email_data["email"], username, password, signup_code
             )
             
-            if account_created:
+            # Handle dict result from new function
+            if isinstance(creation_result, dict):
+                if creation_result.get("success"):
+                    result = self._record_success(attempt_id, {
+                        "username": username,
+                        "email": email_data["email"],
+                        "password": password,
+                        "session_id": session_id,
+                        "created_at": time.time()
+                    })
+                    return result
+                else:
+                    # Return detailed error info for session management
+                    error_type = creation_result.get("error_type", "unknown")
+                    return self._record_failure(attempt_id, f"Account creation failed: {error_type}")
+            # Backward compatibility for bool return
+            elif creation_result:
                 result = self._record_success(attempt_id, {
                     "username": username,
                     "email": email_data["email"],
@@ -16196,7 +16239,6 @@ class InstagramAccountCreator2025:
                     "session_id": session_id,
                     "created_at": time.time()
                 })
-                
                 return result
             else:
                 return self._record_failure(attempt_id, "Account creation failed")
@@ -16914,22 +16956,38 @@ class InstagramAccountCreator2025:
     
     async def _create_instagram_account(self, session_id: str, email: str, 
                                       username: str, password: str, 
-                                      signup_code: str) -> bool:
+                                      signup_code: str) -> Dict[str, Any]:
         """Create Instagram account dengan semua perbaikan
         
-        IMPORTANT: No IP rotation during session - if it fails, return False
-        to signal that a NEW SESSION is needed. Rotating IP mid-process is detectable.
+        IMPORTANT: No IP rotation during session - if it fails, return dict with error type
+        to signal what kind of failure occurred.
+        
+        Returns:
+            Dict with keys:
+                - success: bool
+                - error_type: str (ip_block, checkpoint, rate_limit, unknown)
+                - user_id: str (if success or checkpoint)
+                - username: str
         """
         
         # NO IP ROTATION - single attempt per session to avoid detection
         # If this fails, caller should create a completely new session
         print(f"{cyan}    Attempting account creation (no IP rotation for stealth){reset}")
         
+        # Default result
+        result = {
+            "success": False,
+            "error_type": "unknown",
+            "user_id": None,
+            "username": username
+        }
+        
         # Get session dengan headers terkini
         session = self.session_manager.get_session_with_headers(session_id)
         if not session:
             print(f"{merah}    Session not found{reset}")
-            return False
+            result["error_type"] = "session_error"
+            return result
         
         # Get fresh jazoest from real signup page
         jazoest = await self.get_jazoest(session_id=session_id)
@@ -17078,7 +17136,10 @@ class InstagramAccountCreator2025:
                                             "instagram.com"
                                         )
                             
-                                    return True
+                                    result["success"] = True
+                                    result["error_type"] = None
+                                    result["user_id"] = data.get("user_id", "")
+                                    return result
 
                                 else:
                                     print(f"\n{bg_kuning}{putih}✅  ACCOUNT CREATED CHECKPOINT!{reset}")
@@ -17096,7 +17157,9 @@ class InstagramAccountCreator2025:
                                     except Exception as e:
                                         pass
                                     
-                                    return False
+                                    result["error_type"] = "checkpoint"
+                                    result["user_id"] = data.get("user_id", "")
+                                    return result
 
                             except Exception as e:
                                 print(f"{merah}    Parse error: {e}{reset}")
@@ -17115,7 +17178,9 @@ class InstagramAccountCreator2025:
                                 except:
                                     pass
                                 
-                                return False
+                                result["error_type"] = "checkpoint"
+                                result["user_id"] = data.get("user_id", "")
+                                return result
 
                         else:
                             body_edit = response_edit.get("body", b"")
@@ -17137,7 +17202,9 @@ class InstagramAccountCreator2025:
                             except:
                                 pass
                             
-                            return False
+                            result["error_type"] = "checkpoint"
+                            result["user_id"] = data.get("user_id", "")
+                            return result
                     else:
                         error_type = self._analyze_error_type(data)
                         print(f"{merah}    Account creation failed: {error_type}{reset}")
@@ -17157,7 +17224,8 @@ class InstagramAccountCreator2025:
                             except:
                                 pass
                             
-                            return False
+                            result["error_type"] = "ip_block"
+                            return result  # Exit immediately on IP block
                         # For other errors, try next endpoint
                         continue
                         
@@ -17167,7 +17235,9 @@ class InstagramAccountCreator2025:
                     print(f"{cyan}    Raw response: {body_preview}...{reset}")
                     # If 200 OK but parse error, might be success
                     print(f"{hijau}✅  Account likely created (200 OK){reset}")
-                    return True
+                    result["success"] = True
+                    result["error_type"] = None
+                    return result
                 except Exception as e:
                     print(f"{merah}    Parse error: {e}{reset}")
                     continue
@@ -17186,7 +17256,8 @@ class InstagramAccountCreator2025:
                 except:
                     pass
                 
-                return False  # Need new session
+                result["error_type"] = "ip_block"
+                return result  # Need new session
             
             elif status == 429:
                 print(f"{kuning}    429 Rate Limited - need new session{reset}")
@@ -17203,14 +17274,15 @@ class InstagramAccountCreator2025:
                 except:
                     pass
                 
-                return False  # Need new session
+                result["error_type"] = "ip_block"
+                return result  # Need new session
             
             else:
                 print(f"{merah}    Endpoint failed with status: {status}{reset}")
                 continue
         
         print(f"{merah}❌  Account creation failed - need new session{reset}")
-        return False
+        return result
     
     def _generate_extra_session_id(self) -> str:
         """Generate extra session ID seperti Instagram asli"""
