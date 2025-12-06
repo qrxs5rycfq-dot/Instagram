@@ -17987,7 +17987,7 @@ class InstagramAccountCreator2025:
                 
                 if is_ip_block:
                     # IP BLOCK - IMMEDIATELY rotate session, no retry
-                    print(f"{merah}🚫  IP BLOCK detected - IMMEDIATE session rotation{reset}")
+                    print(f"{merah}🚫  IP BLOCK detected (error_type={error_type}) - IMMEDIATE session rotation{reset}")
                     results["ip_blocks"] += 1
                     force_new_session = True
                     current_session_id = None
@@ -18031,8 +18031,8 @@ class InstagramAccountCreator2025:
                     print(f"{kuning}⏳  Checkpoint cooldown: {checkpoint_cooldown:.1f}s{reset}")
                     await asyncio.sleep(checkpoint_cooldown)
                 else:
-                    # Other failure - normal cooldown
-                    print(f"{kuning}    Other failure, normal cooldown{reset}")
+                    # Other failure - show error_type for debugging
+                    print(f"{kuning}    Other failure (error_type={error_type}), normal cooldown{reset}")
                     cooldown = random.uniform(20, 40)
                     print(f"{kuning}⏳  Cooldown: {cooldown:.1f}s{reset}")
                     await asyncio.sleep(cooldown)
