@@ -3379,15 +3379,9 @@ class UltraStealthIPGenerator2025:
             # REAL-TIME VERIFICATION: Check with multiple APIs
             verification = self._verify_ip_is_indonesia_realtime(ip)
             
-            # Accept IP if:
-            # 1. Indonesia IP (preferred), OR
-            # 2. Any usable IP (not proxy/datacenter) - like 120.88.35.45 (MM) that worked!
-            if verification["verified"] and verification["is_usable"]:
-                country_info = f"[{verification.get('country', 'unknown')}]"
-                if verification["is_indonesia"]:
-                    print(f"{hijau}    ✓ IP verified as Indonesia: {ip} ({verification['isp']}) [via {verification.get('source', 'unknown')}]{reset}")
-                else:
-                    print(f"{hijau}    ✓ IP usable (non-proxy): {ip} ({verification['isp']}) {country_info} [via {verification.get('source', 'unknown')}]{reset}")
+            # Accept IP ONLY if Indonesia - strict mode
+            if verification["verified"] and verification["is_indonesia"] and verification["is_usable"]:
+                print(f"{hijau}    ✓ IP verified as Indonesia: {ip} ({verification['isp']}) [via {verification.get('source', 'unknown')}]{reset}")
                 verified_ip = ip
                 self.used_ips.add(ip)
                 self._ip_timestamps[ip] = time.time()
@@ -15792,10 +15786,20 @@ class InstagramAccountCreator2025:
                 try:
                     body = response.get("body", b"")
                     if not body:
-                        # print(f"{merah}    Empty response body{reset}")
+                        print(f"{kuning}    Empty response body - session may be expired{reset}")
                         return self._generate_fallback_username(email, hint)
                     
-                    data = json.loads(body.decode('utf-8', errors='ignore'))
+                    # Decode and check for HTML (session expired)
+                    body_text = body.decode('utf-8', errors='ignore')
+                    if body_text.startswith('<!DOCTYPE') or body_text.startswith('<html'):
+                        print(f"{kuning}    Got HTML response - session expired, using fallback{reset}")
+                        return self._generate_fallback_username(email, hint)
+                    
+                    if not body_text.strip():
+                        print(f"{kuning}    Empty response - session may be flagged{reset}")
+                        return self._generate_fallback_username(email, hint)
+                    
+                    data = json.loads(body_text)
                     # print(f"{cyan}    Username API response: {json.dumps(data, indent=2)[:300]}...{reset}")
                     
                     # Cari suggestions di berbagai field
@@ -16633,6 +16637,7 @@ class InstagramAccountCreator2025:
             "total": count,
             "successful": 0,
             "failed": 0,
+            "checkpointed": 0,
             "accounts": [],
             "errors": [],
             "start_time": time.time(),
@@ -16691,7 +16696,25 @@ class InstagramAccountCreator2025:
                     "403" in error_msg
                 )
                 
-                if is_ip_block:
+                # Check if checkpoint - also force new session
+                is_checkpoint = (
+                    error_type == "checkpoint" or
+                    "checkpoint" in error_msg or
+                    "suspended" in error_msg or
+                    "verification" in error_msg
+                )
+                
+                if is_checkpoint:
+                    print(f"{kuning}🚧  Checkpoint detected - forcing new session{reset}")
+                    results["checkpointed"] += 1
+                    current_session_id = None  # Force new session on next iteration
+                    accounts_in_current_session = 0
+                    
+                    # Extra cooldown for checkpoint - IP might be flagged
+                    checkpoint_cooldown = random.uniform(45, 75)
+                    print(f"{kuning}⏳  Checkpoint cooldown: {checkpoint_cooldown:.1f}s{reset}")
+                    await asyncio.sleep(checkpoint_cooldown)
+                elif is_ip_block:
                     print(f"{merah}🚫  IP block detected - forcing new session{reset}")
                     results["ip_blocks"] += 1
                     current_session_id = None  # Force new session on next iteration
@@ -16714,6 +16737,7 @@ class InstagramAccountCreator2025:
         
         print(f"\n{bg_biru}{putih}📊  BATCH CREATION COMPLETE{reset}")
         print(f"    Successful: {results['successful']}/{count}")
+        print(f"    Checkpointed: {results['checkpointed']}")
         print(f"    Failed: {results['failed']}/{count}")
         print(f"    Success rate: {results['success_rate']:.1%}")
         print(f"    Sessions used: {results['sessions_used']}")
