@@ -5005,10 +5005,22 @@ class AdvancedIPStealthSystem2025:
         return self._generate_dynamic_isp_ips("cbn")
     
     def _generate_firstmedia_ips(self):
-        return self._generate_dynamic_isp_ips("telkomsel")  # Reuse telkomsel
+        return self._generate_dynamic_isp_ips("firstmedia")
     
     def _generate_myrepublic_ips(self):
-        return self._generate_dynamic_isp_ips("xl")  # Reuse xl
+        return self._generate_dynamic_isp_ips("myrepublic")
+    
+    def _generate_indihome_ips(self):
+        return self._generate_dynamic_isp_ips("indihome")
+    
+    def _generate_mncplay_ips(self):
+        return self._generate_dynamic_isp_ips("mncplay")
+    
+    def _generate_iconnet_ips(self):
+        return self._generate_dynamic_isp_ips("iconnet")
+    
+    def _generate_oxygen_ips(self):
+        return self._generate_dynamic_isp_ips("oxygen")
 
 # ===================== IP VALIDATOR 2025 =====================
 
