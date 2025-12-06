@@ -1041,13 +1041,14 @@ class UnifiedSessionManager2025:
             "android": list(range(120, 136)),
         }
     
-    def create_session(self, session_id: str = None, device_type: str = "random") -> Dict[str, Any]:
+    def create_session(self, session_id: str = None, device_type: str = "random", country: str = "random") -> Dict[str, Any]:
         """
         Create a new unified session with all spoofing components synchronized.
         
         Args:
             session_id: Optional session ID. Auto-generated if not provided.
             device_type: "android", "desktop", or "random"
+            country: Country code (e.g. "US", "AU", "JP") or "random" for truly random country
         
         Returns:
             Complete session configuration with all components synchronized
@@ -1059,23 +1060,48 @@ class UnifiedSessionManager2025:
         if device_type == "random":
             device_type = random.choice(["android", "desktop"])
         
+        # Load country database and select random country if needed
+        country_db = self._load_country_database_session()
+        all_countries = list(country_db.get("countries", {}).keys())
+        if not all_countries:
+            all_countries = ["US", "AU", "CA", "GB", "DE", "FR", "JP", "KR", "SG", "NL", "NZ", "IT", "ES", "MX", "BR", "TH", "MY", "PH", "VN", "IN", "ID"]
+        
+        # Select random country if not specified
+        if country == "random":
+            country = random.choice(all_countries)
+        
+        # Get country-specific data
+        country_data = country_db.get("countries", {}).get(country, {})
+        if not country_data:
+            # Fallback to defaults
+            country_data = {
+                "name": country,
+                "language": "en-US",
+                "timezone": "America/New_York",
+                "locale": "en_US",
+                "isps": {},
+                "cities": [{"name": "Unknown", "lat": 0, "lon": 0}],
+                "devices": {"mobile": ["iPhone 15 Pro"], "desktop": ["MacBook Pro"]}
+            }
+        
         # Select consistent platform
         if device_type == "android":
-            platform_info = self._generate_android_platform()
+            platform_info = self._generate_android_platform_for_country(country, country_data)
         else:
-            platform_info = self._generate_desktop_platform()
+            platform_info = self._generate_desktop_platform_for_country(country, country_data)
         
         # Generate consistent Chrome version
         chrome_version = random.choice(self.chrome_versions[platform_info["os_type"]])
         
-        # Generate IP from Indonesian ISP
-        ip_config = self._generate_indonesia_ip(device_type, platform_info)
+        # Generate IP from country-specific ISP
+        ip_config = self._generate_ip_for_country(country, country_data, device_type, platform_info)
         
         # Generate synchronized fingerprints
         session = {
             "session_id": session_id,
             "created_at": time.time(),
             "device_type": device_type,
+            "country": country,
             
             # Platform info
             "platform": platform_info,
@@ -1099,13 +1125,13 @@ class UnifiedSessionManager2025:
             # Cookies (session-specific)
             "cookies": self._generate_initial_cookies(session_id),
             
-            # Location (Indonesia)
+            # Location (matches IP country)
             "location": {
-                "country": "ID",
-                "country_name": "Indonesia",
-                "timezone": self.timezone,
-                "language": self.language,
-                "locale": "id_ID",
+                "country": country,
+                "country_name": country_data.get("name", country),
+                "timezone": country_data.get("timezone", "America/New_York"),
+                "language": country_data.get("language", "en-US"),
+                "locale": country_data.get("locale", "en_US"),
             },
         }
         
@@ -1113,6 +1139,133 @@ class UnifiedSessionManager2025:
         self._sessions[session_id] = session
         
         return session
+    
+    def _load_country_database_session(self) -> Dict[str, Any]:
+        """Load comprehensive country database from JSON file"""
+        try:
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "country_database.json")
+            if os.path.exists(db_path):
+                with open(db_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception as e:
+            pass
+        return {"countries": {}}
+    
+    def _generate_android_platform_for_country(self, country: str, country_data: Dict) -> Dict[str, Any]:
+        """Generate Android platform info specific to country"""
+        devices = country_data.get("devices", {}).get("mobile", ["Samsung Galaxy A54"])
+        device = random.choice(devices)
+        
+        return {
+            "os_type": "android",
+            "os": "Android",
+            "os_version": random.choice(["13", "14"]),
+            "device": device,
+            "device_model": device.split()[-1] if " " in device else device,
+            "country": country,
+            "hardware": {
+                "ram": random.choice([6, 8, 12, 16]),
+                "storage": random.choice([128, 256, 512]),
+            }
+        }
+    
+    def _generate_desktop_platform_for_country(self, country: str, country_data: Dict) -> Dict[str, Any]:
+        """Generate desktop platform info specific to country"""
+        devices = country_data.get("devices", {}).get("desktop", ["MacBook Pro"])
+        device = random.choice(devices)
+        
+        # Determine OS from device name
+        if "mac" in device.lower():
+            os_type = "macos"
+            os_name = "macOS"
+            os_version = random.choice(["14.4", "14.3", "14.2"])
+        else:
+            os_type = "windows"
+            os_name = "Windows"
+            os_version = random.choice(["10", "11"])
+        
+        return {
+            "os_type": os_type,
+            "os": os_name,
+            "os_version": os_version,
+            "device": device,
+            "device_model": device,
+            "country": country,
+            "hardware": {
+                "ram": random.choice([16, 32, 64]),
+                "storage": random.choice([512, 1024, 2048]),
+            }
+        }
+    
+    def _generate_ip_for_country(self, country: str, country_data: Dict, device_type: str, platform_info: Dict) -> Dict[str, Any]:
+        """Generate IP address from country-specific ISP with full synchronization"""
+        isps = country_data.get("isps", {})
+        
+        # Prioritize mobile ISPs for mobile devices
+        if device_type == "android":
+            isp_pool = isps.get("mobile", {})
+        else:
+            isp_pool = isps.get("broadband", {}) or isps.get("mobile", {})
+        
+        if not isp_pool:
+            # Fallback: generate plausible IP
+            ip = f"{random.randint(1, 223)}.{random.randint(1, 254)}.{random.randint(1, 254)}.{random.randint(2, 253)}"
+            return {
+                "ip": ip,
+                "isp": "unknown",
+                "asn": "AS0",
+                "country": country,
+                "type": "wifi" if device_type == "desktop" else "mobile",
+            }
+        
+        # Select random ISP
+        isp_name = random.choice(list(isp_pool.keys()))
+        isp_data = isp_pool[isp_name]
+        
+        # Generate IP from ISP ranges
+        ranges = isp_data.get("ranges", [])
+        if ranges:
+            ip_range = random.choice(ranges)
+            ip = self._generate_ip_from_cidr(ip_range)
+        else:
+            ip = f"{random.randint(1, 223)}.{random.randint(1, 254)}.{random.randint(1, 254)}.{random.randint(2, 253)}"
+        
+        # Select city
+        cities = country_data.get("cities", [{"name": "Unknown", "lat": 0, "lon": 0}])
+        city = random.choice(cities)
+        
+        return {
+            "ip": ip,
+            "isp": isp_data.get("name", isp_name),
+            "asn": isp_data.get("asn", "AS0"),
+            "country": country,
+            "country_name": country_data.get("name", country),
+            "city": city.get("name", "Unknown"),
+            "latitude": city.get("lat", 0) + random.uniform(-0.01, 0.01),
+            "longitude": city.get("lon", 0) + random.uniform(-0.01, 0.01),
+            "type": "wifi" if device_type == "desktop" else "mobile",
+            "timezone": country_data.get("timezone", "UTC"),
+        }
+    
+    def _generate_ip_from_cidr(self, cidr: str) -> str:
+        """Generate random IP from CIDR range"""
+        try:
+            network = ipaddress.ip_network(cidr, strict=False)
+            # Get random IP from network (avoiding first and last)
+            hosts = list(network.hosts())
+            if len(hosts) > 10:
+                # Avoid common IPs (first 5, last 5)
+                hosts = hosts[5:-5]
+            if hosts:
+                return str(random.choice(hosts))
+        except Exception:
+            pass
+        
+        # Fallback: parse CIDR and generate
+        parts = cidr.split('/')[0].split('.')
+        while len(parts) < 4:
+            parts.append(str(random.randint(2, 253)))
+        return '.'.join(parts[:4])
     
     def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get existing session configuration"""
@@ -4432,6 +4585,19 @@ class AdvancedIPStealthSystem2025:
             "oxygen": self._generate_oxygen_ips,
         }
     
+    def _load_country_database(self) -> Dict[str, Any]:
+        """Load comprehensive country database from JSON file"""
+        try:
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "country_database.json")
+            if os.path.exists(db_path):
+                with open(db_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"{kuning}    Warning: Could not load country_database.json: {e}{reset}")
+        
+        # Return empty dict if file not found
+        return {"countries": {}}
+    
     def _get_country_config(self) -> Dict[str, Any]:
         """Get Indonesia country configuration"""
         return {
@@ -6537,42 +6703,31 @@ class AdvancedIPStealthSystem2025:
     
     def _generate_fresh_ip_batch_enhanced(self):
         """Generate fresh batch of IPs with multi-country support"""
-        print(f"{cyan}🌐  Generating enhanced multi-country IP batch...{reset}")
+        print(f"{cyan}🌐  Generating enhanced multi-country IP batch (TRULY RANDOM)...{reset}")
         
         new_ips = []
         
-        # Multi-country ISP list with weighted selection
-        # PRIORITIZE TRUSTED COUNTRIES - US, AU, CA, UK, NZ (Five Eyes countries are trusted by Instagram)
-        # EXCLUDE: Indonesia, India, Brazil - HIGH CHECKPOINT RISK
-        country_isps = {
-            "US": ["verizon", "att", "tmobile", "comcast", "spectrum", "cox", "charter"],  # USA - TOP PRIORITY
-            "AU": ["telstra", "optus", "vodafone_au", "tpg"],  # Australia - VERY TRUSTED
-            "CA": ["rogers", "bell", "telus", "shaw"],  # Canada - VERY TRUSTED
-            "UK": ["bt", "ee", "vodafone_uk", "three_uk", "sky"],  # UK - TRUSTED
-            "NZ": ["spark", "vodafone_nz", "2degrees"],  # New Zealand - TRUSTED
-            "DE": ["telekom_de", "vodafone_de", "o2_de"],  # Germany - TRUSTED
-            "FR": ["orange_fr", "sfr", "bouygues", "free_fr"],  # France - TRUSTED
-            "NL": ["kpn", "vodafone_nl", "tmobile_nl"],  # Netherlands - TRUSTED
-            "JP": ["ntt_docomo", "softbank", "au_kddi"],  # Japan - TRUSTED
-            "SG": ["singtel", "starhub", "m1"],  # Singapore - TRUSTED
-        }
+        # Load country database from JSON file
+        country_db = self._load_country_database()
         
-        # Random country selection with weights - TRUSTED COUNTRIES ONLY
-        # US & AU highest, then CA/UK/NZ, then EU/Asia trusted
-        countries = list(country_isps.keys())
-        country_weights = [30, 20, 15, 12, 8, 5, 4, 3, 2, 1]  # US=30%, AU=20%, CA=15%, UK=12%, etc.
+        # Get all countries with equal weight (TRULY RANDOM)
+        all_countries = list(country_db.get("countries", {}).keys())
+        if not all_countries:
+            # Fallback to hardcoded list
+            all_countries = ["US", "AU", "CA", "GB", "DE", "FR", "JP", "KR", "SG", "NL", "NZ", "IT", "ES", "MX", "BR", "TH", "MY", "PH", "VN", "IN", "ID"]
         
-        # Select 3-5 countries randomly with US & AU prioritized
-        selected_countries = random.choices(countries, weights=country_weights, k=random.randint(3, 5))
-        selected_countries = list(set(selected_countries))  # Remove duplicates
-        # Ensure US is always included as primary
-        if "US" not in selected_countries:
-            selected_countries.insert(0, "US")
-        # Ensure AU is always included as secondary
-        if "AU" not in selected_countries and len(selected_countries) < 5:
-            selected_countries.insert(1, "AU")
+        # TRULY RANDOM - equal weights for all countries
+        selected_countries = random.sample(all_countries, min(5, len(all_countries)))
         
-        print(f"{cyan}    Selected countries: {selected_countries}{reset}")
+        print(f"{cyan}    Selected countries (RANDOM): {selected_countries}{reset}")
+        
+        # Build country_isps from database
+        country_isps = {}
+        for country in selected_countries:
+            country_data = country_db.get("countries", {}).get(country, {})
+            isps = country_data.get("isps", {})
+            # Combine mobile and broadband ISPs
+            country_isps[country] = list(isps.get("mobile", {}).keys()) + list(isps.get("broadband", {}).keys())
         
         for country in selected_countries:
             isps = country_isps.get(country, [])

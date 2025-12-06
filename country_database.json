@@ -1,0 +1,524 @@
+{
+  "_comment": "Comprehensive global country database for IP spoofing with matching fingerprint, TLS, JA3, device info",
+  "_version": "2025.12",
+  "countries": {
+    "US": {
+      "name": "United States",
+      "language": "en-US",
+      "timezone": "America/New_York",
+      "locale": "en_US",
+      "currency": "USD",
+      "isps": {
+        "mobile": {
+          "verizon": {"asn": "AS22394", "name": "Verizon Wireless", "ranges": ["174.192.0.0/10", "166.137.0.0/16"]},
+          "att": {"asn": "AS20057", "name": "AT&T Mobility", "ranges": ["166.147.0.0/16", "107.77.0.0/16"]},
+          "tmobile": {"asn": "AS21928", "name": "T-Mobile USA", "ranges": ["172.32.0.0/11", "172.56.0.0/13"]}
+        },
+        "broadband": {
+          "comcast": {"asn": "AS7922", "name": "Comcast Cable", "ranges": ["73.0.0.0/8", "98.192.0.0/10"]},
+          "spectrum": {"asn": "AS11351", "name": "Charter/Spectrum", "ranges": ["66.75.0.0/16", "71.56.0.0/13"]}
+        }
+      },
+      "cities": [
+        {"name": "New York", "lat": 40.7128, "lon": -74.0060},
+        {"name": "Los Angeles", "lat": 34.0522, "lon": -118.2437},
+        {"name": "Chicago", "lat": 41.8781, "lon": -87.6298}
+      ],
+      "devices": {
+        "mobile": ["iPhone 15 Pro Max", "iPhone 15 Pro", "Samsung Galaxy S24 Ultra", "Pixel 8 Pro"],
+        "desktop": ["MacBook Pro 14-inch", "Dell XPS 15", "HP Spectre x360"]
+      }
+    },
+    "AU": {
+      "name": "Australia",
+      "language": "en-AU",
+      "timezone": "Australia/Sydney",
+      "locale": "en_AU",
+      "currency": "AUD",
+      "isps": {
+        "mobile": {
+          "telstra": {"asn": "AS1221", "name": "Telstra", "ranges": ["1.120.0.0/13", "1.128.0.0/11"]},
+          "optus": {"asn": "AS4804", "name": "Optus", "ranges": ["49.176.0.0/12", "49.192.0.0/12"]}
+        },
+        "broadband": {
+          "tpg": {"asn": "AS7545", "name": "TPG", "ranges": ["101.184.0.0/13", "203.219.0.0/16"]}
+        }
+      },
+      "cities": [
+        {"name": "Sydney", "lat": -33.8688, "lon": 151.2093},
+        {"name": "Melbourne", "lat": -37.8136, "lon": 144.9631}
+      ],
+      "devices": {
+        "mobile": ["iPhone 15 Pro Max", "Samsung Galaxy S24 Ultra", "Pixel 8 Pro"],
+        "desktop": ["MacBook Pro 16-inch", "Dell XPS 15"]
+      }
+    },
+    "CA": {
+      "name": "Canada",
+      "language": "en-CA",
+      "timezone": "America/Toronto",
+      "locale": "en_CA",
+      "currency": "CAD",
+      "isps": {
+        "mobile": {
+          "rogers": {"asn": "AS812", "name": "Rogers Wireless", "ranges": ["24.224.0.0/12", "99.224.0.0/11"]},
+          "bell": {"asn": "AS577", "name": "Bell Mobility", "ranges": ["65.92.0.0/14", "142.0.0.0/10"]}
+        },
+        "broadband": {
+          "shaw": {"asn": "AS6327", "name": "Shaw Communications", "ranges": ["68.144.0.0/12", "75.154.0.0/15"]}
+        }
+      },
+      "cities": [
+        {"name": "Toronto", "lat": 43.6532, "lon": -79.3832},
+        {"name": "Vancouver", "lat": 49.2827, "lon": -123.1207}
+      ],
+      "devices": {
+        "mobile": ["iPhone 15 Pro Max", "Samsung Galaxy S24 Ultra"],
+        "desktop": ["MacBook Pro 14-inch", "Dell XPS 15"]
+      }
+    },
+    "GB": {
+      "name": "United Kingdom",
+      "language": "en-GB",
+      "timezone": "Europe/London",
+      "locale": "en_GB",
+      "currency": "GBP",
+      "isps": {
+        "mobile": {
+          "ee": {"asn": "AS12576", "name": "EE", "ranges": ["86.128.0.0/10", "90.192.0.0/10"]},
+          "vodafone_uk": {"asn": "AS25135", "name": "Vodafone UK", "ranges": ["92.24.0.0/13", "92.232.0.0/13"]}
+        },
+        "broadband": {
+          "bt": {"asn": "AS2856", "name": "BT", "ranges": ["86.128.0.0/10", "81.128.0.0/11"]}
+        }
+      },
+      "cities": [
+        {"name": "London", "lat": 51.5074, "lon": -0.1278},
+        {"name": "Manchester", "lat": 53.4808, "lon": -2.2426}
+      ],
+      "devices": {
+        "mobile": ["iPhone 15 Pro Max", "Samsung Galaxy S24"],
+        "desktop": ["MacBook Pro 14-inch", "Dell XPS 13"]
+      }
+    },
+    "DE": {
+      "name": "Germany",
+      "language": "de-DE",
+      "timezone": "Europe/Berlin",
+      "locale": "de_DE",
+      "currency": "EUR",
+      "isps": {
+        "mobile": {
+          "telekom_de": {"asn": "AS3320", "name": "Deutsche Telekom", "ranges": ["80.128.0.0/11", "91.0.0.0/10"]},
+          "vodafone_de": {"asn": "AS3209", "name": "Vodafone DE", "ranges": ["78.0.0.0/11", "79.192.0.0/10"]}
+        },
+        "broadband": {
+          "1und1": {"asn": "AS8560", "name": "1&1", "ranges": ["78.42.0.0/15", "87.78.0.0/15"]}
+        }
+      },
+      "cities": [
+        {"name": "Berlin", "lat": 52.5200, "lon": 13.4050},
+        {"name": "Munich", "lat": 48.1351, "lon": 11.5820}
+      ],
+      "devices": {
+        "mobile": ["iPhone 15 Pro", "Samsung Galaxy S24", "Xiaomi 14"],
+        "desktop": ["MacBook Pro", "Dell XPS 15"]
+      }
+    },
+    "FR": {
+      "name": "France",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "locale": "fr_FR",
+      "currency": "EUR",
+      "isps": {
+        "mobile": {
+          "orange_fr": {"asn": "AS3215", "name": "Orange France", "ranges": ["90.0.0.0/8", "92.128.0.0/10"]},
+          "sfr": {"asn": "AS15557", "name": "SFR", "ranges": ["86.192.0.0/10", "92.128.0.0/10"]}
+        },
+        "broadband": {
+          "free_fr": {"asn": "AS12322", "name": "Free", "ranges": ["82.224.0.0/11", "78.192.0.0/10"]}
+        }
+      },
+      "cities": [
+        {"name": "Paris", "lat": 48.8566, "lon": 2.3522},
+        {"name": "Lyon", "lat": 45.7640, "lon": 4.8357}
+      ],
+      "devices": {
+        "mobile": ["iPhone 15 Pro Max", "Samsung Galaxy S24 Ultra"],
+        "desktop": ["MacBook Pro", "Dell Latitude"]
+      }
+    },
+    "JP": {
+      "name": "Japan",
+      "language": "ja-JP",
+      "timezone": "Asia/Tokyo",
+      "locale": "ja_JP",
+      "currency": "JPY",
+      "isps": {
+        "mobile": {
+          "ntt_docomo": {"asn": "AS9605", "name": "NTT Docomo", "ranges": ["49.96.0.0/12", "126.0.0.0/8"]},
+          "softbank": {"asn": "AS17676", "name": "SoftBank", "ranges": ["60.32.0.0/11", "220.96.0.0/11"]}
+        },
+        "broadband": {
+          "ntt_east": {"asn": "AS4713", "name": "NTT East", "ranges": ["60.32.0.0/11", "219.96.0.0/11"]}
+        }
+      },
+      "cities": [
+        {"name": "Tokyo", "lat": 35.6762, "lon": 139.6503},
+        {"name": "Osaka", "lat": 34.6937, "lon": 135.5023}
+      ],
+      "devices": {
+        "mobile": ["iPhone 15 Pro Max", "Sony Xperia 1 V", "Sharp AQUOS R8"],
+        "desktop": ["MacBook Pro", "Sony VAIO"]
+      }
+    },
+    "KR": {
+      "name": "South Korea",
+      "language": "ko-KR",
+      "timezone": "Asia/Seoul",
+      "locale": "ko_KR",
+      "currency": "KRW",
+      "isps": {
+        "mobile": {
+          "sk_telecom": {"asn": "AS9644", "name": "SK Telecom", "ranges": ["175.192.0.0/10", "223.32.0.0/11"]},
+          "kt": {"asn": "AS4766", "name": "KT", "ranges": ["118.32.0.0/11", "220.64.0.0/11"]}
+        },
+        "broadband": {
+          "sk_broadband": {"asn": "AS9318", "name": "SK Broadband", "ranges": ["175.192.0.0/10"]}
+        }
+      },
+      "cities": [
+        {"name": "Seoul", "lat": 37.5665, "lon": 126.9780},
+        {"name": "Busan", "lat": 35.1796, "lon": 129.0756}
+      ],
+      "devices": {
+        "mobile": ["Samsung Galaxy S24 Ultra", "Samsung Galaxy Z Fold 5", "iPhone 15 Pro Max"],
+        "desktop": ["Samsung Galaxy Book 3", "LG gram"]
+      }
+    },
+    "SG": {
+      "name": "Singapore",
+      "language": "en-SG",
+      "timezone": "Asia/Singapore",
+      "locale": "en_SG",
+      "currency": "SGD",
+      "isps": {
+        "mobile": {
+          "singtel": {"asn": "AS7473", "name": "Singtel", "ranges": ["42.60.0.0/14", "116.14.0.0/15"]},
+          "starhub": {"asn": "AS4657", "name": "StarHub", "ranges": ["27.104.0.0/13", "203.116.0.0/14"]}
+        },
+        "broadband": {
+          "singtel_fiber": {"asn": "AS7473", "name": "Singtel Fiber", "ranges": ["42.60.0.0/14"]}
+        }
+      },
+      "cities": [{"name": "Singapore", "lat": 1.3521, "lon": 103.8198}],
+      "devices": {
+        "mobile": ["iPhone 15 Pro Max", "Samsung Galaxy S24 Ultra", "OnePlus 12"],
+        "desktop": ["MacBook Pro", "ASUS ZenBook"]
+      }
+    },
+    "NL": {
+      "name": "Netherlands",
+      "language": "nl-NL",
+      "timezone": "Europe/Amsterdam",
+      "locale": "nl_NL",
+      "currency": "EUR",
+      "isps": {
+        "mobile": {
+          "kpn": {"asn": "AS1136", "name": "KPN", "ranges": ["145.48.0.0/12", "213.75.0.0/16"]},
+          "vodafone_nl": {"asn": "AS1103", "name": "Vodafone NL", "ranges": ["80.56.0.0/13", "212.178.0.0/16"]}
+        },
+        "broadband": {
+          "ziggo": {"asn": "AS9143", "name": "Ziggo", "ranges": ["62.238.0.0/15", "77.160.0.0/12"]}
+        }
+      },
+      "cities": [
+        {"name": "Amsterdam", "lat": 52.3676, "lon": 4.9041},
+        {"name": "Rotterdam", "lat": 51.9244, "lon": 4.4777}
+      ],
+      "devices": {
+        "mobile": ["iPhone 15 Pro", "Samsung Galaxy S24"],
+        "desktop": ["MacBook Pro", "Dell XPS"]
+      }
+    },
+    "NZ": {
+      "name": "New Zealand",
+      "language": "en-NZ",
+      "timezone": "Pacific/Auckland",
+      "locale": "en_NZ",
+      "currency": "NZD",
+      "isps": {
+        "mobile": {
+          "spark": {"asn": "AS9790", "name": "Spark NZ", "ranges": ["122.56.0.0/12", "203.96.0.0/14"]},
+          "vodafone_nz": {"asn": "AS9500", "name": "Vodafone NZ", "ranges": ["60.234.0.0/15", "125.236.0.0/14"]}
+        },
+        "broadband": {
+          "chorus": {"asn": "AS38022", "name": "Chorus NZ", "ranges": ["122.56.0.0/12"]}
+        }
+      },
+      "cities": [
+        {"name": "Auckland", "lat": -36.8485, "lon": 174.7633},
+        {"name": "Wellington", "lat": -41.2865, "lon": 174.7762}
+      ],
+      "devices": {
+        "mobile": ["iPhone 15 Pro Max", "Samsung Galaxy S24"],
+        "desktop": ["MacBook Pro", "Dell XPS 15"]
+      }
+    },
+    "IT": {
+      "name": "Italy",
+      "language": "it-IT",
+      "timezone": "Europe/Rome",
+      "locale": "it_IT",
+      "currency": "EUR",
+      "isps": {
+        "mobile": {
+          "tim": {"asn": "AS3269", "name": "TIM", "ranges": ["79.0.0.0/11", "151.0.0.0/8"]},
+          "vodafone_it": {"asn": "AS30722", "name": "Vodafone IT", "ranges": ["79.0.0.0/11"]}
+        },
+        "broadband": {
+          "fastweb": {"asn": "AS12874", "name": "Fastweb", "ranges": ["37.160.0.0/11"]}
+        }
+      },
+      "cities": [
+        {"name": "Rome", "lat": 41.9028, "lon": 12.4964},
+        {"name": "Milan", "lat": 45.4642, "lon": 9.1900}
+      ],
+      "devices": {
+        "mobile": ["iPhone 15 Pro", "Samsung Galaxy S24"],
+        "desktop": ["MacBook Pro", "Dell Latitude"]
+      }
+    },
+    "ES": {
+      "name": "Spain",
+      "language": "es-ES",
+      "timezone": "Europe/Madrid",
+      "locale": "es_ES",
+      "currency": "EUR",
+      "isps": {
+        "mobile": {
+          "movistar": {"asn": "AS3352", "name": "Movistar", "ranges": ["83.32.0.0/11", "79.0.0.0/11"]},
+          "vodafone_es": {"asn": "AS12430", "name": "Vodafone ES", "ranges": ["79.0.0.0/11"]}
+        },
+        "broadband": {
+          "masmovil": {"asn": "AS15704", "name": "MasMovil", "ranges": ["37.152.0.0/13"]}
+        }
+      },
+      "cities": [
+        {"name": "Madrid", "lat": 40.4168, "lon": -3.7038},
+        {"name": "Barcelona", "lat": 41.3851, "lon": 2.1734}
+      ],
+      "devices": {
+        "mobile": ["iPhone 15 Pro", "Samsung Galaxy S24"],
+        "desktop": ["MacBook Pro", "Dell XPS"]
+      }
+    },
+    "MX": {
+      "name": "Mexico",
+      "language": "es-MX",
+      "timezone": "America/Mexico_City",
+      "locale": "es_MX",
+      "currency": "MXN",
+      "isps": {
+        "mobile": {
+          "telcel": {"asn": "AS8151", "name": "Telcel", "ranges": ["187.128.0.0/9", "200.0.0.0/8"]},
+          "att_mx": {"asn": "AS28548", "name": "AT&T Mexico", "ranges": ["187.128.0.0/9"]}
+        },
+        "broadband": {
+          "telmex": {"asn": "AS8151", "name": "Telmex", "ranges": ["187.128.0.0/9", "200.0.0.0/8"]}
+        }
+      },
+      "cities": [
+        {"name": "Mexico City", "lat": 19.4326, "lon": -99.1332},
+        {"name": "Guadalajara", "lat": 20.6597, "lon": -103.3496}
+      ],
+      "devices": {
+        "mobile": ["iPhone 15 Pro", "Samsung Galaxy A54", "Motorola Edge"],
+        "desktop": ["MacBook Air", "Dell Inspiron"]
+      }
+    },
+    "BR": {
+      "name": "Brazil",
+      "language": "pt-BR",
+      "timezone": "America/Sao_Paulo",
+      "locale": "pt_BR",
+      "currency": "BRL",
+      "isps": {
+        "mobile": {
+          "vivo_br": {"asn": "AS26599", "name": "Vivo", "ranges": ["177.0.0.0/8", "186.0.0.0/8"]},
+          "claro_br": {"asn": "AS4230", "name": "Claro", "ranges": ["177.0.0.0/8", "187.0.0.0/8"]}
+        },
+        "broadband": {
+          "net_virtua": {"asn": "AS28573", "name": "NET Virtua", "ranges": ["177.0.0.0/8", "186.0.0.0/8"]}
+        }
+      },
+      "cities": [
+        {"name": "São Paulo", "lat": -23.5505, "lon": -46.6333},
+        {"name": "Rio de Janeiro", "lat": -22.9068, "lon": -43.1729}
+      ],
+      "devices": {
+        "mobile": ["Samsung Galaxy A54", "Motorola Moto G84", "Xiaomi Redmi Note 12"],
+        "desktop": ["Dell Inspiron", "Lenovo IdeaPad"]
+      }
+    },
+    "TH": {
+      "name": "Thailand",
+      "language": "th-TH",
+      "timezone": "Asia/Bangkok",
+      "locale": "th_TH",
+      "currency": "THB",
+      "isps": {
+        "mobile": {
+          "ais": {"asn": "AS131090", "name": "AIS", "ranges": ["49.228.0.0/14", "180.180.0.0/14"]},
+          "true_th": {"asn": "AS17552", "name": "True Move", "ranges": ["110.164.0.0/14", "171.96.0.0/13"]}
+        },
+        "broadband": {
+          "3bb": {"asn": "AS45629", "name": "3BB", "ranges": ["49.228.0.0/14"]}
+        }
+      },
+      "cities": [
+        {"name": "Bangkok", "lat": 13.7563, "lon": 100.5018},
+        {"name": "Chiang Mai", "lat": 18.7883, "lon": 98.9853}
+      ],
+      "devices": {
+        "mobile": ["iPhone 15 Pro", "Samsung Galaxy S24", "OPPO Reno 10"],
+        "desktop": ["MacBook Air", "ASUS VivoBook"]
+      }
+    },
+    "MY": {
+      "name": "Malaysia",
+      "language": "ms-MY",
+      "timezone": "Asia/Kuala_Lumpur",
+      "locale": "ms_MY",
+      "currency": "MYR",
+      "isps": {
+        "mobile": {
+          "maxis": {"asn": "AS9930", "name": "Maxis", "ranges": ["175.136.0.0/13", "60.48.0.0/12"]},
+          "celcom": {"asn": "AS10030", "name": "Celcom", "ranges": ["175.136.0.0/13", "113.210.0.0/15"]}
+        },
+        "broadband": {
+          "tm": {"asn": "AS4788", "name": "Telekom Malaysia", "ranges": ["175.136.0.0/13"]}
+        }
+      },
+      "cities": [
+        {"name": "Kuala Lumpur", "lat": 3.1390, "lon": 101.6869},
+        {"name": "Penang", "lat": 5.4164, "lon": 100.3327}
+      ],
+      "devices": {
+        "mobile": ["iPhone 15 Pro", "Samsung Galaxy S24", "OPPO Reno 10"],
+        "desktop": ["MacBook Air", "ASUS VivoBook"]
+      }
+    },
+    "PH": {
+      "name": "Philippines",
+      "language": "en-PH",
+      "timezone": "Asia/Manila",
+      "locale": "en_PH",
+      "currency": "PHP",
+      "isps": {
+        "mobile": {
+          "globe": {"asn": "AS4775", "name": "Globe", "ranges": ["112.198.0.0/15", "120.28.0.0/14"]},
+          "smart": {"asn": "AS10139", "name": "Smart", "ranges": ["112.198.0.0/15", "110.54.0.0/15"]}
+        },
+        "broadband": {
+          "pldt": {"asn": "AS9299", "name": "PLDT", "ranges": ["112.198.0.0/15"]}
+        }
+      },
+      "cities": [
+        {"name": "Manila", "lat": 14.5995, "lon": 120.9842},
+        {"name": "Cebu City", "lat": 10.3157, "lon": 123.8854}
+      ],
+      "devices": {
+        "mobile": ["Samsung Galaxy A54", "Xiaomi Redmi Note 12", "Vivo V29"],
+        "desktop": ["ASUS VivoBook", "Lenovo IdeaPad"]
+      }
+    },
+    "VN": {
+      "name": "Vietnam",
+      "language": "vi-VN",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "locale": "vi_VN",
+      "currency": "VND",
+      "isps": {
+        "mobile": {
+          "viettel": {"asn": "AS7552", "name": "Viettel", "ranges": ["113.160.0.0/11", "171.224.0.0/11"]},
+          "vinaphone": {"asn": "AS45899", "name": "Vinaphone", "ranges": ["113.160.0.0/11", "123.16.0.0/12"]}
+        },
+        "broadband": {
+          "fpt": {"asn": "AS18403", "name": "FPT Telecom", "ranges": ["113.160.0.0/11"]}
+        }
+      },
+      "cities": [
+        {"name": "Ho Chi Minh City", "lat": 10.8231, "lon": 106.6297},
+        {"name": "Hanoi", "lat": 21.0278, "lon": 105.8342}
+      ],
+      "devices": {
+        "mobile": ["Samsung Galaxy A54", "OPPO Reno 10", "Xiaomi Redmi Note 12"],
+        "desktop": ["ASUS VivoBook", "Dell Vostro"]
+      }
+    },
+    "IN": {
+      "name": "India",
+      "language": "hi-IN",
+      "timezone": "Asia/Kolkata",
+      "locale": "hi_IN",
+      "currency": "INR",
+      "isps": {
+        "mobile": {
+          "jio": {"asn": "AS55836", "name": "Jio", "ranges": ["49.32.0.0/11", "157.32.0.0/11"]},
+          "airtel_in": {"asn": "AS9498", "name": "Airtel", "ranges": ["49.32.0.0/11", "122.160.0.0/11"]}
+        },
+        "broadband": {
+          "act_fiber": {"asn": "AS17747", "name": "ACT Fibernet", "ranges": ["49.32.0.0/11"]}
+        }
+      },
+      "cities": [
+        {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
+        {"name": "Delhi", "lat": 28.7041, "lon": 77.1025}
+      ],
+      "devices": {
+        "mobile": ["Samsung Galaxy A54", "Xiaomi Redmi Note 12", "OnePlus Nord 3"],
+        "desktop": ["HP Laptop", "Dell Inspiron"]
+      }
+    },
+    "ID": {
+      "name": "Indonesia",
+      "language": "id-ID",
+      "timezone": "Asia/Jakarta",
+      "locale": "id_ID",
+      "currency": "IDR",
+      "isps": {
+        "mobile": {
+          "telkomsel": {"asn": "AS7713", "name": "Telkomsel", "ranges": ["114.120.0.0/13", "36.64.0.0/11"]},
+          "indosat": {"asn": "AS4761", "name": "Indosat", "ranges": ["114.4.0.0/14", "180.214.0.0/15"]},
+          "xl": {"asn": "AS24203", "name": "XL Axiata", "ranges": ["112.215.0.0/16"]}
+        },
+        "broadband": {
+          "indihome": {"asn": "AS7713", "name": "IndiHome", "ranges": ["180.244.0.0/14", "125.160.0.0/12"]},
+          "biznet": {"asn": "AS17451", "name": "Biznet", "ranges": ["103.28.52.0/22", "117.102.64.0/18"]}
+        }
+      },
+      "cities": [
+        {"name": "Jakarta", "lat": -6.2088, "lon": 106.8456},
+        {"name": "Surabaya", "lat": -7.2575, "lon": 112.7521}
+      ],
+      "devices": {
+        "mobile": ["Samsung Galaxy A54", "Xiaomi Redmi Note 12", "OPPO A78", "Vivo V29"],
+        "desktop": ["ASUS VivoBook", "Lenovo IdeaPad"]
+      }
+    }
+  },
+  "tls_fingerprints": {
+    "chrome_131": {
+      "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+      "ja3_hash": "cd08e31494f9531f560d64c695473da9",
+      "tls_version": "1.3"
+    },
+    "chrome_136": {
+      "ja3": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+      "ja3_hash": "cd08e31494f9531f560d64c695473da9",
+      "tls_version": "1.3"
+    }
+  }
+}
