@@ -3093,6 +3093,7 @@ class UltraStealthIPGenerator2025:
         self.ip_lease_times = {}
         self.last_rotation = {}
         self._ip_timestamps = {}  # Track IP freshness
+        self._ip_countries = {}   # Track IP country for fingerprint matching
         
         # Real ISP IP ranges from IANA/APNIC/ARIN allocations
         self.real_isp_ranges = self._load_real_isp_ranges()
@@ -3377,16 +3378,22 @@ class UltraStealthIPGenerator2025:
                 attempts += 1
             
             # REAL-TIME VERIFICATION: Check with multiple APIs
-            verification = self._verify_ip_is_indonesia_realtime(ip)
+            verification = self._verify_ip_realtime(ip)
             
-            # Accept IP ONLY if Indonesia - strict mode
-            if verification["verified"] and verification["is_indonesia"] and verification["is_usable"]:
-                print(f"{hijau}    ✓ IP verified as Indonesia: {ip} ({verification['isp']}) [via {verification.get('source', 'unknown')}]{reset}")
+            # Accept IP from ANY country if:
+            # 1. Verified (API responded)
+            # 2. Not proxy/datacenter
+            # 3. Usable for Instagram
+            if verification["verified"] and verification["is_usable"]:
+                country_code = verification.get("country", "ID")
+                print(f"{hijau}    ✓ IP verified: {ip} ({verification['isp']}) [{country_code}] [via {verification.get('source', 'unknown')}]{reset}")
                 verified_ip = ip
                 self.used_ips.add(ip)
                 self._ip_timestamps[ip] = time.time()
                 if verification.get("isp"):
                     isp = self._normalize_isp_name(verification["isp"])
+                # Store country for fingerprint matching
+                self._ip_countries[ip] = country_code
                 break
             elif verification["is_proxy"] or verification["is_datacenter"]:
                 print(f"{merah}    ✗ IP {ip} is proxy/datacenter, skipping...{reset}")
@@ -3401,7 +3408,7 @@ class UltraStealthIPGenerator2025:
                         suitable_ranges = isp_ranges
                         selected_range = random.choice(suitable_ranges)
             else:
-                print(f"{kuning}    ✗ IP {ip} not usable (country={verification.get('country', 'unknown')}), trying again...{reset}")
+                print(f"{kuning}    ✗ IP {ip} not usable, trying again...{reset}")
                 # Try different range
                 if len(suitable_ranges) > 1:
                     other_ranges = [r for r in suitable_ranges if r != selected_range]
@@ -3409,43 +3416,47 @@ class UltraStealthIPGenerator2025:
                         selected_range = random.choice(other_ranges)
         
         if not verified_ip:
-            # Fallback to Telkomsel (most reliable)
-            print(f"{kuning}    ⚠ Switching to Telkomsel (most reliable)...{reset}")
-            isp = "telkomsel"
-            telkomsel_ranges = country_ranges.get("telkomsel", [])
+            # Fallback - try any available range
+            print(f"{kuning}    ⚠ Trying fallback with any available IP...{reset}")
             
             for _ in range(10):
-                if telkomsel_ranges:
-                    selected_range = random.choice(telkomsel_ranges)
+                # Try random ISP
+                fallback_isp = random.choice(list(country_ranges.keys()))
+                fallback_ranges = country_ranges.get(fallback_isp, [])
+                
+                if fallback_ranges:
+                    selected_range = random.choice(fallback_ranges)
                     ip = self._generate_fresh_indonesia_ip(selected_range)
                     
                     while ip in self.used_ips:
                         ip = self._generate_fresh_indonesia_ip(selected_range)
                     
-                    verification = self._verify_ip_is_indonesia_realtime(ip)
-                    if verification["is_indonesia"] and verification["verified"]:
-                        print(f"{hijau}    ✓ IP verified: {ip} ({verification['isp']}){reset}")
+                    verification = self._verify_ip_realtime(ip)
+                    if verification["verified"] and verification["is_usable"]:
+                        country_code = verification.get("country", "ID")
+                        print(f"{hijau}    ✓ IP verified: {ip} ({verification['isp']}) [{country_code}]{reset}")
                         verified_ip = ip
                         self.used_ips.add(ip)
                         self._ip_timestamps[ip] = time.time()
+                        self._ip_countries[ip] = country_code
                         if verification.get("isp"):
                             isp = self._normalize_isp_name(verification["isp"])
                         break
             
             if not verified_ip:
-                print(f"{merah}    ⚠ Could not verify IP after 30 attempts, using: {ip}{reset}")
+                print(f"{kuning}    ⚠ Could not verify IP after attempts, using: {ip}{reset}")
                 verified_ip = ip
                 self.used_ips.add(ip)
                 self._ip_timestamps[ip] = time.time()
+                self._ip_countries[ip] = "ID"  # Default
         
-        # Generate complete IP profile
-        return self._build_ultra_stealth_profile(verified_ip, country, isp, selected_range)
+        # Generate complete IP profile with matching fingerprint
+        return self._build_ultra_stealth_profile(verified_ip, self._ip_countries.get(verified_ip, "ID"), isp, selected_range)
     
-    def _verify_ip_is_indonesia_realtime(self, ip: str) -> Dict[str, Any]:
+    def _verify_ip_realtime(self, ip: str) -> Dict[str, Any]:
         """Verify IP location and check if it's usable for Instagram
         
-        IMPORTANT: IP 120.88.35.45 (Myanmar) worked for account creation!
-        This means Instagram doesn't strictly check country - they check:
+        Instagram checks:
         1. IP reputation (not blacklisted)
         2. Not datacenter/VPN/proxy
         3. Fresh/unique IP
@@ -3457,7 +3468,7 @@ class UltraStealthIPGenerator2025:
         """
         result = {
             "is_indonesia": False,
-            "is_usable": False,  # New field - IP is usable for Instagram
+            "is_usable": False,
             "country": None,
             "isp": None,
             "org": None,
@@ -3858,19 +3869,46 @@ class UltraStealthIPGenerator2025:
         }
     
     def _get_country_data(self, country: str) -> Dict[str, Any]:
-        """Get country-specific data"""
+        """Get country-specific data for fingerprint matching"""
         country_map = {
+            # Asia
+            "ID": {"name": "Indonesia", "language": "id-ID", "timezone": "Asia/Jakarta", "locale": "id_ID"},
+            "MY": {"name": "Malaysia", "language": "ms-MY", "timezone": "Asia/Kuala_Lumpur", "locale": "ms_MY"},
+            "SG": {"name": "Singapore", "language": "en-SG", "timezone": "Asia/Singapore", "locale": "en_SG"},
+            "TH": {"name": "Thailand", "language": "th-TH", "timezone": "Asia/Bangkok", "locale": "th_TH"},
+            "VN": {"name": "Vietnam", "language": "vi-VN", "timezone": "Asia/Ho_Chi_Minh", "locale": "vi_VN"},
+            "PH": {"name": "Philippines", "language": "en-PH", "timezone": "Asia/Manila", "locale": "en_PH"},
+            "MM": {"name": "Myanmar", "language": "my-MM", "timezone": "Asia/Yangon", "locale": "my_MM"},
+            "KH": {"name": "Cambodia", "language": "km-KH", "timezone": "Asia/Phnom_Penh", "locale": "km_KH"},
+            "LA": {"name": "Laos", "language": "lo-LA", "timezone": "Asia/Vientiane", "locale": "lo_LA"},
+            "BD": {"name": "Bangladesh", "language": "bn-BD", "timezone": "Asia/Dhaka", "locale": "bn_BD"},
+            "IN": {"name": "India", "language": "hi-IN", "timezone": "Asia/Kolkata", "locale": "hi_IN"},
+            "PK": {"name": "Pakistan", "language": "ur-PK", "timezone": "Asia/Karachi", "locale": "ur_PK"},
+            "JP": {"name": "Japan", "language": "ja-JP", "timezone": "Asia/Tokyo", "locale": "ja_JP"},
+            "KR": {"name": "South Korea", "language": "ko-KR", "timezone": "Asia/Seoul", "locale": "ko_KR"},
+            "CN": {"name": "China", "language": "zh-CN", "timezone": "Asia/Shanghai", "locale": "zh_CN"},
+            "TW": {"name": "Taiwan", "language": "zh-TW", "timezone": "Asia/Taipei", "locale": "zh_TW"},
+            "HK": {"name": "Hong Kong", "language": "zh-HK", "timezone": "Asia/Hong_Kong", "locale": "zh_HK"},
+            # Americas
             "US": {"name": "United States", "language": "en-US", "timezone": "America/New_York", "locale": "en_US"},
-            "AU": {"name": "Australia", "language": "en-AU", "timezone": "Australia/Sydney", "locale": "en_AU"},
             "CA": {"name": "Canada", "language": "en-CA", "timezone": "America/Toronto", "locale": "en_CA"},
+            "BR": {"name": "Brazil", "language": "pt-BR", "timezone": "America/Sao_Paulo", "locale": "pt_BR"},
+            "MX": {"name": "Mexico", "language": "es-MX", "timezone": "America/Mexico_City", "locale": "es_MX"},
+            "AR": {"name": "Argentina", "language": "es-AR", "timezone": "America/Buenos_Aires", "locale": "es_AR"},
+            # Europe
             "UK": {"name": "United Kingdom", "language": "en-GB", "timezone": "Europe/London", "locale": "en_GB"},
+            "GB": {"name": "United Kingdom", "language": "en-GB", "timezone": "Europe/London", "locale": "en_GB"},
             "DE": {"name": "Germany", "language": "de-DE", "timezone": "Europe/Berlin", "locale": "de_DE"},
             "FR": {"name": "France", "language": "fr-FR", "timezone": "Europe/Paris", "locale": "fr_FR"},
-            "JP": {"name": "Japan", "language": "ja-JP", "timezone": "Asia/Tokyo", "locale": "ja_JP"},
-            "SG": {"name": "Singapore", "language": "en-SG", "timezone": "Asia/Singapore", "locale": "en_SG"},
+            "IT": {"name": "Italy", "language": "it-IT", "timezone": "Europe/Rome", "locale": "it_IT"},
+            "ES": {"name": "Spain", "language": "es-ES", "timezone": "Europe/Madrid", "locale": "es_ES"},
             "NL": {"name": "Netherlands", "language": "nl-NL", "timezone": "Europe/Amsterdam", "locale": "nl_NL"},
+            "RU": {"name": "Russia", "language": "ru-RU", "timezone": "Europe/Moscow", "locale": "ru_RU"},
+            # Oceania
+            "AU": {"name": "Australia", "language": "en-AU", "timezone": "Australia/Sydney", "locale": "en_AU"},
+            "NZ": {"name": "New Zealand", "language": "en-NZ", "timezone": "Pacific/Auckland", "locale": "en_NZ"},
         }
-        return country_map.get(country, country_map["US"])
+        return country_map.get(country, country_map.get("ID"))  # Default to Indonesia
     
     def _get_isp_data(self, country: str, isp: str) -> Dict[str, Any]:
         """Get ISP-specific data"""
@@ -16645,34 +16683,35 @@ class InstagramAccountCreator2025:
             "ip_blocks": 0
         }
         
-        # Config: 3 accounts per session
-        ACCOUNTS_PER_SESSION = 3
+        # Config: 1 account per session (fresh session for each account)
+        ACCOUNTS_PER_SESSION = 1
         current_session_id = None
         accounts_in_current_session = 0
         
         for i in range(count):
             print(f"\n{biru}🔹  Account {i + 1}/{count}{reset}")
             
-            # Check if need new session (every 3 accounts or first account or IP block occurred)
-            if current_session_id is None or accounts_in_current_session >= ACCOUNTS_PER_SESSION:
-                if current_session_id:
-                    print(f"{cyan}🔄  Session limit reached ({ACCOUNTS_PER_SESSION} accounts) - creating new session{reset}")
-                current_session_id = await self._create_new_session()
-                accounts_in_current_session = 0
-                results["sessions_used"] += 1
-                
-                if not current_session_id:
-                    print(f"{merah}❌  Failed to create session, retrying...{reset}")
-                    await asyncio.sleep(5)
-                    current_session_id = await self._create_new_session()
-                    results["sessions_used"] += 1
-                    if not current_session_id:
-                        results["failed"] += 1
-                        results["errors"].append({"error": "Session creation failed", "account": i + 1})
-                        continue
+            # ALWAYS create new session for each account (1 account = 1 session)
+            print(f"{cyan}🆕  Creating fresh session for account {i + 1}...{reset}")
+            current_session_id = await self._create_new_session()
+            accounts_in_current_session = 0
+            results["sessions_used"] += 1
             
-            # Create account with current session
+            if not current_session_id:
+                print(f"{merah}❌  Failed to create session, retrying...{reset}")
+                await asyncio.sleep(5)
+                current_session_id = await self._create_new_session()
+                results["sessions_used"] += 1
+                if not current_session_id:
+                    results["failed"] += 1
+                    results["errors"].append({"error": "Session creation failed", "account": i + 1})
+                    continue
+            
+            # Create account with fresh session
             result = await self.create_account(password, session_id=current_session_id)
+            
+            # After each account, invalidate session (don't reuse)
+            current_session_id = None
             
             if result["status"] == "success":
                 results["successful"] += 1
@@ -16683,12 +16722,17 @@ class InstagramAccountCreator2025:
                 results["failed"] += 1
                 results["errors"].append(result)
                 
-                # Check if IP block - force new session
-                error_type = result.get("error_type", "")
-                error_msg = str(result.get("error", "")).lower()
+                # Get error message for detection
+                error_msg = str(result.get("reason", result.get("error", ""))).lower()
                 
+                # Check if checkpoint - track for stats
+                is_checkpoint = (
+                    "checkpoint" in error_msg or
+                    "suspended" in error_msg
+                )
+                
+                # Check if IP block - track for stats
                 is_ip_block = (
-                    error_type == "ip_block" or 
                     "ip" in error_msg or 
                     "block" in error_msg or
                     "rate" in error_msg or
@@ -16696,36 +16740,24 @@ class InstagramAccountCreator2025:
                     "403" in error_msg
                 )
                 
-                # Check if checkpoint - also force new session
-                is_checkpoint = (
-                    error_type == "checkpoint" or
-                    "checkpoint" in error_msg or
-                    "suspended" in error_msg or
-                    "verification" in error_msg
-                )
-                
                 if is_checkpoint:
-                    print(f"{kuning}🚧  Checkpoint detected - forcing new session{reset}")
+                    print(f"{kuning}🚧  Checkpoint detected{reset}")
                     results["checkpointed"] += 1
-                    current_session_id = None  # Force new session on next iteration
-                    accounts_in_current_session = 0
                     
-                    # Extra cooldown for checkpoint - IP might be flagged
+                    # Extra cooldown for checkpoint
                     checkpoint_cooldown = random.uniform(45, 75)
                     print(f"{kuning}⏳  Checkpoint cooldown: {checkpoint_cooldown:.1f}s{reset}")
                     await asyncio.sleep(checkpoint_cooldown)
                 elif is_ip_block:
-                    print(f"{merah}🚫  IP block detected - forcing new session{reset}")
+                    print(f"{merah}🚫  IP block detected{reset}")
                     results["ip_blocks"] += 1
-                    current_session_id = None  # Force new session on next iteration
-                    accounts_in_current_session = 0
                     
                     # Extra cooldown for IP block
                     block_cooldown = random.uniform(60, 90)
                     print(f"{kuning}⏳  IP block cooldown: {block_cooldown:.1f}s{reset}")
                     await asyncio.sleep(block_cooldown)
             
-            # Cooldown antara akun
+            # Cooldown antara akun (fresh session always created next)
             if i < count - 1:
                 cooldown = random.uniform(30, 60)
                 print(f"{kuning}⏳  Cooldown for {cooldown:.1f}s before next account{reset}")
