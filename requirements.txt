@@ -1,10 +1,17 @@
 # Core dependencies for bipas6.py
 # Install with: pip install -r requirements.txt
 
-# HTTP clients and networking
+# BEST HTTP client for anti-detection (RECOMMENDED)
+# curl_cffi impersonates real Chrome TLS fingerprint (JA3)
+curl_cffi>=0.5.0
+
+# Fallback HTTP clients
 requests>=2.28.0
 aiohttp>=3.8.0
 urllib3>=1.26.0
+
+# Alternative TLS client (optional)
+# tls-client>=0.2.0
 
 # Data handling and parsing
 beautifulsoup4>=4.11.0

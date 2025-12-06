@@ -42,11 +42,34 @@ except Exception:
 
 try:
     import aiohttp
-    HAVE_AIORPC = True
+    HAVE_AIOHTTP = True
 except ImportError:
-    HAVE_AIORPC = False
-    # Note: Color variables defined below, using simple print here
-    print("❌  aiohttp not installed. Install with: pip install aiohttp")
+    HAVE_AIOHTTP = False
+    aiohttp = None
+    print("⚠️  aiohttp not installed. Install with: pip install aiohttp")
+
+# BEST FOR ANTI-DETECTION: curl_cffi with Chrome impersonation
+# This library impersonates real Chrome TLS fingerprint (JA3)
+try:
+    from curl_cffi.requests import AsyncSession as CurlAsyncSession
+    from curl_cffi.requests import Session as CurlSession
+    HAVE_CURL_CFFI = True
+    print("✅  curl_cffi available - Best TLS fingerprint impersonation")
+except ImportError:
+    HAVE_CURL_CFFI = False
+    CurlAsyncSession = None
+    CurlSession = None
+    print("⚠️  curl_cffi not installed. Install with: pip install curl_cffi")
+    print("    curl_cffi provides BEST anti-detection with Chrome TLS fingerprint")
+
+# Alternative: tls-client (also good for TLS fingerprinting)
+try:
+    import tls_client
+    HAVE_TLS_CLIENT = True
+    print("✅  tls-client available - Good TLS fingerprint support")
+except ImportError:
+    HAVE_TLS_CLIENT = False
+    tls_client = None
 
 try:
     import brotli
@@ -588,6 +611,391 @@ def get_smart_isp(ip_type: str = "mobile", exclude_isps: List[str] = None) -> st
     
     # Last resort
     return random.choice(default_isps)
+
+
+# ===================== CURL_CFFI HTTP CLIENT =====================
+# Best anti-detection HTTP client with Chrome TLS fingerprint impersonation
+# curl_cffi impersonates REAL Chrome browser TLS fingerprint (JA3)
+
+class ChromeImpersonateClient:
+    """
+    Chrome Impersonate HTTP Client using curl_cffi
+    
+    This is the BEST option for anti-detection because:
+    1. Impersonates REAL Chrome TLS fingerprint (JA3)
+    2. HTTP/2 support like real Chrome
+    3. Same cipher suites as Chrome
+    4. Instagram cannot detect it as Python/bot
+    5. Full TLS 1.3 support with correct extensions
+    6. Correct ALPN negotiation (h2, http/1.1)
+    7. Real Chrome User-Agent header order
+    
+    JA3 Fingerprint Info:
+    - JA3 is a method to fingerprint TLS clients
+    - curl_cffi uses libcurl compiled with specific TLS settings
+    - It produces IDENTICAL JA3 hash as real Chrome browser
+    
+    Fallback to aiohttp if curl_cffi not available
+    """
+    
+    # Chrome versions to impersonate (latest versions for 2025)
+    # Format: "chrome{version}" 
+    CHROME_VERSIONS = [
+        # 2024 versions
+        "chrome120", "chrome123", "chrome124",
+        # 2025 versions (latest - best compatibility)
+        "chrome126", "chrome127", "chrome128", "chrome129",
+        "chrome131", "chrome133", "chrome134", "chrome135", "chrome136",
+    ]
+    
+    # Real Chrome JA3 fingerprints for reference
+    # These are automatically handled by curl_cffi impersonation
+    CHROME_JA3_FINGERPRINTS = {
+        "chrome120": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513,29-23-24,0",
+        "chrome131": "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513-21,29-23-24,0",
+    }
+    
+    # HTTP/2 settings that match Chrome
+    HTTP2_SETTINGS = {
+        "HEADER_TABLE_SIZE": 65536,
+        "ENABLE_PUSH": 0,
+        "MAX_CONCURRENT_STREAMS": 1000,
+        "INITIAL_WINDOW_SIZE": 6291456,
+        "MAX_FRAME_SIZE": 16384,
+        "MAX_HEADER_LIST_SIZE": 262144,
+    }
+    
+    def __init__(self, chrome_version: str = None, device_type: str = "desktop"):
+        """Initialize Chrome impersonate client
+        
+        Args:
+            chrome_version: Chrome version to impersonate (e.g., "chrome120")
+                           If None, randomly selects from recent versions
+            device_type: "desktop" or "android" - affects User-Agent and fingerprint
+        """
+        # Use latest Chrome versions for best compatibility
+        self.chrome_version = chrome_version or random.choice(self.CHROME_VERSIONS[-5:])
+        self.device_type = device_type
+        self._sync_session = None
+        self._async_session = None
+        self.cookies = {}
+        self.default_headers = {}
+        
+        # TLS/JA3 Configuration
+        self.tls_config = self._generate_tls_config()
+        
+        # Check if curl_cffi is available
+        self.use_curl_cffi = HAVE_CURL_CFFI
+        
+        if self.use_curl_cffi:
+            print(f"    🔒 Using curl_cffi with {self.chrome_version} impersonation")
+            print(f"    📍 TLS: {self.tls_config['tls_version']} | HTTP/2: Enabled | JA3: Real Chrome")
+        else:
+            print(f"    ⚠️ curl_cffi not available, using aiohttp (LESS SECURE - may get blocked)")
+    
+    def _generate_tls_config(self) -> Dict[str, Any]:
+        """Generate TLS configuration matching real Chrome"""
+        chrome_major = int(self.chrome_version.replace("chrome", ""))
+        
+        return {
+            "tls_version": "TLS 1.3",
+            "cipher_suites": [
+                "TLS_AES_128_GCM_SHA256",
+                "TLS_AES_256_GCM_SHA384",
+                "TLS_CHACHA20_POLY1305_SHA256",
+                "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+                "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+                "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+                "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+                "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+            ],
+            "extensions": [
+                "server_name", "extended_master_secret", "renegotiation_info",
+                "supported_groups", "ec_point_formats", "session_ticket",
+                "application_layer_protocol_negotiation", "status_request",
+                "signature_algorithms", "signed_certificate_timestamp",
+                "key_share", "psk_key_exchange_modes", "supported_versions",
+                "compress_certificate", "application_settings",
+            ],
+            "supported_groups": ["x25519", "secp256r1", "secp384r1"],
+            "alpn": ["h2", "http/1.1"],
+            "chrome_version": chrome_major,
+            "ja3_hash": self.CHROME_JA3_FINGERPRINTS.get(self.chrome_version, "real_chrome"),
+        }
+    
+    def get_tls_fingerprint(self) -> Dict[str, Any]:
+        """Get current TLS fingerprint configuration"""
+        return {
+            **self.tls_config,
+            "impersonate": self.chrome_version,
+            "http2_settings": self.HTTP2_SETTINGS,
+            "device_type": self.device_type,
+        }
+    
+    def set_headers(self, headers: Dict[str, str]):
+        """Set default headers for all requests"""
+        self.default_headers = headers.copy()
+    
+    def set_cookies(self, cookies: Dict[str, str]):
+        """Set cookies for all requests"""
+        self.cookies = cookies.copy()
+    
+    def update_cookies(self, new_cookies: Dict[str, str]):
+        """Update cookies (merge with existing)"""
+        self.cookies.update(new_cookies)
+    
+    def _get_sync_session(self):
+        """Get or create sync session with Chrome impersonation"""
+        if self.use_curl_cffi and CurlSession:
+            if not self._sync_session:
+                self._sync_session = CurlSession(
+                    impersonate=self.chrome_version,
+                    # Additional options for better impersonation
+                    verify=True,  # Verify SSL certificates
+                )
+            return self._sync_session
+        return None
+    
+    async def _get_async_session(self):
+        """Get or create async session with Chrome impersonation"""
+        if self.use_curl_cffi and CurlAsyncSession:
+            if not self._async_session:
+                self._async_session = CurlAsyncSession(
+                    impersonate=self.chrome_version,
+                    verify=True,
+                )
+            return self._async_session
+        return None
+    
+    def _prepare_headers(self, custom_headers: Dict[str, str] = None) -> Dict[str, str]:
+        """Prepare headers in correct Chrome order"""
+        # Chrome sends headers in a specific order
+        # curl_cffi handles most of this, but we ensure our custom headers are correct
+        headers = {}
+        
+        # Add default headers first
+        headers.update(self.default_headers)
+        
+        # Add custom headers
+        if custom_headers:
+            headers.update(custom_headers)
+        
+        return headers
+    
+    async def get(self, url: str, headers: Dict[str, str] = None, 
+                  timeout: int = 30, allow_redirects: bool = True, **kwargs) -> Dict[str, Any]:
+        """Async GET request with Chrome impersonation
+        
+        Features:
+        - Real Chrome TLS fingerprint (JA3)
+        - HTTP/2 with correct settings
+        - Proper header ordering
+        - Cookie handling like real browser
+        """
+        merged_headers = self._prepare_headers(headers)
+        
+        try:
+            if self.use_curl_cffi:
+                session = await self._get_async_session()
+                response = await session.get(
+                    url,
+                    headers=merged_headers,
+                    cookies=self.cookies,
+                    timeout=timeout,
+                    allow_redirects=allow_redirects,
+                    **kwargs
+                )
+                
+                # Update cookies from response
+                if response.cookies:
+                    self.cookies.update(dict(response.cookies))
+                
+                return {
+                    "status": response.status_code,
+                    "body": response.content,
+                    "headers": dict(response.headers),
+                    "cookies": dict(response.cookies),
+                    "url": str(response.url),
+                    "http_version": "HTTP/2" if self.use_curl_cffi else "HTTP/1.1",
+                }
+            elif HAVE_AIOHTTP:
+                # Fallback to aiohttp (less secure)
+                timeout_obj = aiohttp.ClientTimeout(total=timeout)
+                async with aiohttp.ClientSession(timeout=timeout_obj) as session:
+                    async with session.get(url, headers=merged_headers, cookies=self.cookies, 
+                                          allow_redirects=allow_redirects) as response:
+                        body = await response.read()
+                        return {
+                            "status": response.status,
+                            "body": body,
+                            "headers": dict(response.headers),
+                            "cookies": {k: v.value for k, v in response.cookies.items()},
+                            "url": str(response.url),
+                            "http_version": "HTTP/1.1",
+                        }
+            else:
+                # Last resort: sync requests
+                import requests as req_lib
+                response = req_lib.get(url, headers=merged_headers, cookies=self.cookies, 
+                                      timeout=timeout, allow_redirects=allow_redirects)
+                return {
+                    "status": response.status_code,
+                    "body": response.content,
+                    "headers": dict(response.headers),
+                    "cookies": dict(response.cookies),
+                    "url": response.url,
+                    "http_version": "HTTP/1.1",
+                }
+        except Exception as e:
+            return {"status": 0, "error": str(e), "body": b"", "headers": {}, "cookies": {}}
+    
+    async def post(self, url: str, data: Any = None, json_data: Any = None,
+                   headers: Dict[str, str] = None, timeout: int = 30, 
+                   allow_redirects: bool = True, **kwargs) -> Dict[str, Any]:
+        """Async POST request with Chrome impersonation
+        
+        Features:
+        - Real Chrome TLS fingerprint (JA3)
+        - HTTP/2 with correct settings
+        - Proper Content-Type handling
+        - Cookie handling like real browser
+        """
+        merged_headers = self._prepare_headers(headers)
+        
+        try:
+            if self.use_curl_cffi:
+                session = await self._get_async_session()
+                
+                # Handle JSON data
+                if json_data is not None:
+                    response = await session.post(
+                        url,
+                        json=json_data,
+                        headers=merged_headers,
+                        cookies=self.cookies,
+                        timeout=timeout,
+                        allow_redirects=allow_redirects,
+                        **kwargs
+                    )
+                else:
+                    response = await session.post(
+                        url,
+                        data=data,
+                        headers=merged_headers,
+                        cookies=self.cookies,
+                        timeout=timeout,
+                        allow_redirects=allow_redirects,
+                        **kwargs
+                    )
+                
+                # Update cookies from response
+                if response.cookies:
+                    self.cookies.update(dict(response.cookies))
+                
+                return {
+                    "status": response.status_code,
+                    "body": response.content,
+                    "headers": dict(response.headers),
+                    "cookies": dict(response.cookies),
+                    "url": str(response.url),
+                    "http_version": "HTTP/2" if self.use_curl_cffi else "HTTP/1.1",
+                }
+            elif HAVE_AIOHTTP:
+                # Fallback to aiohttp
+                timeout_obj = aiohttp.ClientTimeout(total=timeout)
+                async with aiohttp.ClientSession(timeout=timeout_obj) as session:
+                    if json_data is not None:
+                        async with session.post(url, json=json_data, headers=merged_headers, 
+                                               cookies=self.cookies, allow_redirects=allow_redirects) as response:
+                            body = await response.read()
+                            return {
+                                "status": response.status,
+                                "body": body,
+                                "headers": dict(response.headers),
+                                "cookies": {k: v.value for k, v in response.cookies.items()},
+                                "url": str(response.url),
+                                "http_version": "HTTP/1.1",
+                            }
+                    else:
+                        async with session.post(url, data=data, headers=merged_headers, 
+                                               cookies=self.cookies, allow_redirects=allow_redirects) as response:
+                            body = await response.read()
+                            return {
+                                "status": response.status,
+                                "body": body,
+                                "headers": dict(response.headers),
+                                "cookies": {k: v.value for k, v in response.cookies.items()},
+                                "url": str(response.url),
+                                "http_version": "HTTP/1.1",
+                            }
+            else:
+                # Last resort: sync requests
+                import requests as req_lib
+                if json_data is not None:
+                    response = req_lib.post(url, json=json_data, headers=merged_headers, 
+                                           cookies=self.cookies, timeout=timeout, 
+                                           allow_redirects=allow_redirects)
+                else:
+                    response = req_lib.post(url, data=data, headers=merged_headers, 
+                                           cookies=self.cookies, timeout=timeout,
+                                           allow_redirects=allow_redirects)
+                return {
+                    "status": response.status_code,
+                    "body": response.content,
+                    "headers": dict(response.headers),
+                    "cookies": dict(response.cookies),
+                    "url": response.url,
+                    "http_version": "HTTP/1.1",
+                }
+        except Exception as e:
+            return {"status": 0, "error": str(e), "body": b"", "headers": {}, "cookies": {}}
+    
+    async def close(self):
+        """Close sessions"""
+        if self._async_session:
+            try:
+                await self._async_session.close()
+            except:
+                pass
+        if self._sync_session:
+            try:
+                self._sync_session.close()
+            except:
+                pass
+    
+    def get_impersonate_info(self) -> Dict[str, Any]:
+        """Get detailed info about current impersonation"""
+        return {
+            "library": "curl_cffi" if self.use_curl_cffi else "aiohttp",
+            "chrome_version": self.chrome_version if self.use_curl_cffi else "N/A",
+            "device_type": self.device_type,
+            "tls_fingerprint": self.tls_config,
+            "http2": self.use_curl_cffi,
+            "http2_settings": self.HTTP2_SETTINGS if self.use_curl_cffi else None,
+            "anti_detection_level": "MAXIMUM" if self.use_curl_cffi else "LOW",
+            "ja3_hash": self.tls_config.get("ja3_hash", "unknown"),
+        }
+    
+    def __repr__(self) -> str:
+        return f"ChromeImpersonateClient({self.chrome_version}, curl_cffi={self.use_curl_cffi})"
+
+
+def get_best_http_client(chrome_version: str = None, device_type: str = "desktop") -> ChromeImpersonateClient:
+    """Get the best available HTTP client for anti-detection
+    
+    Priority:
+    1. curl_cffi with Chrome impersonation (BEST - Real JA3 fingerprint)
+    2. aiohttp (fallback - Python TLS fingerprint, may be detected)
+    
+    Args:
+        chrome_version: Chrome version to impersonate
+        device_type: "desktop" or "android"
+    
+    Returns:
+        ChromeImpersonateClient instance
+    """
+    return ChromeImpersonateClient(chrome_version, device_type)
 
 
 # ===================== UNIFIED SESSION MANAGER 2025 =====================
