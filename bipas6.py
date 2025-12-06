@@ -4244,7 +4244,7 @@ class UltraStealthIPGenerator2025:
         tcp_fingerprint = self._generate_tcp_fingerprint_enhanced(device_type)
         
         # Generate network metrics
-        network_metrics = self._generate_network_metrics()
+        network_metrics = self._generate_network_metrics(ip_type, country)
         
         # Build device profile
         device_profile = self._generate_device_profile_for_country(selected_device, country, ip_type)
