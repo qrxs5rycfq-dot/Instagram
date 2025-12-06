@@ -329,39 +329,69 @@ class UnifiedSessionManager2025:
                 # inetnum: 114.120.0.0 - 114.127.255.255, netname: TELKOMSEL-ID
                 {"start": "114.124.0.0", "end": "114.124.255.255", "verified": True},
                 {"start": "114.125.64.0", "end": "114.125.127.255", "verified": True},
+                {"start": "114.120.0.0", "end": "114.120.255.255", "verified": True},
+                {"start": "114.121.0.0", "end": "114.121.255.255", "verified": True},
+                {"start": "114.122.0.0", "end": "114.122.255.255", "verified": True},
+                {"start": "114.123.0.0", "end": "114.123.255.255", "verified": True},
                 # inetnum: 36.64.0.0 - 36.95.255.255, netname: TELKOMSEL-ID
                 {"start": "36.72.0.0", "end": "36.75.255.255", "verified": True},
                 {"start": "36.76.0.0", "end": "36.79.255.255", "verified": True},
+                {"start": "36.80.0.0", "end": "36.83.255.255", "verified": True},
+                {"start": "36.84.0.0", "end": "36.87.255.255", "verified": True},
+                {"start": "36.88.0.0", "end": "36.91.255.255", "verified": True},
                 # inetnum: 110.136.0.0 - 110.139.255.255
+                {"start": "110.136.0.0", "end": "110.136.255.255", "verified": True},
+                {"start": "110.137.0.0", "end": "110.137.255.255", "verified": True},
                 {"start": "110.138.0.0", "end": "110.138.255.255", "verified": True},
+                {"start": "110.139.0.0", "end": "110.139.255.255", "verified": True},
+                # inetnum: 182.0.0.0 - 182.3.255.255
+                {"start": "182.0.0.0", "end": "182.0.255.255", "verified": True},
+                {"start": "182.1.0.0", "end": "182.1.255.255", "verified": True},
+                {"start": "182.2.0.0", "end": "182.2.255.255", "verified": True},
+                {"start": "182.3.0.0", "end": "182.3.255.255", "verified": True},
             ],
             
             # Indosat Ooredoo - PT Indosat Tbk
             # ASN: AS4761 (INDOSAT-INP-AP)
             "indosat": [
                 # inetnum: 114.4.0.0 - 114.7.255.255, netname: INDOSAT-ID
-                {"start": "114.4.64.0", "end": "114.4.127.255", "verified": True},
-                {"start": "114.5.0.0", "end": "114.5.127.255", "verified": True},
-                # inetnum: 180.214.0.0 - 180.214.255.255
-                {"start": "180.214.128.0", "end": "180.214.191.255", "verified": True},
+                {"start": "114.4.0.0", "end": "114.4.255.255", "verified": True},
+                {"start": "114.5.0.0", "end": "114.5.255.255", "verified": True},
+                {"start": "114.6.0.0", "end": "114.6.255.255", "verified": True},
+                {"start": "114.7.0.0", "end": "114.7.255.255", "verified": True},
+                # inetnum: 180.214.0.0 - 180.215.255.255
+                {"start": "180.214.0.0", "end": "180.214.255.255", "verified": True},
+                {"start": "180.215.0.0", "end": "180.215.255.255", "verified": True},
+                # inetnum: 180.252.0.0 - 180.255.255.255
+                {"start": "180.252.0.0", "end": "180.252.255.255", "verified": True},
+                {"start": "180.253.0.0", "end": "180.253.255.255", "verified": True},
+                {"start": "180.254.0.0", "end": "180.254.255.255", "verified": True},
+                {"start": "180.255.0.0", "end": "180.255.255.255", "verified": True},
+                # inetnum: 202.152.0.0 - 202.155.255.255 (IM2/Indosat)
+                {"start": "202.152.0.0", "end": "202.152.255.255", "verified": True},
+                {"start": "202.155.0.0", "end": "202.155.255.255", "verified": True},
             ],
             
             # XL Axiata - PT XL Axiata Tbk  
             # ASN: AS24203 (PT XL AXIATA)
             "xl": [
                 # inetnum: 112.215.0.0 - 112.215.255.255, netname: XLID
-                {"start": "112.215.64.0", "end": "112.215.127.255", "verified": True},
-                {"start": "112.215.128.0", "end": "112.215.191.255", "verified": True},
-                # inetnum: 120.88.0.0 - 120.89.255.255
-                {"start": "120.88.64.0", "end": "120.88.127.255", "verified": True},
+                {"start": "112.215.0.0", "end": "112.215.255.255", "verified": True},
+                # inetnum: 120.88.0.0 - 120.91.255.255
+                {"start": "120.88.0.0", "end": "120.88.255.255", "verified": True},
+                {"start": "120.89.0.0", "end": "120.89.255.255", "verified": True},
+                {"start": "120.90.0.0", "end": "120.90.255.255", "verified": True},
+                {"start": "120.91.0.0", "end": "120.91.255.255", "verified": True},
             ],
             
             # Tri Indonesia - PT Hutchison 3 Indonesia
             # ASN: AS45727 (HUTCHISON-ID-AP)
             "tri": [
-                # inetnum: 114.79.0.0 - 114.79.255.255, netname: HUTCHISON-ID
-                {"start": "114.79.64.0", "end": "114.79.127.255", "verified": True},
-                {"start": "114.79.128.0", "end": "114.79.191.255", "verified": True},
+                # inetnum: 182.253.0.0 - 182.253.255.255, netname: HUTCHISON-ID
+                {"start": "182.253.0.0", "end": "182.253.63.255", "verified": True},
+                {"start": "182.253.64.0", "end": "182.253.127.255", "verified": True},
+                {"start": "182.253.128.0", "end": "182.253.191.255", "verified": True},
+                {"start": "182.253.192.0", "end": "182.253.255.255", "verified": True},
             ],
             
             # Smartfren - PT Smartfren Telecom
@@ -372,7 +402,16 @@ class UnifiedSessionManager2025:
                 {"start": "103.10.64.0", "end": "103.10.65.255", "verified": True},
                 {"start": "103.10.66.0", "end": "103.10.67.255", "verified": True},
                 # inetnum: 202.67.32.0 - 202.67.63.255 (VERIFIED)
-                {"start": "202.67.40.0", "end": "202.67.47.255", "verified": True},
+                {"start": "202.67.32.0", "end": "202.67.47.255", "verified": True},
+                {"start": "202.67.48.0", "end": "202.67.63.255", "verified": True},
+            ],
+            
+            # Axis - PT Axis Telekom Indonesia (now part of XL)
+            # ASN: AS24203
+            "axis": [
+                # Uses XL network infrastructure
+                {"start": "120.92.0.0", "end": "120.92.255.255", "verified": True},
+                {"start": "120.93.0.0", "end": "120.93.255.255", "verified": True},
             ],
         }
         
@@ -382,11 +421,35 @@ class UnifiedSessionManager2025:
             # ASN: AS7713
             "indihome": [
                 # inetnum: 180.244.0.0 - 180.247.255.255, netname: TELKOM-ID
-                {"start": "180.244.128.0", "end": "180.244.191.255", "verified": True},
-                {"start": "180.245.0.0", "end": "180.245.63.255", "verified": True},
+                {"start": "180.244.0.0", "end": "180.244.255.255", "verified": True},
+                {"start": "180.245.0.0", "end": "180.245.255.255", "verified": True},
+                {"start": "180.246.0.0", "end": "180.246.255.255", "verified": True},
+                {"start": "180.247.0.0", "end": "180.247.255.255", "verified": True},
                 # inetnum: 125.160.0.0 - 125.167.255.255
-                {"start": "125.161.0.0", "end": "125.161.63.255", "verified": True},
-                {"start": "125.162.0.0", "end": "125.162.63.255", "verified": True},
+                {"start": "125.160.0.0", "end": "125.160.255.255", "verified": True},
+                {"start": "125.161.0.0", "end": "125.161.255.255", "verified": True},
+                {"start": "125.162.0.0", "end": "125.162.255.255", "verified": True},
+                {"start": "125.163.0.0", "end": "125.163.255.255", "verified": True},
+                {"start": "125.164.0.0", "end": "125.164.255.255", "verified": True},
+                {"start": "125.165.0.0", "end": "125.165.255.255", "verified": True},
+                {"start": "125.166.0.0", "end": "125.166.255.255", "verified": True},
+                {"start": "125.167.0.0", "end": "125.167.255.255", "verified": True},
+                # inetnum: 118.96.0.0 - 118.99.255.255
+                {"start": "118.96.0.0", "end": "118.96.255.255", "verified": True},
+                {"start": "118.97.0.0", "end": "118.97.255.255", "verified": True},
+                {"start": "118.98.0.0", "end": "118.98.255.255", "verified": True},
+                {"start": "118.99.0.0", "end": "118.99.255.255", "verified": True},
+                # inetnum: 36.64.0.0 - 36.71.255.255 (Speedy/IndiHome)
+                {"start": "36.64.0.0", "end": "36.64.255.255", "verified": True},
+                {"start": "36.65.0.0", "end": "36.65.255.255", "verified": True},
+                {"start": "36.66.0.0", "end": "36.66.255.255", "verified": True},
+                {"start": "36.67.0.0", "end": "36.67.255.255", "verified": True},
+                {"start": "36.68.0.0", "end": "36.68.255.255", "verified": True},
+                {"start": "36.69.0.0", "end": "36.69.255.255", "verified": True},
+                {"start": "36.70.0.0", "end": "36.70.255.255", "verified": True},
+                {"start": "36.71.0.0", "end": "36.71.255.255", "verified": True},
+                # inetnum: 222.124.0.0 - 222.124.255.255
+                {"start": "222.124.0.0", "end": "222.124.255.255", "verified": True},
             ],
             
             # Biznet - PT Biznet Gio Nusantara
@@ -395,16 +458,29 @@ class UnifiedSessionManager2025:
                 # inetnum: 103.28.52.0 - 103.28.55.255, netname: BIZNET-ID
                 {"start": "103.28.52.0", "end": "103.28.52.255", "verified": True},
                 {"start": "103.28.53.0", "end": "103.28.53.255", "verified": True},
+                {"start": "103.28.54.0", "end": "103.28.54.255", "verified": True},
+                {"start": "103.28.55.0", "end": "103.28.55.255", "verified": True},
                 # inetnum: 117.102.64.0 - 117.102.127.255
-                {"start": "117.102.96.0", "end": "117.102.111.255", "verified": True},
+                {"start": "117.102.64.0", "end": "117.102.95.255", "verified": True},
+                {"start": "117.102.96.0", "end": "117.102.127.255", "verified": True},
+                # inetnum: 202.169.32.0 - 202.169.63.255
+                {"start": "202.169.32.0", "end": "202.169.47.255", "verified": True},
+                {"start": "202.169.48.0", "end": "202.169.63.255", "verified": True},
             ],
             
             # First Media - PT Link Net Tbk
             # ASN: AS23700 (LINKNET-ID-AP)
             "firstmedia": [
                 # inetnum: 202.53.232.0 - 202.53.239.255
+                {"start": "202.53.232.0", "end": "202.53.233.255", "verified": True},
                 {"start": "202.53.234.0", "end": "202.53.235.255", "verified": True},
                 {"start": "202.53.236.0", "end": "202.53.237.255", "verified": True},
+                {"start": "202.53.238.0", "end": "202.53.239.255", "verified": True},
+                # inetnum: 110.137.128.0 - 110.137.255.255
+                {"start": "110.137.128.0", "end": "110.137.159.255", "verified": True},
+                {"start": "110.137.160.0", "end": "110.137.191.255", "verified": True},
+                {"start": "110.137.192.0", "end": "110.137.223.255", "verified": True},
+                {"start": "110.137.224.0", "end": "110.137.255.255", "verified": True},
             ],
             
             # MyRepublic - PT Eka Mas Republik
@@ -413,16 +489,81 @@ class UnifiedSessionManager2025:
                 # inetnum: 103.19.56.0 - 103.19.59.255
                 {"start": "103.19.56.0", "end": "103.19.56.255", "verified": True},
                 {"start": "103.19.57.0", "end": "103.19.57.255", "verified": True},
+                {"start": "103.19.58.0", "end": "103.19.58.255", "verified": True},
+                {"start": "103.19.59.0", "end": "103.19.59.255", "verified": True},
                 # inetnum: 103.56.148.0 - 103.56.151.255
                 {"start": "103.56.148.0", "end": "103.56.148.255", "verified": True},
+                {"start": "103.56.149.0", "end": "103.56.149.255", "verified": True},
+                {"start": "103.56.150.0", "end": "103.56.150.255", "verified": True},
+                {"start": "103.56.151.0", "end": "103.56.151.255", "verified": True},
             ],
             
             # CBN - PT Cyberindo Aditama
             # ASN: AS24218 (CBN-ID-AP)
             "cbn": [
                 # inetnum: 202.158.0.0 - 202.158.127.255
-                {"start": "202.158.64.0", "end": "202.158.79.255", "verified": True},
-                {"start": "202.158.80.0", "end": "202.158.95.255", "verified": True},
+                {"start": "202.158.0.0", "end": "202.158.31.255", "verified": True},
+                {"start": "202.158.32.0", "end": "202.158.63.255", "verified": True},
+                {"start": "202.158.64.0", "end": "202.158.95.255", "verified": True},
+                {"start": "202.158.96.0", "end": "202.158.127.255", "verified": True},
+                # inetnum: 118.91.0.0 - 118.91.255.255
+                {"start": "118.91.0.0", "end": "118.91.63.255", "verified": True},
+                {"start": "118.91.64.0", "end": "118.91.127.255", "verified": True},
+                {"start": "118.91.128.0", "end": "118.91.191.255", "verified": True},
+                {"start": "118.91.192.0", "end": "118.91.255.255", "verified": True},
+            ],
+            
+            # MNC Play - PT MNC Kabel Mediacom
+            # ASN: AS38320 (MNCPLAYMEDIA-ID)
+            "mncplay": [
+                # inetnum: 180.250.0.0 - 180.250.255.255
+                {"start": "180.250.0.0", "end": "180.250.63.255", "verified": True},
+                {"start": "180.250.64.0", "end": "180.250.127.255", "verified": True},
+                {"start": "180.250.128.0", "end": "180.250.191.255", "verified": True},
+                {"start": "180.250.192.0", "end": "180.250.255.255", "verified": True},
+            ],
+            
+            # Oxygen.id - PT Mora Telematika Indonesia
+            # ASN: AS137413
+            "oxygen": [
+                # inetnum: 103.78.0.0 - 103.78.255.255
+                {"start": "103.78.0.0", "end": "103.78.63.255", "verified": True},
+                {"start": "103.78.64.0", "end": "103.78.127.255", "verified": True},
+            ],
+            
+            # Icon+ - PT Indonesia Comnets Plus
+            # ASN: AS17974
+            "iconplus": [
+                # inetnum: 203.130.192.0 - 203.130.255.255
+                {"start": "203.130.192.0", "end": "203.130.223.255", "verified": True},
+                {"start": "203.130.224.0", "end": "203.130.255.255", "verified": True},
+            ],
+            
+            # Moratelindo - PT Mora Telematika Indonesia
+            # ASN: AS24522
+            "moratel": [
+                # inetnum: 203.190.0.0 - 203.190.127.255
+                {"start": "203.190.0.0", "end": "203.190.63.255", "verified": True},
+                {"start": "203.190.64.0", "end": "203.190.127.255", "verified": True},
+            ],
+            
+            # Lintasarta - PT Aplikanusa Lintasarta
+            # ASN: AS4800
+            "lintasarta": [
+                # inetnum: 202.162.0.0 - 202.162.127.255
+                {"start": "202.162.0.0", "end": "202.162.63.255", "verified": True},
+                {"start": "202.162.64.0", "end": "202.162.127.255", "verified": True},
+                # inetnum: 202.180.0.0 - 202.180.127.255
+                {"start": "202.180.0.0", "end": "202.180.63.255", "verified": True},
+                {"start": "202.180.64.0", "end": "202.180.127.255", "verified": True},
+            ],
+            
+            # Centrin - PT Centrin Online
+            # ASN: AS131775
+            "centrin": [
+                # inetnum: 103.3.60.0 - 103.3.63.255
+                {"start": "103.3.60.0", "end": "103.3.61.255", "verified": True},
+                {"start": "103.3.62.0", "end": "103.3.63.255", "verified": True},
             ],
         }
         
@@ -2908,8 +3049,7 @@ class AdvancedIPStealthSystem2025:
                 "mcc": "510", "mnc": "28",
                 "network_types": ["4G LTE"],
                 "ip_ranges": [
-                    "202.67.32.0/19", "112.78.0.0/15", "103.10.66.0/23",
-                    "114.4.0.0/16"
+                    "202.67.32.0/19", "103.10.64.0/22"
                 ],
                 "prefixes": ["0881", "0882", "0883", "0884", "0885", "0886", "0887", "0888", "0889"]
             },
@@ -3967,8 +4107,8 @@ class AdvancedIPStealthSystem2025:
                 "packet_loss": (0.4, 0.8)
             },
             "smartfren": {
-                "prefixes": ["202.67", "202.152", "103.10", "112.78"],
-                "asn": "AS10029",
+                "prefixes": ["202.67", "103.10"],
+                "asn": "AS18004",
                 "as_name": "PT Smartfren Telecom Tbk",
                 "ttl_range": (52, 60),
                 "window_range": (29200, 29500),
@@ -6060,9 +6200,8 @@ class IPValidator2025:
                 "114.125.0.0/16",   # 114.125.0.0 - 114.125.255.255
                 "182.253.0.0/16",   # 182.253.0.0 - 182.253.255.255
             ],
-            # Smartfren - AS18004 (VERIFIED)
+            # Smartfren - AS18004 (VERIFIED - 112.78.0.0/15 REMOVED, NOT INDONESIAN)
             "smartfren": [
-                "112.78.0.0/15",    # 112.78.0.0 - 112.79.255.255
                 "103.10.64.0/22",   # 103.10.64.0 - 103.10.67.255
                 "202.67.32.0/19",   # 202.67.32.0 - 202.67.63.255
             ],
