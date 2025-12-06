@@ -1119,8 +1119,8 @@ class UnifiedSessionManager2025:
             # TLS/JA3 fingerprint (synchronized with Chrome version)
             "tls": self._generate_tls_config(chrome_version),
             
-            # Device fingerprint (synchronized with platform)
-            "fingerprint": self._generate_device_fingerprint(platform_info, chrome_version),
+            # Device fingerprint (synchronized with platform AND country)
+            "fingerprint": self._generate_device_fingerprint(platform_info, chrome_version, country_data),
             
             # Cookies (session-specific)
             "cookies": self._generate_initial_cookies(session_id),
@@ -1733,29 +1733,81 @@ class UnifiedSessionManager2025:
             )
     
     def _generate_headers(self, platform: Dict, chrome_version: int, ip_config: Dict) -> Dict[str, str]:
-        """Generate HTTP headers synchronized with all components"""
+        """Generate HTTP headers synchronized with all components including country"""
         user_agent = self._generate_user_agent(platform, chrome_version)
         
         # Sec-Ch-Ua based on Chrome version
         sec_ch_ua = f'"Chromium";v="{chrome_version}", "Google Chrome";v="{chrome_version}", "Not?A_Brand";v="99"'
         
         # Mobile indicator
-        is_mobile = platform["os_type"] == "android"
+        is_mobile = platform.get("os_type") == "android"
         sec_ch_ua_mobile = "?1" if is_mobile else "?0"
         
         # Platform
-        if platform["os_type"] == "android":
+        if platform.get("os_type") == "android":
             sec_ch_ua_platform = '"Android"'
-        elif platform["os_type"] == "windows":
+        elif platform.get("os_type") == "windows":
             sec_ch_ua_platform = '"Windows"'
         else:
             sec_ch_ua_platform = '"macOS"'
+        
+        # Get language from IP config (country-specific)
+        country = ip_config.get("country", "US")
+        
+        # Country-specific Accept-Language headers
+        accept_language_map = {
+            "US": "en-US,en;q=0.9",
+            "CA": "en-CA,en;q=0.9,fr-CA;q=0.8",
+            "GB": "en-GB,en;q=0.9",
+            "AU": "en-AU,en;q=0.9",
+            "NZ": "en-NZ,en;q=0.9",
+            "DE": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+            "FR": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+            "IT": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+            "ES": "es-ES,es;q=0.9,en-US;q=0.8,en;q=0.7",
+            "PT": "pt-PT,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            "NL": "nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7",
+            "BE": "nl-BE,nl;q=0.9,fr-BE;q=0.8,en;q=0.7",
+            "CH": "de-CH,de;q=0.9,fr-CH;q=0.8,en;q=0.7",
+            "AT": "de-AT,de;q=0.9,en-US;q=0.8,en;q=0.7",
+            "PL": "pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7",
+            "SE": "sv-SE,sv;q=0.9,en-US;q=0.8,en;q=0.7",
+            "NO": "nb-NO,nb;q=0.9,en-US;q=0.8,en;q=0.7",
+            "DK": "da-DK,da;q=0.9,en-US;q=0.8,en;q=0.7",
+            "RU": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+            "JP": "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7",
+            "KR": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+            "CN": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+            "TW": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+            "HK": "zh-HK,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+            "SG": "en-SG,en;q=0.9,zh-CN;q=0.8",
+            "MY": "ms-MY,ms;q=0.9,en-US;q=0.8,en;q=0.7",
+            "TH": "th-TH,th;q=0.9,en-US;q=0.8,en;q=0.7",
+            "VN": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+            "PH": "fil-PH,fil;q=0.9,en-US;q=0.8,en;q=0.7",
+            "ID": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            "IN": "en-IN,en;q=0.9,hi-IN;q=0.8",
+            "PK": "ur-PK,ur;q=0.9,en-US;q=0.8,en;q=0.7",
+            "BD": "bn-BD,bn;q=0.9,en-US;q=0.8,en;q=0.7",
+            "MX": "es-MX,es;q=0.9,en-US;q=0.8,en;q=0.7",
+            "BR": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+            "AR": "es-AR,es;q=0.9,en-US;q=0.8,en;q=0.7",
+            "CL": "es-CL,es;q=0.9,en-US;q=0.8,en;q=0.7",
+            "CO": "es-CO,es;q=0.9,en-US;q=0.8,en;q=0.7",
+            "PE": "es-PE,es;q=0.9,en-US;q=0.8,en;q=0.7",
+            "AE": "ar-AE,ar;q=0.9,en-US;q=0.8,en;q=0.7",
+            "SA": "ar-SA,ar;q=0.9,en-US;q=0.8,en;q=0.7",
+            "TR": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+            "IL": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7",
+            "EG": "ar-EG,ar;q=0.9,en-US;q=0.8,en;q=0.7",
+        }
+        accept_language = accept_language_map.get(country, "en-US,en;q=0.9")
         
         headers = {
             # Essential headers - ORDER MATTERS for fingerprinting
             # Minimal headers to match real Chrome browser behavior
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept-Language": accept_language,
             "Accept-Encoding": "gzip, deflate, br, zstd",
             "Cache-Control": "max-age=0",
             "Connection": "keep-alive",
@@ -1820,52 +1872,136 @@ class UnifiedSessionManager2025:
             },
         }
     
-    def _generate_device_fingerprint(self, platform: Dict, chrome_version: int) -> Dict[str, Any]:
-        """Generate device fingerprint synchronized with platform"""
+    def _generate_device_fingerprint(self, platform: Dict, chrome_version: int, country_data: Dict = None) -> Dict[str, Any]:
+        """Generate device fingerprint synchronized with platform and country"""
+        # Get country-specific data
+        country = platform.get("country", "US")
+        if country_data:
+            timezone_name = country_data.get("timezone", "America/New_York")
+            language = country_data.get("language", "en-US")
+            locale = country_data.get("locale", "en_US")
+        else:
+            timezone_name = "America/New_York"
+            language = "en-US"
+            locale = "en_US"
+        
+        # Calculate timezone offset based on timezone name
+        timezone_offsets = {
+            "America/New_York": -300,
+            "America/Los_Angeles": -480,
+            "America/Chicago": -360,
+            "America/Denver": -420,
+            "America/Sao_Paulo": -180,
+            "America/Mexico_City": -360,
+            "America/Buenos_Aires": -180,
+            "America/Santiago": -180,
+            "America/Lima": -300,
+            "America/Bogota": -300,
+            "America/Toronto": -300,
+            "America/Vancouver": -480,
+            "Europe/London": 0,
+            "Europe/Paris": 60,
+            "Europe/Berlin": 60,
+            "Europe/Amsterdam": 60,
+            "Europe/Rome": 60,
+            "Europe/Madrid": 60,
+            "Europe/Lisbon": 0,
+            "Europe/Brussels": 60,
+            "Europe/Zurich": 60,
+            "Europe/Vienna": 60,
+            "Europe/Warsaw": 60,
+            "Europe/Stockholm": 60,
+            "Europe/Oslo": 60,
+            "Europe/Copenhagen": 60,
+            "Europe/Moscow": 180,
+            "Asia/Tokyo": 540,
+            "Asia/Seoul": 540,
+            "Asia/Shanghai": 480,
+            "Asia/Hong_Kong": 480,
+            "Asia/Taipei": 480,
+            "Asia/Singapore": 480,
+            "Asia/Jakarta": 420,
+            "Asia/Bangkok": 420,
+            "Asia/Kuala_Lumpur": 480,
+            "Asia/Manila": 480,
+            "Asia/Ho_Chi_Minh": 420,
+            "Asia/Kolkata": 330,
+            "Asia/Karachi": 300,
+            "Asia/Dhaka": 360,
+            "Asia/Dubai": 240,
+            "Asia/Riyadh": 180,
+            "Asia/Istanbul": 180,
+            "Asia/Jerusalem": 120,
+            "Africa/Cairo": 120,
+            "Australia/Sydney": 660,
+            "Australia/Melbourne": 660,
+            "Pacific/Auckland": 780,
+        }
+        tz_offset = timezone_offsets.get(timezone_name, 0)
+        
+        # Generate language list based on country
+        lang_code = language.split("-")[0] if "-" in language else language
+        languages = [language, lang_code]
+        if language != "en-US":
+            languages.extend(["en-US", "en"])
+        
         # Canvas fingerprint (device-specific)
         canvas_hash = hashlib.md5(
-            f"{platform['device_model']}_{platform['screen_width']}_{platform['screen_height']}".encode()
+            f"{platform.get('device_model', 'Unknown')}_{platform.get('screen_width', 1920)}_{platform.get('screen_height', 1080)}".encode()
         ).hexdigest()[:32]
         
         # Audio fingerprint
         audio_hash = hashlib.md5(
-            f"{platform['device_brand']}_{platform['os_version']}".encode()
+            f"{platform.get('device_brand', 'Unknown')}_{platform.get('os_version', '14')}".encode()
         ).hexdigest()[:24]
         
         # WebGL fingerprint based on device
-        if platform["os_type"] == "android":
-            webgl_vendor = "Qualcomm" if platform["device_brand"] in ["Samsung", "Xiaomi", "OPPO", "Vivo"] else "ARM"
+        os_type = platform.get("os_type", "desktop")
+        if os_type == "android":
+            device_brand = platform.get("device_brand", "Samsung")
+            webgl_vendor = "Qualcomm" if device_brand in ["Samsung", "Xiaomi", "OPPO", "Vivo", "Realme"] else "ARM"
             webgl_renderer = random.choice([
                 "Adreno (TM) 740",
                 "Adreno (TM) 730",
+                "Adreno (TM) 660",
                 "Mali-G715 MC11",
                 "Mali-G710 MC10",
+                "Mali-G78 MP20",
             ])
-        elif platform["os_type"] == "windows":
+        elif os_type == "windows":
             webgl_vendor = random.choice(["NVIDIA Corporation", "Intel Inc.", "AMD"])
             webgl_renderer = random.choice([
+                "NVIDIA GeForce RTX 4090",
+                "NVIDIA GeForce RTX 4080",
                 "NVIDIA GeForce RTX 4070",
+                "NVIDIA GeForce RTX 3080",
                 "NVIDIA GeForce RTX 3060",
                 "Intel(R) UHD Graphics 770",
+                "Intel(R) Iris Xe Graphics",
+                "AMD Radeon RX 7900 XTX",
                 "AMD Radeon RX 7600",
             ])
-        else:
+        else:  # macOS
             webgl_vendor = "Apple Inc."
             webgl_renderer = random.choice([
+                "Apple M3 Max",
                 "Apple M3 Pro",
                 "Apple M3",
+                "Apple M2 Ultra",
+                "Apple M2 Max",
                 "Apple M2 Pro",
                 "Apple M2",
+                "Apple M1 Max",
             ])
         
         return {
-            "device_type": platform["os_type"],
-            "device_brand": platform["device_brand"],
-            "device_model": platform["device_model"],
+            "device_type": os_type,
+            "device_brand": platform.get("device_brand", "Unknown"),
+            "device_model": platform.get("device_model", "Unknown"),
             "screen": {
-                "width": platform["screen_width"],
-                "height": platform["screen_height"],
-                "pixel_ratio": platform["pixel_ratio"],
+                "width": platform.get("screen_width", 1920),
+                "height": platform.get("screen_height", 1080),
+                "pixel_ratio": platform.get("pixel_ratio", 1.0),
                 "color_depth": 24,
             },
             "canvas": {
@@ -1882,17 +2018,19 @@ class UnifiedSessionManager2025:
                 "version": "WebGL 2.0",
             },
             "hardware": {
-                "cores": random.choice([4, 6, 8, 12]) if platform["os_type"] != "android" else random.choice([4, 8]),
-                "ram": random.choice([8, 16, 32]) if platform["os_type"] != "android" else random.choice([6, 8, 12]),
-                "gpu_memory": random.choice([4, 8, 12]) if platform["os_type"] != "android" else 0,
+                "cores": random.choice([4, 6, 8, 12, 16]) if os_type != "android" else random.choice([4, 8]),
+                "ram": random.choice([8, 16, 32, 64]) if os_type != "android" else random.choice([6, 8, 12, 16]),
+                "gpu_memory": random.choice([4, 8, 12, 16, 24]) if os_type != "android" else 0,
             },
-            "fonts": self._generate_font_list(platform["os_type"]),
-            "plugins": self._generate_plugin_list(platform["os_type"]),
+            "fonts": self._generate_font_list(os_type),
+            "plugins": self._generate_plugin_list(os_type),
             "timezone": {
-                "offset": -420,  # UTC+7 for Indonesia
-                "name": self.timezone,
+                "offset": tz_offset,
+                "name": timezone_name,
             },
-            "languages": ["id-ID", "id", "en-US", "en"],
+            "languages": languages,
+            "locale": locale,
+            "country": country,
         }
     
     def _generate_font_list(self, os_type: str) -> List[str]:
