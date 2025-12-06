@@ -15438,8 +15438,9 @@ class InstagramAccountCreator2025:
             print(f"{merah}❌  Failed to save account: {e}{reset}")
     
     async def batch_create_accounts(self, count: int, password: str) -> Dict[str, Any]:
-        """Buat beberapa akun sekaligus"""
+        """Buat beberapa akun sekaligus dengan 3 akun per session"""
         print(f"{cyan}🏭  Starting batch creation of {count} accounts{reset}")
+        print(f"{cyan}    Strategy: 3 accounts per session, switch on IP block{reset}")
         
         results = {
             "total": count,
@@ -15447,20 +15448,72 @@ class InstagramAccountCreator2025:
             "failed": 0,
             "accounts": [],
             "errors": [],
-            "start_time": time.time()
+            "start_time": time.time(),
+            "sessions_used": 0,
+            "ip_blocks": 0
         }
+        
+        # Config: 3 accounts per session
+        ACCOUNTS_PER_SESSION = 3
+        current_session_id = None
+        accounts_in_current_session = 0
         
         for i in range(count):
             print(f"\n{biru}🔹  Account {i + 1}/{count}{reset}")
             
-            result = await self.create_account(password)
+            # Check if need new session (every 3 accounts or first account or IP block occurred)
+            if current_session_id is None or accounts_in_current_session >= ACCOUNTS_PER_SESSION:
+                if current_session_id:
+                    print(f"{cyan}🔄  Session limit reached ({ACCOUNTS_PER_SESSION} accounts) - creating new session{reset}")
+                current_session_id = await self._create_new_session()
+                accounts_in_current_session = 0
+                results["sessions_used"] += 1
+                
+                if not current_session_id:
+                    print(f"{merah}❌  Failed to create session, retrying...{reset}")
+                    await asyncio.sleep(5)
+                    current_session_id = await self._create_new_session()
+                    results["sessions_used"] += 1
+                    if not current_session_id:
+                        results["failed"] += 1
+                        results["errors"].append({"error": "Session creation failed", "account": i + 1})
+                        continue
+            
+            # Create account with current session
+            result = await self.create_account(password, session_id=current_session_id)
             
             if result["status"] == "success":
                 results["successful"] += 1
                 results["accounts"].append(result["account"])
+                accounts_in_current_session += 1
+                print(f"{hijau}✅  Account {accounts_in_current_session}/{ACCOUNTS_PER_SESSION} in current session{reset}")
             else:
                 results["failed"] += 1
                 results["errors"].append(result)
+                
+                # Check if IP block - force new session
+                error_type = result.get("error_type", "")
+                error_msg = str(result.get("error", "")).lower()
+                
+                is_ip_block = (
+                    error_type == "ip_block" or 
+                    "ip" in error_msg or 
+                    "block" in error_msg or
+                    "rate" in error_msg or
+                    "429" in error_msg or
+                    "403" in error_msg
+                )
+                
+                if is_ip_block:
+                    print(f"{merah}🚫  IP block detected - forcing new session{reset}")
+                    results["ip_blocks"] += 1
+                    current_session_id = None  # Force new session on next iteration
+                    accounts_in_current_session = 0
+                    
+                    # Extra cooldown for IP block
+                    block_cooldown = random.uniform(60, 90)
+                    print(f"{kuning}⏳  IP block cooldown: {block_cooldown:.1f}s{reset}")
+                    await asyncio.sleep(block_cooldown)
             
             # Cooldown antara akun
             if i < count - 1:
@@ -15476,6 +15529,8 @@ class InstagramAccountCreator2025:
         print(f"    Successful: {results['successful']}/{count}")
         print(f"    Failed: {results['failed']}/{count}")
         print(f"    Success rate: {results['success_rate']:.1%}")
+        print(f"    Sessions used: {results['sessions_used']}")
+        print(f"    IP blocks: {results['ip_blocks']}")
         print(f"    Duration: {results['duration']:.1f}s")
         
         return results
