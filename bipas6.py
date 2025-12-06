@@ -2295,6 +2295,373 @@ class UnifiedSessionManager2025:
 # Global session manager instance
 unified_session_manager = UnifiedSessionManager2025()
 
+# ===================== NETWORK LAYER FINGERPRINT SYSTEM 2025 =====================
+
+class NetworkLayerFingerprint2025:
+    """
+    Comprehensive Network Layer Fingerprinting (50+ Vectors)
+    Includes: TCP/IP Stack, TLS/SSL, HTTP/2 fingerprints
+    """
+    
+    # TCP/IP Stack Fingerprints per OS
+    TCP_IP_PROFILES = {
+        "windows": {
+            # TCP Stack
+            "tcp_initial_window_size": 65535,
+            "tcp_window_scaling_factor": 8,
+            "tcp_max_segment_size": 1460,
+            "tcp_timestamp_enabled": True,
+            "tcp_sack_permitted": True,
+            "tcp_ecn_enabled": False,
+            "tcp_sack_ok": True,
+            "tcp_sack_count": random.randint(1, 3),
+            "tcp_option_order": ["MSS", "WS", "SACK", "TS", "NOP"],
+            # IP Stack
+            "ip_ttl": 128,
+            "ip_df_flag": True,
+            "ip_id_pattern": "incremental",
+            "ip_tos": 0,
+            "ip_options": None,
+            # TCP Behavior
+            "tcp_seq_pattern": "random_iss",
+            "tcp_ack_behavior": "immediate",
+            "tcp_urgent_pointer": False,
+            "tcp_checksum_offload": True,
+        },
+        "macos": {
+            "tcp_initial_window_size": 65535,
+            "tcp_window_scaling_factor": 6,
+            "tcp_max_segment_size": 1460,
+            "tcp_timestamp_enabled": True,
+            "tcp_sack_permitted": True,
+            "tcp_ecn_enabled": False,
+            "tcp_sack_ok": True,
+            "tcp_sack_count": random.randint(1, 2),
+            "tcp_option_order": ["MSS", "NOP", "WS", "NOP", "NOP", "TS", "SACK", "EOL"],
+            "ip_ttl": 64,
+            "ip_df_flag": True,
+            "ip_id_pattern": "zero",
+            "ip_tos": 0,
+            "ip_options": None,
+            "tcp_seq_pattern": "random_iss",
+            "tcp_ack_behavior": "delayed",
+            "tcp_urgent_pointer": False,
+            "tcp_checksum_offload": True,
+        },
+        "linux": {
+            "tcp_initial_window_size": 65535,
+            "tcp_window_scaling_factor": 7,
+            "tcp_max_segment_size": 1460,
+            "tcp_timestamp_enabled": True,
+            "tcp_sack_permitted": True,
+            "tcp_ecn_enabled": True,
+            "tcp_sack_ok": True,
+            "tcp_sack_count": random.randint(2, 4),
+            "tcp_option_order": ["MSS", "SACK", "TS", "NOP", "WS"],
+            "ip_ttl": 64,
+            "ip_df_flag": True,
+            "ip_id_pattern": "random",
+            "ip_tos": 0,
+            "ip_options": None,
+            "tcp_seq_pattern": "random_iss",
+            "tcp_ack_behavior": "delayed",
+            "tcp_urgent_pointer": False,
+            "tcp_checksum_offload": True,
+        },
+        "android": {
+            "tcp_initial_window_size": 65535,
+            "tcp_window_scaling_factor": 7,
+            "tcp_max_segment_size": 1400,  # Mobile MTU
+            "tcp_timestamp_enabled": True,
+            "tcp_sack_permitted": True,
+            "tcp_ecn_enabled": False,
+            "tcp_sack_ok": True,
+            "tcp_sack_count": random.randint(1, 3),
+            "tcp_option_order": ["MSS", "SACK", "TS", "NOP", "WS"],
+            "ip_ttl": 64,
+            "ip_df_flag": True,
+            "ip_id_pattern": "random",
+            "ip_tos": 0,
+            "ip_options": None,
+            "tcp_seq_pattern": "random_iss",
+            "tcp_ack_behavior": "delayed",
+            "tcp_urgent_pointer": False,
+            "tcp_checksum_offload": True,
+        },
+        "ios": {
+            "tcp_initial_window_size": 65535,
+            "tcp_window_scaling_factor": 6,
+            "tcp_max_segment_size": 1400,
+            "tcp_timestamp_enabled": True,
+            "tcp_sack_permitted": True,
+            "tcp_ecn_enabled": False,
+            "tcp_sack_ok": True,
+            "tcp_sack_count": random.randint(1, 2),
+            "tcp_option_order": ["MSS", "NOP", "WS", "NOP", "NOP", "TS", "SACK", "EOL"],
+            "ip_ttl": 64,
+            "ip_df_flag": True,
+            "ip_id_pattern": "zero",
+            "ip_tos": 0,
+            "ip_options": None,
+            "tcp_seq_pattern": "random_iss",
+            "tcp_ack_behavior": "delayed",
+            "tcp_urgent_pointer": False,
+            "tcp_checksum_offload": True,
+        },
+    }
+    
+    # TLS Extension Details (vectors 21-40)
+    TLS_EXTENSIONS = {
+        "chrome": {
+            "ja3_prefix": "771",  # TLS 1.2
+            "tls_versions": [0x0304, 0x0303, 0x0302],  # TLS 1.3, 1.2, 1.1
+            "cipher_suites": [
+                4865, 4866, 4867,  # TLS 1.3 ciphers
+                49195, 49199, 49196, 49200,  # ECDHE ciphers
+                52393, 52392,  # ChaCha20
+                49171, 49172, 156, 157, 47, 53  # Legacy
+            ],
+            "extensions": [0, 23, 65281, 10, 11, 35, 16, 5, 13, 18, 51, 45, 43, 27, 17513, 21, 41],
+            "supported_groups": [29, 23, 24, 25],  # x25519, secp256r1, secp384r1, secp521r1
+            "ec_point_formats": [0],  # uncompressed
+            "signature_algorithms": [
+                0x0403, 0x0503, 0x0603,  # ECDSA
+                0x0804, 0x0805, 0x0806,  # RSA-PSS
+                0x0401, 0x0501, 0x0601,  # RSA PKCS1
+                0x0201  # RSA PKCS1 SHA1
+            ],
+            "alpn_protocols": ["h2", "http/1.1"],
+            "session_ticket_support": True,
+            "ocsp_stapling": True,
+            "sct_support": True,  # Signed Certificate Timestamps
+            "key_share_groups": [29, 23],  # x25519, secp256r1
+            "psk_modes": [1],  # psk_dhe_ke
+            "early_data_support": False,
+            "cert_compression": [2],  # brotli
+            "record_size_limit": 16385,
+            "cookie_extension": False,
+        },
+        "firefox": {
+            "ja3_prefix": "771",
+            "tls_versions": [0x0304, 0x0303],
+            "cipher_suites": [4865, 4867, 4866, 49195, 49199, 52393, 52392, 49196, 49200, 49171, 49172],
+            "extensions": [0, 23, 65281, 10, 11, 35, 16, 5, 34, 51, 43, 13, 45, 28],
+            "supported_groups": [29, 23, 24, 25, 256, 257],
+            "ec_point_formats": [0],
+            "signature_algorithms": [0x0403, 0x0503, 0x0603, 0x0804, 0x0805, 0x0806, 0x0401, 0x0501, 0x0601],
+            "alpn_protocols": ["h2", "http/1.1"],
+            "session_ticket_support": True,
+            "ocsp_stapling": True,
+            "sct_support": True,
+            "key_share_groups": [29, 23],
+            "psk_modes": [1],
+            "early_data_support": True,
+            "cert_compression": [2],
+            "record_size_limit": 16385,
+            "cookie_extension": False,
+        },
+        "safari": {
+            "ja3_prefix": "771",
+            "tls_versions": [0x0304, 0x0303],
+            "cipher_suites": [4865, 4866, 4867, 49196, 49200, 49195, 49199, 52393, 52392],
+            "extensions": [0, 23, 65281, 10, 11, 16, 5, 13, 18, 51, 45, 43, 27],
+            "supported_groups": [29, 23, 24],
+            "ec_point_formats": [0],
+            "signature_algorithms": [0x0403, 0x0503, 0x0603, 0x0804, 0x0805, 0x0401, 0x0501, 0x0601],
+            "alpn_protocols": ["h2", "http/1.1"],
+            "session_ticket_support": True,
+            "ocsp_stapling": True,
+            "sct_support": False,
+            "key_share_groups": [29, 23],
+            "psk_modes": [1],
+            "early_data_support": False,
+            "cert_compression": [],
+            "record_size_limit": 16385,
+            "cookie_extension": False,
+        },
+    }
+    
+    # HTTP/2 Fingerprints (vectors 41-50)
+    HTTP2_FINGERPRINTS = {
+        "chrome": {
+            "settings_frame": {
+                "HEADER_TABLE_SIZE": 65536,
+                "ENABLE_PUSH": 0,
+                "MAX_CONCURRENT_STREAMS": 1000,
+                "INITIAL_WINDOW_SIZE": 6291456,
+                "MAX_FRAME_SIZE": 16384,
+                "MAX_HEADER_LIST_SIZE": 262144,
+            },
+            "window_update_increment": 15663105,
+            "priority": {"stream_id": 0, "weight": 256, "exclusive": True},
+            "stream_concurrency_limit": 100,
+            "flow_control_window": 6291456,
+            "ping_ack_delay_ms": random.randint(10, 50),
+            "header_compression_dynamic_table_size": 4096,
+            "pseudo_header_order": [":method", ":authority", ":scheme", ":path"],
+            "connection_preface": "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n",
+        },
+        "firefox": {
+            "settings_frame": {
+                "HEADER_TABLE_SIZE": 65536,
+                "ENABLE_PUSH": 1,
+                "MAX_CONCURRENT_STREAMS": 100,
+                "INITIAL_WINDOW_SIZE": 131072,
+                "MAX_FRAME_SIZE": 16384,
+                "MAX_HEADER_LIST_SIZE": 65536,
+            },
+            "window_update_increment": 12517377,
+            "priority": {"stream_id": 0, "weight": 16, "exclusive": False},
+            "stream_concurrency_limit": 100,
+            "flow_control_window": 131072,
+            "ping_ack_delay_ms": random.randint(5, 30),
+            "header_compression_dynamic_table_size": 4096,
+            "pseudo_header_order": [":method", ":path", ":authority", ":scheme"],
+            "connection_preface": "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n",
+        },
+        "safari": {
+            "settings_frame": {
+                "HEADER_TABLE_SIZE": 4096,
+                "ENABLE_PUSH": 0,
+                "MAX_CONCURRENT_STREAMS": 100,
+                "INITIAL_WINDOW_SIZE": 65535,
+                "MAX_FRAME_SIZE": 16384,
+                "MAX_HEADER_LIST_SIZE": None,
+            },
+            "window_update_increment": 10485760,
+            "priority": {"stream_id": 0, "weight": 255, "exclusive": False},
+            "stream_concurrency_limit": 100,
+            "flow_control_window": 65535,
+            "ping_ack_delay_ms": random.randint(15, 60),
+            "header_compression_dynamic_table_size": 4096,
+            "pseudo_header_order": [":method", ":scheme", ":path", ":authority"],
+            "connection_preface": "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n",
+        },
+    }
+    
+    def __init__(self):
+        self.fingerprint_cache = {}
+    
+    def generate_tcp_fingerprint(self, os_type: str = None) -> Dict[str, Any]:
+        """Generate TCP/IP stack fingerprint for given OS (vectors 1-20)"""
+        if os_type is None:
+            os_type = random.choice(["windows", "macos", "linux", "android", "ios"])
+        
+        profile = self.TCP_IP_PROFILES.get(os_type, self.TCP_IP_PROFILES["windows"])
+        
+        # Add realistic jitter
+        fingerprint = profile.copy()
+        fingerprint["os_type"] = os_type
+        
+        # Add timestamp with jitter
+        fingerprint["tcp_timestamp_value"] = int(time.time() * 1000) + random.randint(-1000, 1000)
+        fingerprint["tcp_timestamp_echo"] = fingerprint["tcp_timestamp_value"] - random.randint(100, 500)
+        
+        # Generate ISN (Initial Sequence Number)
+        fingerprint["tcp_isn"] = random.randint(0, 0xFFFFFFFF)
+        
+        # MTU based on connection type
+        fingerprint["mtu"] = random.choice([1500, 1492, 1400, 1380])
+        
+        return fingerprint
+    
+    def generate_tls_fingerprint(self, browser: str = "chrome", 
+                                  version: int = None) -> Dict[str, Any]:
+        """Generate TLS/SSL fingerprint (vectors 21-40)"""
+        if browser not in self.TLS_EXTENSIONS:
+            browser = "chrome"
+        
+        profile = self.TLS_EXTENSIONS[browser].copy()
+        
+        # Generate JA3 hash
+        cipher_str = "-".join(str(c) for c in profile["cipher_suites"])
+        ext_str = "-".join(str(e) for e in profile["extensions"])
+        groups_str = "-".join(str(g) for g in profile["supported_groups"])
+        ec_str = "-".join(str(e) for e in profile["ec_point_formats"])
+        
+        ja3_string = f"{profile['ja3_prefix']},{cipher_str},{ext_str},{groups_str},{ec_str}"
+        ja3_hash = hashlib.md5(ja3_string.encode()).hexdigest()
+        
+        fingerprint = {
+            **profile,
+            "ja3_string": ja3_string,
+            "ja3_hash": ja3_hash,
+            "browser": browser,
+            "session_id": secrets.token_hex(32),
+            "random": secrets.token_bytes(32).hex(),
+        }
+        
+        # Add Chrome version if applicable
+        if browser == "chrome":
+            if version is None:
+                version = random.randint(131, 136)
+            fingerprint["chrome_version"] = version
+            fingerprint["chrome_full_version"] = f"{version}.0.{random.randint(6700, 7100)}.{random.randint(50, 200)}"
+        
+        return fingerprint
+    
+    def generate_http2_fingerprint(self, browser: str = "chrome") -> Dict[str, Any]:
+        """Generate HTTP/2 fingerprint (vectors 41-50)"""
+        if browser not in self.HTTP2_FINGERPRINTS:
+            browser = "chrome"
+        
+        profile = self.HTTP2_FINGERPRINTS[browser].copy()
+        
+        # Generate AKAMAI-style fingerprint string
+        settings = profile["settings_frame"]
+        settings_str = ";".join(f"{k}:{v}" for k, v in settings.items() if v is not None)
+        
+        fingerprint = {
+            **profile,
+            "browser": browser,
+            "akamai_fingerprint": f"{settings_str}|{profile['window_update_increment']}",
+        }
+        
+        return fingerprint
+    
+    def generate_complete_fingerprint(self, device_type: str = "desktop",
+                                       browser: str = "chrome") -> Dict[str, Any]:
+        """Generate complete network layer fingerprint (all 50 vectors)"""
+        
+        # Determine OS based on device type
+        if device_type == "android":
+            os_type = "android"
+        elif device_type == "ios":
+            os_type = "ios"
+        elif device_type == "desktop":
+            os_type = random.choice(["windows", "macos", "linux"])
+        else:
+            os_type = random.choice(["windows", "macos"])
+        
+        fingerprint = {
+            "device_type": device_type,
+            "browser": browser,
+            "os_type": os_type,
+            "tcp_ip": self.generate_tcp_fingerprint(os_type),
+            "tls": self.generate_tls_fingerprint(browser),
+            "http2": self.generate_http2_fingerprint(browser),
+            "generated_at": time.time(),
+        }
+        
+        return fingerprint
+    
+    def get_fingerprint_for_session(self, session_id: str, 
+                                     device_type: str = "desktop",
+                                     browser: str = "chrome") -> Dict[str, Any]:
+        """Get or create consistent fingerprint for session"""
+        cache_key = f"{session_id}_{device_type}_{browser}"
+        
+        if cache_key not in self.fingerprint_cache:
+            self.fingerprint_cache[cache_key] = self.generate_complete_fingerprint(
+                device_type, browser
+            )
+        
+        return self.fingerprint_cache[cache_key]
+
+
+# Global network fingerprint instance
+network_fingerprint = NetworkLayerFingerprint2025()
+
 # ===================== ADVANCED TLS/JA3 FINGERPRINT SYSTEM 2025 =====================
 
 class AdvancedTLSFingerprint2025:
@@ -16229,7 +16596,7 @@ class InstagramAccountCreator2025:
                 else:
                     # Return detailed error info for session management
                     error_type = creation_result.get("error_type", "unknown")
-                    return self._record_failure(attempt_id, f"Account creation failed: {error_type}")
+                    return self._record_failure(attempt_id, f"Account creation failed: {error_type}", error_type)
             # Backward compatibility for bool return
             elif creation_result:
                 result = self._record_success(attempt_id, {
@@ -16241,13 +16608,13 @@ class InstagramAccountCreator2025:
                 })
                 return result
             else:
-                return self._record_failure(attempt_id, "Account creation failed")
+                return self._record_failure(attempt_id, "Account creation failed", "unknown")
             
         except Exception as e:
             print(f"{merah}❌  Error in account creation: {e}{reset}")
             import traceback
             traceback.print_exc()
-            return self._record_failure(attempt_id, f"Unexpected error: {str(e)}")
+            return self._record_failure(attempt_id, f"Unexpected error: {str(e)}", "exception")
     
     async def _create_new_session(self) -> Optional[str]:
         """Buat session baru dengan semua komponen terintegrasi - RANDOM COUNTRY"""
@@ -17464,12 +17831,19 @@ class InstagramAccountCreator2025:
         
         return result
     
-    def _record_failure(self, attempt_id: str, reason: str) -> Dict[str, Any]:
-        """Record failed account creation"""
+    def _record_failure(self, attempt_id: str, reason: str, error_type: str = "unknown") -> Dict[str, Any]:
+        """Record failed account creation
+        
+        Args:
+            attempt_id: Unique attempt identifier
+            reason: Human readable reason
+            error_type: Machine readable type (ip_block, checkpoint, rate_limit, unknown)
+        """
         self.stats["failed"] += 1
         self.failed_accounts.append({
             "attempt_id": attempt_id,
             "reason": reason,
+            "error_type": error_type,
             "timestamp": time.time()
         })
         
@@ -17477,6 +17851,7 @@ class InstagramAccountCreator2025:
             "status": "failed",
             "attempt_id": attempt_id,
             "reason": reason,
+            "error_type": error_type,  # ADDED: for session management detection
             "timestamp": time.time(),
             "message": f"Account creation failed: {reason}"
         }
@@ -17586,11 +17961,13 @@ class InstagramAccountCreator2025:
                 results["failed"] += 1
                 results["errors"].append(result)
                 
-                # Get error message for detection
+                # Get error type directly from result (IMPROVED)
+                error_type = result.get("error_type", "unknown")
                 error_msg = str(result.get("reason", result.get("error", ""))).lower()
                 
                 # Check if IP block FIRST (higher priority)
                 is_ip_block = (
+                    error_type == "ip_block" or
                     "ip_block" in error_msg or
                     "ip block" in error_msg or
                     "ipblock" in error_msg or
@@ -17603,6 +17980,7 @@ class InstagramAccountCreator2025:
                 
                 # Check if checkpoint (only if NOT ip block)
                 is_checkpoint = not is_ip_block and (
+                    error_type == "checkpoint" or
                     "checkpoint" in error_msg or
                     "suspended" in error_msg
                 )
