@@ -606,17 +606,180 @@ class UnifiedSessionManager2025:
             ]
     
     def _generate_initial_cookies(self, session_id: str) -> Dict[str, str]:
-        """Generate initial session cookies"""
+        """Generate valid Instagram session cookies
+        
+        These cookies are required by Instagram for proper session handling.
+        All values are generated to match Instagram's expected format.
+        """
         timestamp = int(time.time())
         
+        # Generate machine ID (mid) - Instagram format: base64-like, 26 chars
+        # Format: ZX1234567890abcdef1234567
+        mid_prefix = random.choice(["Z", "Y", "X", "W"])
+        mid_body = ''.join(random.choices(string.ascii_letters + string.digits, k=25))
+        mid = mid_prefix + mid_body
+        
+        # Generate device ID (ig_did) - UUID format uppercase
+        ig_did = str(uuid.uuid4()).upper()
+        
+        # Generate CSRF token - 32 character hex string
+        csrftoken = secrets.token_hex(16)  # 32 hex chars
+        
+        # Generate rur (region) - Instagram data center region
+        rur = random.choice([
+            "FTW",  # Fort Worth
+            "PRN",  # Primary
+            "ATN",  # Atlanta
+            "ASH",  # Ashburn
+        ])
+        
         return {
-            "mid": base64.b64encode(f"{timestamp}_{secrets.token_hex(8)}".encode()).decode()[:26],
-            "ig_did": str(uuid.uuid4()).upper(),
+            # Essential cookies
+            "mid": mid,
+            "ig_did": ig_did,
             "ig_nrcb": "1",
-            "csrftoken": secrets.token_hex(32),
-            "ds_user_id": "",  # Will be set after login
-            "sessionid": "",   # Will be set after login
+            "csrftoken": csrftoken,
+            "rur": f'"{rur}\\054{secrets.token_hex(20)}\\054{timestamp}:01f7{secrets.token_hex(28)}:1c"',
+            
+            # Consent cookies
+            "datr": ''.join(random.choices(string.ascii_letters + string.digits, k=24)),
+            "ig_cb": "1",  # Cookie banner acknowledged
+            
+            # Will be set after login/registration
+            "ds_user_id": "",
+            "sessionid": "",
+            "shbid": "",
+            "shbts": "",
         }
+    
+    def _generate_instagram_headers(self, session: Dict[str, Any], request_type: str = "web") -> Dict[str, str]:
+        """Generate valid Instagram-specific headers
+        
+        These headers are required by Instagram API and must be consistent
+        with the session configuration.
+        
+        Args:
+            session: The session configuration
+            request_type: "web", "ajax", "api", "graphql"
+        """
+        platform = session["platform"]
+        chrome_version = session["chrome_version"]
+        cookies = session["cookies"]
+        
+        # Instagram App IDs - VALID and ACTIVE
+        # These are the actual app IDs used by Instagram web
+        INSTAGRAM_APP_IDS = {
+            "web": "936619743392459",           # Instagram Web (main)
+            "web_lite": "1217981644879628",     # Instagram Web Lite
+            "threads": "238260118697367",        # Threads Web
+        }
+        
+        # ASBD IDs - Anti-spam/bot detection IDs
+        # Format: numeric, typically 6 digits
+        ASBD_IDS = [
+            "129477",
+            "198387", 
+            "227315",
+            "227316",
+            "227317",
+        ]
+        
+        # Select consistent IDs for this session
+        app_id = INSTAGRAM_APP_IDS["web"]
+        asbd_id = random.choice(ASBD_IDS)
+        
+        # Generate X-Instagram-AJAX version (matches app version)
+        # Format: 1018038550 (timestamp-like)
+        ajax_version = str(int(time.time()) - random.randint(86400, 604800))  # Within last week
+        
+        # Generate WWW Claim (authorization token format)
+        www_claim = "0"  # Initial value, updated after auth
+        
+        # Base headers (synchronized with session)
+        user_agent = session["user_agent"]
+        
+        # Sec-Ch-Ua based on Chrome version
+        sec_ch_ua = f'"Chromium";v="{chrome_version}", "Google Chrome";v="{chrome_version}", "Not?A_Brand";v="99"'
+        
+        # Mobile indicator
+        is_mobile = platform["os_type"] == "android"
+        sec_ch_ua_mobile = "?1" if is_mobile else "?0"
+        
+        # Platform header
+        if platform["os_type"] == "android":
+            sec_ch_ua_platform = '"Android"'
+        elif platform["os_type"] == "windows":
+            sec_ch_ua_platform = '"Windows"'
+        else:
+            sec_ch_ua_platform = '"macOS"'
+        
+        headers = {
+            # Standard browser headers
+            "Accept": "*/*",
+            "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            
+            # Client hints (synchronized)
+            "Sec-Ch-Ua": sec_ch_ua,
+            "Sec-Ch-Ua-Mobile": sec_ch_ua_mobile,
+            "Sec-Ch-Ua-Platform": sec_ch_ua_platform,
+            "Sec-Ch-Ua-Full-Version-List": sec_ch_ua,
+            "Sec-Ch-Prefers-Color-Scheme": random.choice(["light", "dark"]),
+            
+            # Fetch metadata
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+            
+            # User agent
+            "User-Agent": user_agent,
+            
+            # Instagram-specific headers (CRITICAL)
+            "X-Ig-App-Id": app_id,
+            "X-Asbd-Id": asbd_id,
+            "X-Ig-Www-Claim": www_claim,
+            "X-Instagram-Ajax": ajax_version,
+            "X-Requested-With": "XMLHttpRequest",
+            
+            # CSRF token from cookies
+            "X-Csrftoken": cookies.get("csrftoken", ""),
+            
+            # Origin and referer
+            "Origin": "https://www.instagram.com",
+            "Referer": "https://www.instagram.com/",
+        }
+        
+        # Add request-type specific headers
+        if request_type == "graphql":
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
+            headers["X-Fb-Friendly-Name"] = "PolarisSignupCreateAccountMutationMutation"
+            headers["X-Fb-Lsd"] = secrets.token_hex(11)  # 22 char hex
+        elif request_type == "api":
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
+        elif request_type == "ajax":
+            headers["X-Ig-App-Locale"] = "id_ID"
+            headers["X-Ig-Device-Locale"] = "id_ID"
+            headers["X-Ig-Mapped-Locale"] = "id_ID"
+        
+        return headers
+    
+    def get_instagram_headers(self, session_id: str, request_type: str = "api") -> Dict[str, str]:
+        """Get Instagram-specific headers for a session
+        
+        Args:
+            session_id: The session ID
+            request_type: "web", "ajax", "api", "graphql"
+        
+        Returns:
+            Headers dict ready for Instagram API requests
+        """
+        session = self._sessions.get(session_id)
+        if not session:
+            session = self.create_session(session_id)
+        
+        return self._generate_instagram_headers(session, request_type)
     
     def validate_session_consistency(self, session_id: str) -> Dict[str, Any]:
         """Validate that all session components are consistent"""
