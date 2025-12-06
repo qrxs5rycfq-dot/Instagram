@@ -689,19 +689,19 @@ class UnifiedSessionManager2025:
         
         headers = {
             # Essential headers - ORDER MATTERS for fingerprinting
+            # Minimal headers to match real Chrome browser behavior
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
             "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Encoding": "gzip, deflate, br, zstd",
             "Cache-Control": "max-age=0",
             "Connection": "keep-alive",
             
-            # Client hints - synchronized with platform
+            # Client hints - synchronized with platform (minimal set)
             "Sec-Ch-Ua": sec_ch_ua,
             "Sec-Ch-Ua-Mobile": sec_ch_ua_mobile,
             "Sec-Ch-Ua-Platform": sec_ch_ua_platform,
-            "Sec-Ch-Ua-Full-Version-List": sec_ch_ua,
             
-            # Fetch metadata
+            # Fetch metadata - standard Chrome values
             "Sec-Fetch-Dest": "document",
             "Sec-Fetch-Mode": "navigate",
             "Sec-Fetch-Site": "none",
