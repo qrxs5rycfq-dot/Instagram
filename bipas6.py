@@ -11735,27 +11735,28 @@ class EmailServiceManager2025:
         self.active_services = {}
         
     def _get_service_priority(self, is_manual: bool = False) -> List[str]:
-        """Get service priority list - 10minutemail sebagai prioritas utama"""
+        """Get service priority list - Auto mode: RANDOM dari working services"""
         if is_manual:
             return [
                 "10minutemail",    # ⭐ Paling reliable untuk manual
                 "guerrillamail",   # Fallback untuk manual
-                "1secmail",        # Backup
-                "mailtm",          # Alternatif
-                "tempmail_plus",   # Lainnya
-                "cmail",           # Lainnya
-                "gmail_alias"      # Last resort
-            ]
-        else:
-            return [
-                "10minutemail",    # ⭐ Paling reliable (no API needed)
-                "guerrillamail",   # Fallback utama
-                "1secmail",        # Cepat dan mudah
-                "mailtm",          # Bagus tapi kadang rate limited
+                "mailtm",          # Mail.tm - API support
                 "tempmail_plus",   # Alternatif baru
                 "cmail",           # Support API
-                "gmail_alias"      # Manual fallback
+                "gmail_alias"      # Last resort
+                # NOTE: 1secmail removed - no longer working (blocked/rate limited)
             ]
+        else:
+            # AUTO MODE: RANDOM dari 3 service utama yang working
+            # Tidak pakai urutan priority, tapi random untuk distribusi lebih baik
+            primary_services = ["10minutemail", "guerrillamail", "mailtm"]
+            random.shuffle(primary_services)  # Random order setiap kali
+            
+            # Fallback services jika primary gagal
+            fallback_services = ["tempmail_plus", "cmail", "gmail_alias"]
+            
+            return primary_services + fallback_services
+            # NOTE: 1secmail removed from auto mode - not working anymore
     
     async def get_email(self, service_name: str = None, retries: int = 3) -> Optional[Dict[str, Any]]:
         """Dapatkan email dengan priority system yang benar"""
