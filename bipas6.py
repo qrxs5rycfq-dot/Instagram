@@ -817,20 +817,18 @@ class UnifiedSessionManager2025:
         else:
             sec_ch_ua_platform = '"macOS"'
         
+        # CLEAN HEADERS - Only essential headers that Instagram Web actually sends
+        # Avoid suspicious custom headers that can trigger rate limiting
         headers = {
-            # Standard browser headers
+            # Standard browser headers - exactly like real Chrome
             "Accept": "*/*",
             "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
             "Accept-Encoding": "gzip, deflate, br",
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
             
-            # Client hints (synchronized)
+            # Client hints - synchronized with platform
             "Sec-Ch-Ua": sec_ch_ua,
             "Sec-Ch-Ua-Mobile": sec_ch_ua_mobile,
             "Sec-Ch-Ua-Platform": sec_ch_ua_platform,
-            "Sec-Ch-Ua-Full-Version-List": sec_ch_ua,
-            "Sec-Ch-Prefers-Color-Scheme": random.choice(["light", "dark"]),
             
             # Fetch metadata
             "Sec-Fetch-Dest": "empty",
@@ -840,32 +838,27 @@ class UnifiedSessionManager2025:
             # User agent
             "User-Agent": user_agent,
             
-            # Instagram-specific headers (CRITICAL)
+            # Essential Instagram headers ONLY
             "X-Ig-App-Id": app_id,
-            "X-Asbd-Id": asbd_id,
-            "X-Ig-Www-Claim": www_claim,
-            "X-Instagram-Ajax": ajax_version,
             "X-Requested-With": "XMLHttpRequest",
-            
-            # CSRF token from cookies
-            "X-Csrftoken": cookies.get("csrftoken", ""),
             
             # Origin and referer
             "Origin": "https://www.instagram.com",
             "Referer": "https://www.instagram.com/",
         }
         
-        # Add request-type specific headers
+        # Add CSRF only if present (don't send empty)
+        csrf = cookies.get("csrftoken", "")
+        if csrf:
+            headers["X-Csrftoken"] = csrf
+        
+        # Add request-type specific headers (minimal)
         if request_type == "graphql":
             headers["Content-Type"] = "application/x-www-form-urlencoded"
-            headers["X-Fb-Friendly-Name"] = "PolarisSignupCreateAccountMutationMutation"
-            headers["X-Fb-Lsd"] = secrets.token_hex(11)  # 22 char hex
         elif request_type == "api":
             headers["Content-Type"] = "application/x-www-form-urlencoded"
         elif request_type == "ajax":
-            headers["X-Ig-App-Locale"] = "id_ID"
-            headers["X-Ig-Device-Locale"] = "id_ID"
-            headers["X-Ig-Mapped-Locale"] = "id_ID"
+            pass  # No extra headers needed
         
         return headers
     
@@ -2021,6 +2014,7 @@ class UltraStealthIPGenerator2025:
         self.used_ips = set()
         self.ip_lease_times = {}
         self.last_rotation = {}
+        self._ip_timestamps = {}  # Track IP freshness
         
         # Real ISP IP ranges from IANA/APNIC/ARIN allocations
         self.real_isp_ranges = self._load_real_isp_ranges()
@@ -2272,12 +2266,13 @@ class UltraStealthIPGenerator2025:
         # Generate IP within the VERIFIED range and verify with real-time API
         max_verify_attempts = 10
         for verify_attempt in range(max_verify_attempts):
-            ip = self._generate_validated_indonesia_ip(selected_range)
+            # Generate fresh IP with timestamp-based uniqueness
+            ip = self._generate_fresh_indonesia_ip(selected_range)
             
-            # Ensure uniqueness
+            # Ensure uniqueness - never reuse IPs
             attempts = 0
-            while ip in self.used_ips and attempts < 100:
-                ip = self._generate_validated_indonesia_ip(selected_range)
+            while ip in self.used_ips and attempts < 200:
+                ip = self._generate_fresh_indonesia_ip(selected_range)
                 attempts += 1
             
             # REAL-TIME VERIFICATION: Check with ip-api.com
@@ -2285,6 +2280,8 @@ class UltraStealthIPGenerator2025:
             if verification["is_indonesia"]:
                 print(f"{hijau}    ✓ IP verified as Indonesia: {ip} ({verification['isp']}){reset}")
                 self.used_ips.add(ip)
+                # Also add to timestamp-based freshness tracker
+                self._ip_timestamps[ip] = time.time()
                 # Use verified ISP name if available
                 if verification.get("isp"):
                     isp = self._normalize_isp_name(verification["isp"])
@@ -2295,6 +2292,7 @@ class UltraStealthIPGenerator2025:
             # If all verification attempts failed, use last generated IP but warn
             print(f"{merah}    ⚠ Could not verify IP, using last generated: {ip}{reset}")
             self.used_ips.add(ip)
+            self._ip_timestamps[ip] = time.time()
         
         # Generate complete IP profile
         return self._build_ultra_stealth_profile(ip, country, isp, selected_range)
@@ -2451,6 +2449,49 @@ class UltraStealthIPGenerator2025:
         # Avoid common server IPs
         if parts[3] in [1, 2, 254]:
             parts[3] = random.randint(10, 245)
+        
+        return ".".join(str(p) for p in parts)
+    
+    def _generate_fresh_indonesia_ip(self, range_info: Dict) -> str:
+        """Generate fresh Indonesia IP with anti-blacklist randomization
+        
+        Uses timestamp-seeded randomization to avoid predictable patterns
+        that might be blacklisted
+        """
+        # Get base IP from validated range
+        base_ip = self._generate_validated_indonesia_ip(range_info)
+        parts = [int(x) for x in base_ip.split(".")]
+        
+        # Add timestamp-based entropy to last 2 octets for freshness
+        timestamp_entropy = int(time.time() * 1000) % 100
+        random_entropy = random.randint(1, 50)
+        
+        # Modify third octet slightly (stay in valid range)
+        start_parts = [int(x) for x in range_info["start"].split(".")]
+        end_parts = [int(x) for x in range_info["end"].split(".")]
+        
+        if start_parts[2] != end_parts[2]:
+            new_third = start_parts[2] + (timestamp_entropy % (end_parts[2] - start_parts[2] + 1))
+            parts[2] = max(start_parts[2], min(end_parts[2], new_third))
+        
+        # Randomize last octet avoiding common patterns
+        avoid_patterns = {0, 1, 2, 100, 128, 200, 254, 255}
+        # Add previously used last octets for this /24
+        prefix = f"{parts[0]}.{parts[1]}.{parts[2]}"
+        for used_ip in self.used_ips:
+            if used_ip.startswith(prefix):
+                try:
+                    avoid_patterns.add(int(used_ip.split(".")[3]))
+                except:
+                    pass
+        
+        # Generate unique last octet
+        valid_octets = [x for x in range(10, 250) if x not in avoid_patterns]
+        if valid_octets:
+            parts[3] = random.choice(valid_octets) + (random_entropy % 5)
+            parts[3] = max(10, min(249, parts[3]))
+        else:
+            parts[3] = random.randint(20, 230)
         
         return ".".join(str(p) for p in parts)
     
@@ -13008,28 +13049,24 @@ class RequestOrchestrator2025:
             ajax_id = tokens.get("ajax_id", "1029952363")
             web_session_id = session.get("extra_session_id", "")
             
+            # CLEAN API HEADERS - Only essential headers, avoid suspicious custom ones
             headers.update({
                 "Accept": "*/*",
                 "Accept-Encoding": "gzip, deflate, br",
                 "Accept-Language": metadata.get("language", "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"),
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Origin": "https://www.instagram.com",
-                "Priority": "u=1, i",
                 "Referer": "https://www.instagram.com/accounts/emailsignup/",
-                "Sec-Ch-Prefers-Color-Scheme": "dark",
                 "Sec-Fetch-Dest": "empty",
                 "Sec-Fetch-Mode": "cors",
                 "Sec-Fetch-Site": "same-origin",
-                "X-Asbd-Id": "359341",
-                "X-Csrftoken": csrf_token,
                 "X-Ig-App-Id": "936619743392459",
-                "X-Ig-Www-Claim": session.get("ig_www_claim", "0"),
-                "X-Instagram-Ajax": ajax_id,
                 "X-Requested-With": "XMLHttpRequest",
             })
             
-            if web_session_id:
-                headers["X-Web-Session-Id"] = web_session_id
+            # Add CSRF only if present
+            if csrf_token:
+                headers["X-Csrftoken"] = csrf_token
                 
         elif request_type == "form":
             # Form submission headers
