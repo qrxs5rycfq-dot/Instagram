@@ -308,6 +308,288 @@ def get_working_ip_count() -> int:
     return len(get_working_ips())
 
 
+# ===================== ISP SUCCESS RATE TRACKING =====================
+# Track success rate per ISP to prioritize high-performing ISPs
+
+ISP_STATS_FILE = "isp_stats.json"
+
+def get_isp_stats() -> Dict[str, Dict[str, int]]:
+    """Load ISP statistics"""
+    try:
+        if os.path.exists(ISP_STATS_FILE):
+            with open(ISP_STATS_FILE, 'r') as f:
+                return json.load(f)
+    except:
+        pass
+    return {}
+
+def update_isp_stats(isp: str, result: str):
+    """Update ISP statistics
+    
+    Args:
+        isp: ISP name
+        result: "success", "checkpoint", or "blocked"
+    """
+    try:
+        stats = get_isp_stats()
+        
+        if isp not in stats:
+            stats[isp] = {"success": 0, "checkpoint": 0, "blocked": 0, "total": 0}
+        
+        stats[isp][result] = stats[isp].get(result, 0) + 1
+        stats[isp]["total"] = stats[isp].get("total", 0) + 1
+        stats[isp]["success_rate"] = round(stats[isp]["success"] / max(stats[isp]["total"], 1) * 100, 2)
+        stats[isp]["last_updated"] = datetime.now().isoformat()
+        
+        with open(ISP_STATS_FILE, 'w') as f:
+            json.dump(stats, f, indent=2)
+            
+    except Exception as e:
+        pass
+
+def get_best_isps(min_attempts: int = 3) -> List[Tuple[str, float]]:
+    """Get ISPs sorted by success rate (highest first)
+    
+    Args:
+        min_attempts: Minimum attempts required to be considered
+        
+    Returns:
+        List of (isp_name, success_rate) tuples sorted by success rate
+    """
+    stats = get_isp_stats()
+    
+    isps_with_stats = []
+    for isp, data in stats.items():
+        if data.get("total", 0) >= min_attempts:
+            success_rate = data.get("success_rate", 0)
+            isps_with_stats.append((isp, success_rate))
+    
+    # Sort by success rate (highest first)
+    isps_with_stats.sort(key=lambda x: x[1], reverse=True)
+    return isps_with_stats
+
+def print_isp_stats():
+    """Print ISP statistics table"""
+    stats = get_isp_stats()
+    if not stats:
+        print(f"{Fore.YELLOW}No ISP statistics yet{Style.RESET_ALL}")
+        return
+    
+    print(f"\n{Fore.CYAN}{'='*60}")
+    print(f"ISP SUCCESS RATE STATISTICS")
+    print(f"{'='*60}{Style.RESET_ALL}")
+    print(f"{'ISP':<15} {'Success':<8} {'CP':<6} {'Block':<7} {'Total':<7} {'Rate':<8}")
+    print(f"{'-'*60}")
+    
+    # Sort by success rate
+    sorted_stats = sorted(stats.items(), key=lambda x: x[1].get("success_rate", 0), reverse=True)
+    
+    for isp, data in sorted_stats:
+        success = data.get("success", 0)
+        checkpoint = data.get("checkpoint", 0)
+        blocked = data.get("blocked", 0)
+        total = data.get("total", 0)
+        rate = data.get("success_rate", 0)
+        
+        # Color based on success rate
+        if rate >= 50:
+            color = Fore.GREEN
+        elif rate >= 25:
+            color = Fore.YELLOW
+        else:
+            color = Fore.RED
+        
+        print(f"{color}{isp:<15} {success:<8} {checkpoint:<6} {blocked:<7} {total:<7} {rate:.1f}%{Style.RESET_ALL}")
+    
+    print(f"{'-'*60}\n")
+
+
+# ===================== API ANTI-DETECTION TIMING SYSTEM =====================
+# Timing patterns optimized for Instagram API (not web browser)
+
+class APIAntiDetectionTiming:
+    """
+    API Anti-Detection Timing System
+    
+    Optimized for Instagram API requests (not web browsing)
+    
+    Features:
+    - API request pacing (not too fast, not too slow)
+    - Session header consistency
+    - Rate limit detection and handling
+    - Optimal delays between API calls
+    """
+    
+    def __init__(self):
+        self.session_start_times = {}
+        self.last_request_times = {}
+        self.request_counts = {}
+        self.rate_limit_hits = {}
+    
+    def get_api_delay(self, request_type: str = "default") -> float:
+        """Get optimal delay for API requests
+        
+        Request types:
+        - csrf: Get CSRF token (fast)
+        - check_email: Check email availability
+        - check_username: Check username availability
+        - send_code: Send verification code
+        - verify_code: Verify email code
+        - create_account: Create account (most sensitive)
+        - between_accounts: Between account creations
+        """
+        delays = {
+            "csrf": (0.5, 1.5),
+            "check_email": (1.0, 2.5),
+            "check_username": (1.0, 2.5),
+            "send_code": (1.5, 3.0),
+            "verify_code": (2.0, 4.0),
+            "create_account": (2.0, 5.0),
+            "between_accounts": (8.0, 15.0),
+            "after_error": (3.0, 6.0),
+            "after_rate_limit": (30.0, 60.0),
+            "default": (1.0, 3.0),
+        }
+        
+        min_delay, max_delay = delays.get(request_type, delays["default"])
+        
+        # Add slight randomness for natural timing
+        delay = random.uniform(min_delay, max_delay)
+        
+        return delay
+    
+    def start_session(self, session_id: str):
+        """Mark session start time"""
+        self.session_start_times[session_id] = time.time()
+        self.request_counts[session_id] = 0
+        self.rate_limit_hits[session_id] = 0
+    
+    def record_request(self, session_id: str):
+        """Record a request for pacing"""
+        self.last_request_times[session_id] = time.time()
+        self.request_counts[session_id] = self.request_counts.get(session_id, 0) + 1
+    
+    def record_rate_limit(self, session_id: str):
+        """Record rate limit hit"""
+        self.rate_limit_hits[session_id] = self.rate_limit_hits.get(session_id, 0) + 1
+    
+    def get_request_count(self, session_id: str) -> int:
+        """Get request count for session"""
+        return self.request_counts.get(session_id, 0)
+    
+    def should_slow_down(self, session_id: str) -> bool:
+        """Check if session should slow down (too many requests)"""
+        count = self.request_counts.get(session_id, 0)
+        rate_limits = self.rate_limit_hits.get(session_id, 0)
+        
+        # Slow down if hit rate limit or many requests
+        return rate_limits > 0 or count > 15
+    
+    def get_delay_multiplier(self, session_id: str) -> float:
+        """Get delay multiplier based on session history"""
+        rate_limits = self.rate_limit_hits.get(session_id, 0)
+        count = self.request_counts.get(session_id, 0)
+        
+        multiplier = 1.0
+        
+        # Increase delay if hit rate limits
+        if rate_limits > 0:
+            multiplier += rate_limits * 0.5
+        
+        # Slight increase for many requests
+        if count > 20:
+            multiplier += 0.3
+        elif count > 10:
+            multiplier += 0.1
+        
+        return min(multiplier, 3.0)  # Max 3x delay
+    
+    def get_next_delay(self, session_id: str, request_type: str = "default") -> float:
+        """Get delay before next request with multiplier applied"""
+        base_delay = self.get_api_delay(request_type)
+        multiplier = self.get_delay_multiplier(session_id)
+        return base_delay * multiplier
+    
+    def should_rotate_session(self, session_id: str) -> Tuple[bool, str]:
+        """Check if session should be rotated
+        
+        Returns:
+            (should_rotate, reason)
+        """
+        rate_limits = self.rate_limit_hits.get(session_id, 0)
+        count = self.request_counts.get(session_id, 0)
+        
+        if rate_limits >= 2:
+            return True, "Too many rate limits"
+        
+        if count >= 30:
+            return True, "Too many requests"
+        
+        return False, ""
+
+
+# Global API anti-detection timing instance
+api_timing = APIAntiDetectionTiming()
+
+
+# ===================== SMART ISP SELECTOR =====================
+# Select ISP based on success rate and availability
+
+def get_smart_isp(ip_type: str = "mobile", exclude_isps: List[str] = None) -> str:
+    """Get best ISP based on success rate statistics
+    
+    Args:
+        ip_type: "mobile" or "residential"
+        exclude_isps: List of ISPs to exclude (e.g., recently failed)
+        
+    Returns:
+        ISP name with highest success rate
+    """
+    exclude_isps = exclude_isps or []
+    
+    # Default ISPs by type - PRIORITIZE MOBILE
+    mobile_isps = ["telkomsel", "indosat", "xl", "tri", "smartfren"]
+    wifi_isps = ["biznet", "indihome", "myrepublic", "cbn", "firstmedia"]
+    
+    default_isps = mobile_isps if ip_type == "mobile" else wifi_isps
+    
+    # Get ISPs with best success rate
+    best_isps = get_best_isps(min_attempts=2)
+    
+    # Filter by type and exclusions
+    available_isps = []
+    for isp, rate in best_isps:
+        if isp in exclude_isps:
+            continue
+        if ip_type == "mobile" and isp in mobile_isps:
+            available_isps.append((isp, rate))
+        elif ip_type == "residential" and isp in wifi_isps:
+            available_isps.append((isp, rate))
+    
+    # If we have ISPs with good stats, use weighted random selection
+    if available_isps:
+        # Weight by success rate
+        isps = [isp for isp, _ in available_isps]
+        weights = [max(rate, 1) for _, rate in available_isps]
+        
+        # Weighted random choice
+        total = sum(weights)
+        r = random.uniform(0, total)
+        cumulative = 0
+        for isp, weight in zip(isps, weights):
+            cumulative += weight
+            if r <= cumulative:
+                return isp
+    
+    # Fallback to random from default ISPs (excluding blocked ones)
+    available_defaults = [isp for isp in default_isps if isp not in exclude_isps]
+    if available_defaults:
+        return random.choice(available_defaults)
+    
+    # Last resort
+    return random.choice(default_isps)
+
+
 # ===================== UNIFIED SESSION MANAGER 2025 =====================
 # Manages all spoofing components in a consistent, synchronized manner
 
