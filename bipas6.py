@@ -16825,12 +16825,13 @@ class InstagramAccountCreator2025:
         """Buat beberapa akun sekaligus dengan smart session strategy
         
         STRATEGY:
-        1. If account succeeds → keep using same IP until 2 checkpoints
-        2. If checkpoint at start → try once more, if still checkpoint → change session
-        3. If IP block → immediately change session
+        1. If account succeeds → keep using same IP/session
+        2. If checkpoint → continue once more with same session
+        3. If checkpoint again → change session
+        4. If IP block → IMMEDIATELY change session (no retry)
         """
         print(f"{cyan}🏭  Starting batch creation of {count} accounts{reset}")
-        print(f"{cyan}    Strategy: Keep working IP until 2 checkpoints, then rotate{reset}")
+        print(f"{cyan}    Strategy: Checkpoint=retry once, IP block=immediate rotate{reset}")
         
         results = {
             "total": count,
@@ -16846,12 +16847,9 @@ class InstagramAccountCreator2025:
         
         # Session tracking
         current_session_id = None
-        session_checkpoint_count = 0  # Checkpoints in current session
         session_success_count = 0     # Successes in current session
-        consecutive_checkpoints = 0   # For tracking consecutive checkpoints at start
-        
-        # Constants
-        MAX_CHECKPOINTS_BEFORE_ROTATE = 2  # Rotate after 2 checkpoints
+        consecutive_checkpoints = 0   # For tracking consecutive checkpoints
+        force_new_session = False     # Flag to force new session on next iteration
         
         for i in range(count):
             print(f"\n{biru}🔹  Account {i + 1}/{count}{reset}")
@@ -16859,16 +16857,16 @@ class InstagramAccountCreator2025:
             # Decide whether to create new session or reuse
             need_new_session = False
             
-            if current_session_id is None:
+            if current_session_id is None or force_new_session:
                 need_new_session = True
-                print(f"{cyan}🆕  No active session, creating new one...{reset}")
-            elif session_checkpoint_count >= MAX_CHECKPOINTS_BEFORE_ROTATE:
-                need_new_session = True
-                print(f"{kuning}🔄  Session hit {session_checkpoint_count} checkpoints, rotating...{reset}")
+                if force_new_session:
+                    print(f"{kuning}🔄  Forced session rotation (IP block or 2x checkpoint)...{reset}")
+                else:
+                    print(f"{cyan}🆕  No active session, creating new one...{reset}")
+                force_new_session = False  # Reset flag
             
             if need_new_session:
                 current_session_id = await self._create_new_session()
-                session_checkpoint_count = 0
                 session_success_count = 0
                 consecutive_checkpoints = 0
                 results["sessions_used"] += 1
@@ -16883,7 +16881,7 @@ class InstagramAccountCreator2025:
                         results["errors"].append({"error": "Session creation failed", "account": i + 1})
                         continue
             else:
-                print(f"{hijau}♻️   Reusing session (success: {session_success_count}, checkpoints: {session_checkpoint_count}/{MAX_CHECKPOINTS_BEFORE_ROTATE}){reset}")
+                print(f"{hijau}♻️   Reusing session (success: {session_success_count}, checkpoints: {consecutive_checkpoints}){reset}")
             
             # Create account with current session
             result = await self.create_account(password, session_id=current_session_id)
@@ -16907,57 +16905,54 @@ class InstagramAccountCreator2025:
                 # Get error message for detection
                 error_msg = str(result.get("reason", result.get("error", ""))).lower()
                 
-                # Check if checkpoint
-                is_checkpoint = (
+                # Check if IP block FIRST (higher priority)
+                is_ip_block = (
+                    "ip_block" in error_msg or
+                    "ip block" in error_msg or
+                    "ipblock" in error_msg or
+                    "rate limit" in error_msg or
+                    "rate_limit" in error_msg or
+                    "429" in error_msg or
+                    "403" in error_msg or
+                    "too many" in error_msg
+                )
+                
+                # Check if checkpoint (only if NOT ip block)
+                is_checkpoint = not is_ip_block and (
                     "checkpoint" in error_msg or
                     "suspended" in error_msg
                 )
                 
-                # Check if IP block
-                is_ip_block = (
-                    "ip" in error_msg or 
-                    "block" in error_msg or
-                    "rate" in error_msg or
-                    "429" in error_msg or
-                    "403" in error_msg
-                )
-                
-                if is_checkpoint:
-                    print(f"{kuning}🚧  Checkpoint detected{reset}")
-                    results["checkpointed"] += 1
-                    session_checkpoint_count += 1
-                    consecutive_checkpoints += 1
-                    
-                    # Strategy: If checkpoint at start (no success yet), try once more
-                    if session_success_count == 0 and consecutive_checkpoints == 1:
-                        print(f"{kuning}    First checkpoint without success, will try once more with same session...{reset}")
-                        checkpoint_cooldown = random.uniform(30, 45)
-                    # If 2 consecutive checkpoints at start, force rotate next iteration
-                    elif session_success_count == 0 and consecutive_checkpoints >= 2:
-                        print(f"{merah}    2 consecutive checkpoints without success, will rotate session...{reset}")
-                        current_session_id = None  # Force new session next iteration
-                        checkpoint_cooldown = random.uniform(45, 75)
-                    # If had success before, check if we hit max checkpoints
-                    elif session_checkpoint_count >= MAX_CHECKPOINTS_BEFORE_ROTATE:
-                        print(f"{kuning}    Hit max checkpoints ({MAX_CHECKPOINTS_BEFORE_ROTATE}), will rotate session...{reset}")
-                        current_session_id = None  # Force new session next iteration
-                        checkpoint_cooldown = random.uniform(45, 75)
-                    else:
-                        print(f"{kuning}    Checkpoint {session_checkpoint_count}/{MAX_CHECKPOINTS_BEFORE_ROTATE}, continuing with same session...{reset}")
-                        checkpoint_cooldown = random.uniform(30, 45)
-                    
-                    print(f"{kuning}⏳  Checkpoint cooldown: {checkpoint_cooldown:.1f}s{reset}")
-                    await asyncio.sleep(checkpoint_cooldown)
-                    
-                elif is_ip_block:
-                    print(f"{merah}🚫  IP block detected - forcing session rotation{reset}")
+                if is_ip_block:
+                    # IP BLOCK - IMMEDIATELY rotate session, no retry
+                    print(f"{merah}🚫  IP BLOCK detected - IMMEDIATE session rotation{reset}")
                     results["ip_blocks"] += 1
-                    current_session_id = None  # Force new session next iteration
+                    force_new_session = True  # Force new session next iteration
+                    current_session_id = None  # Also clear current session
                     
                     # Extra cooldown for IP block
                     block_cooldown = random.uniform(60, 90)
                     print(f"{kuning}⏳  IP block cooldown: {block_cooldown:.1f}s{reset}")
                     await asyncio.sleep(block_cooldown)
+                    
+                elif is_checkpoint:
+                    print(f"{kuning}🚧  Checkpoint detected{reset}")
+                    results["checkpointed"] += 1
+                    consecutive_checkpoints += 1
+                    
+                    # Strategy: If first checkpoint, try once more
+                    if consecutive_checkpoints == 1:
+                        print(f"{kuning}    First checkpoint, will try once more with same session...{reset}")
+                        checkpoint_cooldown = random.uniform(30, 45)
+                    # If 2nd checkpoint, force rotate
+                    else:
+                        print(f"{merah}    2nd checkpoint - rotating session...{reset}")
+                        force_new_session = True
+                        current_session_id = None
+                        checkpoint_cooldown = random.uniform(45, 75)
+                    
+                    print(f"{kuning}⏳  Checkpoint cooldown: {checkpoint_cooldown:.1f}s{reset}")
+                    await asyncio.sleep(checkpoint_cooldown)
                 else:
                     # Other failure - normal cooldown
                     print(f"{kuning}    Other failure, normal cooldown{reset}")
