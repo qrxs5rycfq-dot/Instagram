@@ -2385,6 +2385,7 @@ class UltraStealthIPGenerator2025:
         - All ranges are confirmed to be Indonesia via WHOIS
         - Random between mobile and residential
         - Simulates DHCP lease patterns
+        - MULTI-SOURCE verification (ip-api.com, ipinfo.io, ipwhois.app)
         """
         
         # Always use Indonesia
@@ -2397,20 +2398,33 @@ class UltraStealthIPGenerator2025:
         # Always use verified Indonesian ranges
         country_ranges = self._get_indonesia_fallback_ranges()
         
-        # Select Indonesian ISP if not specified
-        indonesia_mobile_isps = ["telkomsel", "indosat", "xl", "tri", "smartfren"]
-        indonesia_wifi_isps = ["biznet", "firstmedia", "myrepublic", "indihome", "cbn"]
+        # IP dapat dari negara mana saja - yang penting:
+        # 1. Fresh (tidak pernah dipakai sebelumnya)
+        # 2. Tidak masuk blacklist (bukan proxy/VPN/datacenter)
+        # 3. Fingerprint dan location MATCH dengan IP country
+        
+        # All available ISPs from Asia (Indonesia prioritized, but others work too!)
+        indonesia_mobile_isps = ["telkomsel", "indosat", "tri", "smartfren"]
+        indonesia_wifi_isps = ["biznet", "indihome", "myrepublic", "cbn"]
+        asia_isps = ["myanmar", "malaysia", "thailand", "vietnam", "philippines", "singapore"]
+        
+        # Combine all ISPs
+        all_isps = indonesia_mobile_isps + indonesia_wifi_isps + asia_isps
         
         if not isp:
+            # Random from all ISPs (Asia included)
             if ip_type == "mobile":
-                isp = random.choice(indonesia_mobile_isps)
+                # 70% Indonesia, 30% other Asia
+                if random.random() < 0.7:
+                    isp = random.choice(indonesia_mobile_isps)
+                else:
+                    isp = random.choice(asia_isps)
             else:
                 isp = random.choice(indonesia_wifi_isps)
         
-        # Validate ISP is Indonesian
-        all_indonesia_isps = indonesia_mobile_isps + indonesia_wifi_isps
-        if isp not in all_indonesia_isps:
-            isp = random.choice(all_indonesia_isps)
+        # Validate ISP exists
+        if isp not in all_isps:
+            isp = random.choice(all_isps)
         
         # Get ISP's IP ranges
         isp_ranges = country_ranges.get(isp, [])
@@ -2427,7 +2441,10 @@ class UltraStealthIPGenerator2025:
         selected_range = random.choice(suitable_ranges)
         
         # Generate IP within the VERIFIED range and verify with real-time API
-        max_verify_attempts = 10
+        # Increased to 20 attempts for better success rate
+        max_verify_attempts = 20
+        verified_ip = None
+        
         for verify_attempt in range(max_verify_attempts):
             # Generate fresh IP with timestamp-based uniqueness
             ip = self._generate_fresh_indonesia_ip(selected_range)
@@ -2438,44 +2455,107 @@ class UltraStealthIPGenerator2025:
                 ip = self._generate_fresh_indonesia_ip(selected_range)
                 attempts += 1
             
-            # REAL-TIME VERIFICATION: Check with ip-api.com
+            # REAL-TIME VERIFICATION: Check with multiple APIs
             verification = self._verify_ip_is_indonesia_realtime(ip)
-            if verification["is_indonesia"]:
-                print(f"{hijau}    ✓ IP verified as Indonesia: {ip} ({verification['isp']}){reset}")
+            
+            # Accept IP if:
+            # 1. Indonesia IP (preferred), OR
+            # 2. Any usable IP (not proxy/datacenter) - like 120.88.35.45 (MM) that worked!
+            if verification["verified"] and verification["is_usable"]:
+                country_info = f"[{verification.get('country', 'unknown')}]"
+                if verification["is_indonesia"]:
+                    print(f"{hijau}    ✓ IP verified as Indonesia: {ip} ({verification['isp']}) [via {verification.get('source', 'unknown')}]{reset}")
+                else:
+                    print(f"{hijau}    ✓ IP usable (non-proxy): {ip} ({verification['isp']}) {country_info} [via {verification.get('source', 'unknown')}]{reset}")
+                verified_ip = ip
                 self.used_ips.add(ip)
-                # Also add to timestamp-based freshness tracker
                 self._ip_timestamps[ip] = time.time()
-                # Use verified ISP name if available
                 if verification.get("isp"):
                     isp = self._normalize_isp_name(verification["isp"])
                 break
+            elif verification["is_proxy"] or verification["is_datacenter"]:
+                print(f"{merah}    ✗ IP {ip} is proxy/datacenter, skipping...{reset}")
+            elif not verification["verified"]:
+                # API unavailable - try different ISP
+                print(f"{kuning}    ○ API unavailable for {ip}, trying different ISP...{reset}")
+                available_isps = [i for i in all_indonesia_isps if i != isp]
+                if available_isps:
+                    isp = random.choice(available_isps)
+                    isp_ranges = country_ranges.get(isp, [])
+                    if isp_ranges:
+                        suitable_ranges = isp_ranges
+                        selected_range = random.choice(suitable_ranges)
             else:
-                print(f"{kuning}    ✗ IP {ip} not Indonesia (country={verification.get('country', 'unknown')}), trying again...{reset}")
-        else:
-            # If all verification attempts failed, use last generated IP but warn
-            print(f"{merah}    ⚠ Could not verify IP, using last generated: {ip}{reset}")
-            self.used_ips.add(ip)
-            self._ip_timestamps[ip] = time.time()
+                print(f"{kuning}    ✗ IP {ip} not usable (country={verification.get('country', 'unknown')}), trying again...{reset}")
+                # Try different range
+                if len(suitable_ranges) > 1:
+                    other_ranges = [r for r in suitable_ranges if r != selected_range]
+                    if other_ranges:
+                        selected_range = random.choice(other_ranges)
+        
+        if not verified_ip:
+            # Fallback to Telkomsel (most reliable)
+            print(f"{kuning}    ⚠ Switching to Telkomsel (most reliable)...{reset}")
+            isp = "telkomsel"
+            telkomsel_ranges = country_ranges.get("telkomsel", [])
+            
+            for _ in range(10):
+                if telkomsel_ranges:
+                    selected_range = random.choice(telkomsel_ranges)
+                    ip = self._generate_fresh_indonesia_ip(selected_range)
+                    
+                    while ip in self.used_ips:
+                        ip = self._generate_fresh_indonesia_ip(selected_range)
+                    
+                    verification = self._verify_ip_is_indonesia_realtime(ip)
+                    if verification["is_indonesia"] and verification["verified"]:
+                        print(f"{hijau}    ✓ IP verified: {ip} ({verification['isp']}){reset}")
+                        verified_ip = ip
+                        self.used_ips.add(ip)
+                        self._ip_timestamps[ip] = time.time()
+                        if verification.get("isp"):
+                            isp = self._normalize_isp_name(verification["isp"])
+                        break
+            
+            if not verified_ip:
+                print(f"{merah}    ⚠ Could not verify IP after 30 attempts, using: {ip}{reset}")
+                verified_ip = ip
+                self.used_ips.add(ip)
+                self._ip_timestamps[ip] = time.time()
         
         # Generate complete IP profile
-        return self._build_ultra_stealth_profile(ip, country, isp, selected_range)
+        return self._build_ultra_stealth_profile(verified_ip, country, isp, selected_range)
     
     def _verify_ip_is_indonesia_realtime(self, ip: str) -> Dict[str, Any]:
-        """Verify IP is from Indonesia using real-time API check
+        """Verify IP location and check if it's usable for Instagram
         
-        Uses ip-api.com for verification (free, no API key needed)
+        IMPORTANT: IP 120.88.35.45 (Myanmar) worked for account creation!
+        This means Instagram doesn't strictly check country - they check:
+        1. IP reputation (not blacklisted)
+        2. Not datacenter/VPN/proxy
+        3. Fresh/unique IP
+        
+        Uses multiple sources for verification:
+        1. ip-api.com (primary)
+        2. ipinfo.io (fallback)
+        3. ipwhois.app (secondary fallback)
         """
         result = {
             "is_indonesia": False,
+            "is_usable": False,  # New field - IP is usable for Instagram
             "country": None,
             "isp": None,
             "org": None,
-            "verified": False
+            "verified": False,
+            "source": None,
+            "is_datacenter": False,
+            "is_proxy": False
         }
         
+        # Source 1: ip-api.com (free, rate: 45 req/min) - includes proxy/hosting detection
         try:
             response = requests.get(
-                f"http://ip-api.com/json/{ip}?fields=status,country,countryCode,isp,org",
+                f"http://ip-api.com/json/{ip}?fields=status,country,countryCode,isp,org,as,proxy,hosting",
                 timeout=5
             )
             
@@ -2486,16 +2566,79 @@ class UltraStealthIPGenerator2025:
                     result["country"] = data.get("countryCode")
                     result["isp"] = data.get("isp")
                     result["org"] = data.get("org")
+                    result["source"] = "ip-api.com"
+                    result["is_proxy"] = data.get("proxy", False)
+                    result["is_datacenter"] = data.get("hosting", False)
                     
                     # Check if Indonesia
                     if data.get("countryCode") == "ID":
                         result["is_indonesia"] = True
                     
+                    # IP is usable if not proxy/datacenter
+                    # Note: IP 120.88.35.45 (Myanmar) worked - so non-ID IPs can work too!
+                    if not result["is_proxy"] and not result["is_datacenter"]:
+                        result["is_usable"] = True
+                    
+                    return result
+                        
         except Exception as e:
-            # If API fails, assume the IP from verified range is valid
-            # This is the fallback when no internet or rate limited
-            result["is_indonesia"] = True  # Trust our CIDR ranges if API unavailable
-            result["verified"] = False
+            pass  # Try next source
+        
+        # Source 2: ipinfo.io (free tier: 50k/month)
+        try:
+            response = requests.get(
+                f"https://ipinfo.io/{ip}/json",
+                timeout=5,
+                headers={"Accept": "application/json"}
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                result["verified"] = True
+                result["country"] = data.get("country")
+                result["isp"] = data.get("org", "").replace("AS", "").strip()
+                result["org"] = data.get("org")
+                result["source"] = "ipinfo.io"
+                
+                if data.get("country") == "ID":
+                    result["is_indonesia"] = True
+                
+                # Assume usable if verified (ipinfo doesn't have proxy field in free tier)
+                result["is_usable"] = True
+                return result
+                    
+        except Exception as e:
+            pass  # Try next source
+        
+        # Source 3: ipwhois.app (free, no rate limit specified)
+        try:
+            response = requests.get(
+                f"https://ipwhois.app/json/{ip}",
+                timeout=5
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success", True):
+                    result["verified"] = True
+                    result["country"] = data.get("country_code")
+                    result["isp"] = data.get("isp")
+                    result["org"] = data.get("org")
+                    result["source"] = "ipwhois.app"
+                    
+                    if data.get("country_code") == "ID":
+                        result["is_indonesia"] = True
+                    
+                    result["is_usable"] = True
+                    return result
+                        
+        except Exception as e:
+            pass
+        
+        # If all APIs fail, DON'T trust - return unverified
+        result["verified"] = False
+        result["is_indonesia"] = False
+        result["is_usable"] = False
         
         return result
     
@@ -2588,6 +2731,46 @@ class UltraStealthIPGenerator2025:
             "cbn": [
                 {"start": "202.158.0.0", "end": "202.158.63.255", "type": "residential", "cgnat": False},  # 202.158.0.0/18
                 {"start": "203.142.64.0", "end": "203.142.127.255", "type": "residential", "cgnat": False}, # 203.142.64.0/18
+            ],
+            
+            # =====================================================
+            # ASIA IP RANGES (Working IPs like 120.88.35.45 Myanmar)
+            # These are backup ranges when Indonesia IPs are blocked
+            # =====================================================
+            
+            # Myanmar - MPT, Telenor Myanmar (120.88.x.x worked!)
+            "myanmar": [
+                {"start": "120.88.0.0", "end": "120.91.255.255", "type": "mobile", "cgnat": False, "country": "MM"},
+                {"start": "103.18.32.0", "end": "103.18.35.255", "type": "mobile", "cgnat": False, "country": "MM"},
+            ],
+            # Malaysia - Maxis, Celcom, Digi
+            "malaysia": [
+                {"start": "60.48.0.0", "end": "60.55.255.255", "type": "mobile", "cgnat": False, "country": "MY"},
+                {"start": "175.136.0.0", "end": "175.143.255.255", "type": "mobile", "cgnat": False, "country": "MY"},
+                {"start": "113.210.0.0", "end": "113.213.255.255", "type": "mobile", "cgnat": False, "country": "MY"},
+            ],
+            # Thailand - AIS, DTAC, True
+            "thailand": [
+                {"start": "171.96.0.0", "end": "171.99.255.255", "type": "mobile", "cgnat": False, "country": "TH"},
+                {"start": "49.228.0.0", "end": "49.231.255.255", "type": "mobile", "cgnat": False, "country": "TH"},
+                {"start": "223.24.0.0", "end": "223.27.255.255", "type": "mobile", "cgnat": False, "country": "TH"},
+            ],
+            # Vietnam - Viettel, VNPT, Mobifone
+            "vietnam": [
+                {"start": "113.160.0.0", "end": "113.191.255.255", "type": "mobile", "cgnat": False, "country": "VN"},
+                {"start": "115.72.0.0", "end": "115.79.255.255", "type": "mobile", "cgnat": False, "country": "VN"},
+                {"start": "14.160.0.0", "end": "14.191.255.255", "type": "mobile", "cgnat": False, "country": "VN"},
+            ],
+            # Philippines - Globe, Smart, PLDT
+            "philippines": [
+                {"start": "112.198.0.0", "end": "112.199.255.255", "type": "mobile", "cgnat": False, "country": "PH"},
+                {"start": "119.92.0.0", "end": "119.95.255.255", "type": "mobile", "cgnat": False, "country": "PH"},
+                {"start": "49.144.0.0", "end": "49.159.255.255", "type": "mobile", "cgnat": False, "country": "PH"},
+            ],
+            # Singapore - Singtel, StarHub, M1
+            "singapore": [
+                {"start": "116.14.0.0", "end": "116.15.255.255", "type": "mobile", "cgnat": False, "country": "SG"},
+                {"start": "219.74.0.0", "end": "219.75.255.255", "type": "mobile", "cgnat": False, "country": "SG"},
             ]
         }
     
