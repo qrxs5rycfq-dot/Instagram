@@ -4893,6 +4893,28 @@ class UltraStealthIPGenerator2025:
                 "sack_permitted": True,
             }
     
+    def _generate_tcp_fingerprint_enhanced(self, device_type: str) -> Dict[str, Any]:
+        """Generate enhanced TCP fingerprint based on device type"""
+        is_mobile = device_type in ["mobile", "android", "ios"]
+        base = self._generate_tcp_fingerprint(is_mobile)
+        
+        # Add enhanced TCP/IP stack properties
+        base.update({
+            "ecn": random.choice([True, False]) if not is_mobile else False,
+            "sack_ok": True,
+            "nop": True,
+            "tcp_options_order": ["mss", "nop", "window_scale", "nop", "nop", "timestamp", "sack_permitted"],
+            "ip_id_pattern": random.choice(["incremental", "random", "zero"]),
+            "df_flag": True,
+            "tos": 0,
+            "tcp_seq_pattern": "random",
+            "tcp_ack_behavior": "delayed",
+            "urgent_pointer": 0,
+            "checksum_offload": True,
+        })
+        
+        return base
+    
     def _generate_device_fingerprint(self, country: str, is_mobile: bool) -> Dict[str, Any]:
         """Generate device fingerprint based on country and connection type"""
         
@@ -4954,6 +4976,7 @@ class AdvancedIPStealthSystem2025:
         self.generation_cache = {}
         self.cache_ttl = 300
         self.session_ip_map = {}
+        self._recently_used_ips = {}  # Track recently used IPs with timestamps
         
         # Complete Indonesia ISP Database
         self.indonesia_isps = self._load_complete_indonesia_isps()
@@ -6847,6 +6870,29 @@ class AdvancedIPStealthSystem2025:
             bad_fourth_octets = list(range(0, 11)) + list(range(250, 256)) + [x for x in range(0, 256) if x % 50 == 0]
             if fourth_octet in bad_fourth_octets:
                 return False
+            
+            return True
+            
+        except Exception:
+            return False
+    
+    def _anti_blacklist_check(self, ip: str) -> bool:
+        """Check if IP is likely to be blacklisted by Instagram"""
+        try:
+            # Use the enhanced validation as the base check
+            if not self._validate_ip_format_enhanced(ip):
+                return False
+            
+            # Additional blacklist check for known problematic IPs
+            if ip in self.blacklisted_ips:
+                return False
+            
+            # Check if IP was recently used (avoid reuse within 1 hour)
+            if hasattr(self, '_recently_used_ips'):
+                if ip in self._recently_used_ips:
+                    last_used = self._recently_used_ips.get(ip, 0)
+                    if time.time() - last_used < 3600:  # 1 hour cooldown
+                        return False
             
             return True
             
