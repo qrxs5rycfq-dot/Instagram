@@ -1029,10 +1029,10 @@ class UnifiedSessionManager2025:
         self._sessions = {}
         self._lock = None  # Will use threading.Lock() if needed
         
-        # Indonesia-only configuration
-        self.location = "ID"
-        self.timezone = "Asia/Jakarta"
-        self.language = "id-ID"
+        # Default location - will be random per session
+        self.location = "random"
+        self.timezone = "UTC"
+        self.language = "en-US"
         
         # Chrome version consistency
         self.chrome_versions = {
@@ -2487,7 +2487,7 @@ class AdvancedBrowserFingerprint2025:
         
     def generate_complete_fingerprint(self, device_type: str = "random",
                                        browser_type: str = "chrome",
-                                       country: str = "ID") -> Dict[str, Any]:
+                                       country: str = "random") -> Dict[str, Any]:
         """Generate a complete browser fingerprint - Random between Android and Desktop"""
         
         # Get TLS fingerprint first
